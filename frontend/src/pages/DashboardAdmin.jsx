@@ -9,6 +9,8 @@ import FicheDetailModal from '../components/FicheDetailModal';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
+import { getCentreTableAbbr } from '../utils/tableAbbreviations';
+import { getEtatTableAbbr, getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
 import {
   getFicheTableIndicators,
   ficheHasDecalageRequest,
@@ -433,12 +435,20 @@ const DashboardAdmin = () => {
     return centre?.titre || '';
   };
 
+  const getCentreDisplay = (centreId) => getCentreTableAbbr(centreId, centresData);
+
   // Obtenir le nom de l'état
   const getEtatName = (etatId) => {
     if (!etatId) return '';
     const etat = etats.find(e => e.id === etatId);
     return etat?.titre || '';
   };
+
+  const getEtatDisplay = (fiche) =>
+    getEtatTableAbbr(fiche, etats, []) || getEtatName(fiche?.id_etat_final);
+
+  const getEtatFullLabel = (fiche) =>
+    getEtatDisplayWithSousEtat(fiche, etats, []) || getEtatName(fiche?.id_etat_final);
 
   // Obtenir les confirmateurs formatés (avec confirmateur 2 et 3 si existent)
   const getConfirmateursFormatted = (fiche) => {
@@ -1233,12 +1243,12 @@ const DashboardAdmin = () => {
                             </span>
                           ) : null}
                         </td>
-                        <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
+                        <td data-label="Centre:" className="fiche-col-centre" title={getCentreName(fiche.id_centre) || undefined}>{getCentreDisplay(fiche.id_centre)}</td>
                         <td data-label="Date Insertion:" className="fiche-col-date">{formatDate(fiche.date_insert_time)}</td>
                         <td data-label="Confirmateur:">{getConfirmateursFormatted(fiche)}</td>
-                        <td data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'} className="etat-col-cell">
-                          <span className="etat-text etat-text--wrap">
-                            {getEtatName(fiche.id_etat_final)}
+                        <td data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'} className="etat-col-cell fiche-col-etat">
+                          <span className="etat-text" title={getEtatFullLabel(fiche) || undefined}>
+                            {getEtatDisplay(fiche)}
                             {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
                               <span className="etat-text-urgent">(RDV_URGENT)</span>
                             )}

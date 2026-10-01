@@ -17,7 +17,8 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
-import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
+import { getEtatDisplayWithSousEtat, getEtatTableAbbr } from '../utils/etatSignerComplet';
+import { getCentreTableAbbr } from '../utils/tableAbbreviations';
 import {
   getFicheTableIndicators,
   ficheHasDecalageRequest,
@@ -1212,12 +1213,14 @@ const Dashboard = () => {
   const getCommercialsFormatted = (fiche) =>
     formatFicheCommercialDisplay(fiche, getUserName, appliedFilters);
 
-  // Obtenir le nom du centre
+  // Obtenir le nom du centre (complet — exports / tooltip)
   const getCentreName = (centreId) => {
     if (!centreId || !centresData) return '';
     const centre = centresData.find(c => c.id === centreId);
     return centre?.titre || '';
   };
+
+  const getCentreDisplay = (centreId) => getCentreTableAbbr(centreId, centresData);
 
   // Obtenir le nom de l'état
   const getEtatName = (etatId) => {
@@ -1228,8 +1231,13 @@ const Dashboard = () => {
 
   const sousEtats = sousEtatsData || [];
 
-  // Libellé d'état : pour les états Signer, ajouter le sous-état dans la même colonne (ex. SIGNER - COMPLETE)
+  // Libellé d'état tableau : abbreviation BDD (+ sous-état abrégé si Signer)
   const getEtatDisplayName = (fiche) =>
+    getEtatTableAbbr(fiche, etats, sousEtats).trim() ||
+    getEtatName(fiche?.id_etat_final) ||
+    '';
+
+  const getEtatFullLabel = (fiche) =>
     getEtatDisplayWithSousEtat(fiche, etats, sousEtats).trim() ||
     getEtatName(fiche?.id_etat_final) ||
     '';
@@ -2427,14 +2435,14 @@ const Dashboard = () => {
                               produitColor={produitColor}
                               onPdf={() => runGeneratePdfFromMenu(fiche.hash)}
                             />
-                            <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
+                            <td data-label="Centre:" className="fiche-col-centre" title={getCentreName(fiche.id_centre) || undefined}>{getCentreDisplay(fiche.id_centre)}</td>
                             <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
                             <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
                             <td
                               data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
                               className="etat-col-cell"
                             >
-                              <span className="etat-text etat-text--wrap">
+                              <span className="etat-text" title={getEtatFullLabel(fiche) || undefined}>
                                 {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
                                 {getEtatDisplayName(fiche)}
                                 {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
@@ -2460,7 +2468,7 @@ const Dashboard = () => {
                               data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
                               className="etat-col-cell"
                             >
-                              <span className="etat-text etat-text--wrap">
+                              <span className="etat-text" title={getEtatFullLabel(fiche) || undefined}>
                                 {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
                                 {getEtatDisplayName(fiche)}
                                 {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
@@ -2470,7 +2478,7 @@ const Dashboard = () => {
                             </td>
                             <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
                             <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
-                            <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
+                            <td data-label="Centre:" className="fiche-col-centre" title={getCentreName(fiche.id_centre) || undefined}>{getCentreDisplay(fiche.id_centre)}</td>
                             <td data-label="Produit:">
                               <span
                                 className="produit-indicator"

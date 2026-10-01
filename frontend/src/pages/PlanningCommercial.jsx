@@ -11,6 +11,8 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFicheTableIndicators } from '../utils/ficheTableIndicators';
+import { abbreviateCentreName } from '../utils/tableAbbreviations';
+import { getEtatTableAbbr, getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import {
   applyForceDesktopViewport,
@@ -1037,9 +1039,12 @@ const PlanningCommercial = () => {
                             {getProduitName(fiche.produit)}
                           </span>
                         </td>
-                        <td data-label="État:" className="etat-col-cell">
-                          <span className="etat-text etat-text--wrap">
-                            {fiche.etat_titre || 'N/A'}
+                        <td data-label="État:" className="etat-col-cell fiche-col-etat">
+                          <span
+                            className="etat-text"
+                            title={getEtatDisplayWithSousEtat(fiche, etats || []) || fiche.etat_titre || undefined}
+                          >
+                            {getEtatTableAbbr(fiche, etats || []) || fiche.etat_titre || 'N/A'}
                           </span>
                         </td>
                         <td data-label="Compte rendu:">
@@ -1088,7 +1093,7 @@ const PlanningCommercial = () => {
                             ) : null}
                           </td>
                         ) : (
-                          <td data-label="Centre:">{fiche.centre_titre || ''}</td>
+                          <td data-label="Centre:" className="fiche-col-centre" title={fiche.centre_titre || undefined}>{abbreviateCentreName(fiche.centre_titre || '')}</td>
                         )}
                         {isCommercial && (
                           <td data-label="SEUL:" className="fiche-col-seul" style={{ textAlign: 'center' }}>

@@ -8,7 +8,8 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import { cleanObservationCQ } from '../utils/cleanObservationCQ';
-import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
+import { getEtatDisplayWithSousEtat, getEtatTableAbbr } from '../utils/etatSignerComplet';
+import { abbreviateCentreName } from '../utils/tableAbbreviations';
 import { exportToCSV, exportToExcel } from '../utils/exportUtils';
 import './CQSignatures.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
@@ -149,6 +150,9 @@ const CQSignatures = () => {
   };
   const getEtatTitle = (row) => {
     return getEtatDisplayWithSousEtat(row, etatsData || [], []);
+  };
+  const getEtatAbbr = (row) => {
+    return getEtatTableAbbr(row, etatsData || [], []) || getEtatTitle(row);
   };
   const getSortValue = (row, key) => {
     switch (key) {
@@ -477,11 +481,11 @@ const CQSignatures = () => {
                     <td className="cp-col">{sig.cp || '-'}</td>
                     <td className="date-rdv-col fiche-col-date">{sig.date_planning ? formatRdvDateTime(sig.date_planning) : '-'}</td>
                     <td className="etat-col etat-col-cell">
-                      <span className="etat-text etat-text--wrap">{getEtatTitle(sig)}</span>
+                      <span className="etat-text" title={getEtatTitle(sig) || undefined}>{getEtatAbbr(sig)}</span>
                     </td>
                     <td className="wrap-word-cell confirmateur-col">{sig.confirmateur_pseudo || '-'}</td>
                     <td className="wrap-word-cell commercial-col">{getCommercialsFormatted(sig)}</td>
-                    <td className="wrap-word-cell centre-col">{sig.centre_titre || '-'}</td>
+                    <td className="centre-col fiche-col-centre" title={sig.centre_titre || undefined}>{abbreviateCentreName(sig.centre_titre || '-')}</td>
                     <td className="wrap-word-cell installateur-col">{sig.installateur_nom || '-'}</td>
                     <td className="produit-col">
                       <span

@@ -4,7 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaUserCheck, FaCheck, FaSearch } from 'react-icons/fa';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
-import { getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
+import { getEtatDisplayWithSousEtat, getEtatTableAbbr } from '../utils/etatSignerComplet';
+import { abbreviateCentreName } from '../utils/tableAbbreviations';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import {
   getFicheTableIndicators,
@@ -497,12 +498,12 @@ const Affectation = () => {
                             produitColor={produitColor}
                             onPdf={() => handleGeneratePdf(fiche.hash)}
                           />
-                          <td data-label="Centre:">{fiche.centre_nom || ''}</td>
+                          <td data-label="Centre:" className="fiche-col-centre" title={fiche.centre_nom || undefined}>{abbreviateCentreName(fiche.centre_nom || '')}</td>
                           <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
                           <td data-label="Confirmateur:">{formatConfirmateurs(fiche)}</td>
                           <td data-label="État:" className="etat-col-cell">
-                            <span className="etat-text etat-text--wrap">
-                              {getEtatDisplayWithSousEtat(fiche, etatsData || [])}
+                            <span className="etat-text" title={getEtatDisplayWithSousEtat(fiche, etatsData || []) || undefined}>
+                              {getEtatTableAbbr(fiche, etatsData || [])}
                             </span>
                           </td>
                           {showDecalageColAdmin ? (
@@ -520,13 +521,13 @@ const Affectation = () => {
                           <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
                           <td data-label="Date RDV:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
                           <td data-label="État:" className="etat-col-cell">
-                            <span className="etat-text etat-text--wrap">
-                              {getEtatDisplayWithSousEtat(fiche, etatsData || [])}
+                            <span className="etat-text" title={getEtatDisplayWithSousEtat(fiche, etatsData || []) || undefined}>
+                              {getEtatTableAbbr(fiche, etatsData || [])}
                             </span>
                           </td>
                           <td data-label="Confirmateur:">{formatConfirmateurs(fiche)}</td>
                           <td data-label="Commercial:">{formatCommercials(fiche)}</td>
-                          <td data-label="Centre:">{fiche.centre_nom || ''}</td>
+                          <td data-label="Centre:" className="fiche-col-centre" title={fiche.centre_nom || undefined}>{abbreviateCentreName(fiche.centre_nom || '')}</td>
                           <td data-label="Produit:">
                             <span
                               className="produit-indicator"

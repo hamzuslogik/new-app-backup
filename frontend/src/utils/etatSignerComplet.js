@@ -102,3 +102,7 @@ export function getEffectiveEtatColor(fiche, etats = [], sousEtats = [], fallbac
   const etatId = getEtatId(fiche);
   return etats.find((e) => Number(e.id) === Number(etatId))?.color || fallbackColor;
 }
+
+/** Abréviation état pour tableaux (délègue à tableAbbreviations). */
+export { getEtatTableAbbr } from './tableAbbreviations';
+

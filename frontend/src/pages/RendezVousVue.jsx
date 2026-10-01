@@ -21,6 +21,8 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import FicheDetailModal from '../components/FicheDetailModal';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { getCentreTableAbbr } from '../utils/tableAbbreviations';
+import { getEtatTableAbbr, getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import {
   applyForceDesktopViewport,
@@ -409,6 +411,14 @@ const RendezVousVue = () => {
     return found?.titre || '';
   };
 
+  const getCentreDisplay = (id) => getCentreTableAbbr(id, centresData);
+
+  const getEtatDisplay = (fiche) =>
+    getEtatTableAbbr(fiche, etatsData || []) || fiche?.etat_titre || fiche?.id_etat_final || '';
+
+  const getEtatFullLabel = (fiche) =>
+    getEtatDisplayWithSousEtat(fiche, etatsData || []) || fiche?.etat_titre || '';
+
   const getProduitName = (produit) => (Number(produit) === 1 ? 'PAC' : Number(produit) === 2 ? 'PV' : '');
   const getProduitColor = (produit) => (Number(produit) === 1 ? '#66D5D4' : Number(produit) === 2 ? '#818cf8' : '#cccccc');
 
@@ -726,12 +736,12 @@ const RendezVousVue = () => {
                           produitColor={getProduitColor(f.produit)}
                           onPdf={() => handleGeneratePdf(f.hash)}
                         />
-                        <td>{getCentreName(f.id_centre) || ''}</td>
+                        <td className="fiche-col-centre" title={getCentreName(f.id_centre) || undefined}>{getCentreDisplay(f.id_centre) || ''}</td>
                         <td className="fiche-col-date">{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
                         <td>{getConfirmateursFormatted(f) || ''}</td>
-                        <td>
-                          <span className="etat-text etat-text--wrap">
-                            {f.etat_titre || f.id_etat_final || ''}
+                        <td className="etat-col-cell fiche-col-etat">
+                          <span className="etat-text" title={getEtatFullLabel(f) || undefined}>
+                            {getEtatDisplay(f)}
                           </span>
                         </td>
                         {showDecalageColAdmin ? (
@@ -749,14 +759,14 @@ const RendezVousVue = () => {
                         <td>{f.ville || ''}</td>
                         <td className="fiche-col-date">{f.date_insert_time ? new Date(f.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
                         <td className="fiche-col-date">{formatRdvDateTime(f.date_rdv_time)}</td>
-                        <td>
-                          <span className="etat-text etat-text--wrap">
-                            {f.etat_titre || f.id_etat_final || ''}
+                        <td className="etat-col-cell fiche-col-etat">
+                          <span className="etat-text" title={getEtatFullLabel(f) || undefined}>
+                            {getEtatDisplay(f)}
                           </span>
                         </td>
                         <td>{getConfirmateursFormatted(f) || ''}</td>
                         <td>{[f.commercial_pseudo, f.commercial2_pseudo].filter(Boolean).join(' / ') || ''}</td>
-                        <td>{getCentreName(f.id_centre) || ''}</td>
+                        <td className="fiche-col-centre" title={getCentreName(f.id_centre) || undefined}>{getCentreDisplay(f.id_centre) || ''}</td>
                         <td className="produit-col">
                           <span className="produit-indicator" style={{ backgroundColor: getProduitColor(f.produit), color: '#fff' }}>
                             {getProduitName(f.produit) || ''}

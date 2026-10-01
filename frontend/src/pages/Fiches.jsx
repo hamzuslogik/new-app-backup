@@ -9,7 +9,8 @@ import FicheDetailLink from '../components/FicheDetailLink';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
-import { getEffectiveEtatColor, getEffectiveEtatTitle } from '../utils/etatSignerComplet';
+import { getEffectiveEtatColor, getEffectiveEtatTitle, getEtatTableAbbr, getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
+import { getCentreTableAbbr } from '../utils/tableAbbreviations';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import {
@@ -675,17 +676,32 @@ const Fiches = () => {
     return centre?.titre || '';
   };
 
+  const getCentreDisplay = (centreId) => getCentreTableAbbr(centreId, centresData);
+
   const getEtatName = (etatId) => {
     if (!etatId) return '';
     const etat = etats.find(e => e.id === etatId);
     return etat?.titre || '';
   };
 
+  const getEtatAbbrById = (etatId) => {
+    if (!etatId) return '';
+    const etat = etats.find(e => e.id === etatId);
+    return (etat?.abbreviation || etat?.titre || '').trim();
+  };
+
   const getFicheEtatColor = (fiche) =>
     getEffectiveEtatColor(fiche, etats, sousEtatsData || [], getEtatColor(fiche?.id_etat_final));
 
   const getFicheEtatName = (fiche) =>
-    getEffectiveEtatTitle(fiche, etats, sousEtatsData || []) || getEtatName(fiche?.id_etat_final);
+    getEtatTableAbbr(fiche, etats, sousEtatsData || []) ||
+    getEffectiveEtatTitle(fiche, etats, sousEtatsData || []) ||
+    getEtatName(fiche?.id_etat_final);
+
+  const getFicheEtatFullLabel = (fiche) =>
+    getEtatDisplayWithSousEtat(fiche, etats, sousEtatsData || []) ||
+    getEffectiveEtatTitle(fiche, etats, sousEtatsData || []) ||
+    getEtatName(fiche?.id_etat_final);
 
   // <CR> si état 8 ou 9 et dernière ligne historio = compte rendu (aligné Dashboard)
   const ID_ETAT_ANNULER_A_REPROGRAMMER = 8;
@@ -698,7 +714,7 @@ const Fiches = () => {
   // Agent qualification : si état dans groupe 0, afficher l'état, sinon "Validé"
   const isEtatGroupe0 = (etatId) => etatsPhase0.some(e => Number(e.id) === Number(etatId));
   const getEtatDisplayForAgentQualif = (etatId) =>
-    isEtatGroupe0(etatId) ? getEtatName(etatId) : 'Validé';
+    isEtatGroupe0(etatId) ? getEtatAbbrById(etatId) : 'Validé';
 
   // Obtenir les confirmateurs formatés (avec confirmateur 2 et 3 si existent)
   // Priorité : jusqu'à 3 confirmateurs distincts fiches_histo (API), puis table fiches
@@ -1706,11 +1722,11 @@ const Fiches = () => {
                                     }
                               }
                             />
-                            <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
+                            <td data-label="Centre:" className="fiche-col-centre" title={getCentreName(fiche.id_centre) || undefined}>{getCentreDisplay(fiche.id_centre)}</td>
                             <td data-label="Date Insertion:" className="fiche-col-date">{formatDate(fiche.date_insert_time)}</td>
                             <td data-label="Conf:">{getConfirmateursFormatted(fiche)}</td>
-                            <td data-label="État:">
-                              <span className="etat-text etat-text--wrap">
+                            <td data-label="État:" className="etat-col-cell fiche-col-etat">
+                              <span className="etat-text" title={getFicheEtatFullLabel(fiche) || undefined}>
                                 {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
                                 {isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getFicheEtatName(fiche)}
                                 {(fiche.ko === 1 || fiche.ko === '1') && (
@@ -1726,8 +1742,8 @@ const Fiches = () => {
                           <>
                             <td data-label="Date Insertion:" className="fiche-col-date">{formatDate(fiche.date_insert_time)}</td>
                             <td data-label="Agent:">{getUserName(fiche.id_agent) || (fiche.agent_pseudo || '')}</td>
-                            <td data-label="État:">
-                              <span className="etat-text etat-text--wrap">
+                            <td data-label="État:" className="etat-col-cell fiche-col-etat">
+                              <span className="etat-text" title={getFicheEtatFullLabel(fiche) || undefined}>
                                 {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
                                 {isAgentQualif ? getEtatDisplayForAgentQualif(fiche.id_etat_final) : getFicheEtatName(fiche)}
                                 {(fiche.ko === 1 || fiche.ko === '1') && (
@@ -1738,7 +1754,7 @@ const Fiches = () => {
                                 )}
                               </span>
                             </td>
-                            <td data-label="Centre:">{getCentreName(fiche.id_centre)}</td>
+                            <td data-label="Centre:" className="fiche-col-centre" title={getCentreName(fiche.id_centre) || undefined}>{getCentreDisplay(fiche.id_centre)}</td>
                             <td data-label="Produit:">
                               <span
                                 className="produit-indicator"
