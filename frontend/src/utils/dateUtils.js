@@ -65,15 +65,20 @@ export function splitDateTimeLocalValue(value) {
 /** Formate une datetime MySQL / ISO pour affichage fr-FR avec heure. */
 export function formatDateTimeFr(value) {
   if (!value) return '-';
-  const d = new Date(String(value).replace(' ', 'T'));
+  const s = String(value).trim();
+  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})/);
+  if (match) {
+    const [, y, m, d, h, min] = match;
+    return `${d}/${m}/${y} ${h.padStart(2, '0')}:${min}`;
+  }
+  const d = new Date(s.replace(' ', 'T'));
   if (Number.isNaN(d.getTime())) return '-';
-  return d.toLocaleString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
 }
 
 /**

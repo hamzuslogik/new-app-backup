@@ -216,10 +216,13 @@
 .cq-table th.date-rdv-col,
 .cq-table td.date-rdv-col,
 .cq-table th.date-signature-col,
-.cq-table td.date-signature-col {
-  width: 136px;
-  min-width: 136px;
-  max-width: 136px;
+.cq-table td.date-signature-col,
+.cq-table th.fiche-col-date,
+.cq-table td.fiche-col-date {
+  width: auto;
+  min-width: max-content;
+  max-width: none;
+  white-space: nowrap !important;
 }
 
 .cq-table th.etat-col,

@@ -477,6 +477,18 @@
   max-width: 0;
 }
 
+.production-qualif table.fiches-table.fiches-table--wrap th.fiche-col-date,
+.production-qualif table.fiches-table.fiches-table--wrap td.fiche-col-date,
+.production-qualif table.fiches-table.fiches-table--wrap th.col-date,
+.production-qualif table.fiches-table.fiches-table--wrap td.col-date {
+  white-space: nowrap !important;
+  word-wrap: normal !important;
+  overflow-wrap: normal !important;
+  max-width: none !important;
+  min-width: max-content !important;
+  width: auto !important;
+}
+
 .production-qualif table.fiches-table.fiches-table--wrap .col-actions,
 .production-qualif table.fiches-table.fiches-table--wrap .colw-actions {
   white-space: nowrap;

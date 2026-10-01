@@ -98,7 +98,7 @@ const Phase3 = () => {
         <td className="etat-col-cell">
           <span className="etat-text etat-text--wrap">{etatInfo.titre}</span>
         </td>
-        <td>{fiche.date_rdv_time ? formatRdvDateTime(fiche.date_rdv_time) : 'N/A'}</td>
+        <td className="fiche-col-date">{fiche.date_rdv_time ? formatRdvDateTime(fiche.date_rdv_time) : 'N/A'}</td>
         {showCQ && (
           <>
             <td>{fiche.cq_etat || 'N/A'}</td>

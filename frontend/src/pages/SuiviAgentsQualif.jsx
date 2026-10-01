@@ -863,7 +863,7 @@ const SuiviAgentsQualif = () => {
                       style={{ backgroundColor: rowColor }}
                     >
                       <td>{fiche.id}</td>
-                      <td>{fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
+                      <td className="fiche-col-date">{fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
                       <td>{fiche.agent_pseudo || ''}</td>
                       <td>{fiche.nom || ''}</td>
                       <td>{fiche.prenom || ''}</td>

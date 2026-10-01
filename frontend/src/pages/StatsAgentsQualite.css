@@ -871,6 +871,15 @@
   vertical-align: top;
 }
 
+.stats-agents-qualite-page .fiches-content .fiches-table th.fiche-col-date,
+.stats-agents-qualite-page .fiches-content .fiches-table td.fiche-col-date {
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  max-width: none !important;
+  min-width: max-content !important;
+}
+
 /* Onglet RDVs audites : observation plus large, actions plus compacte */
 .stats-agents-qualite-page .rdvs-audites-table th:nth-child(8),
 .stats-agents-qualite-page .rdvs-audites-table td:nth-child(8) {

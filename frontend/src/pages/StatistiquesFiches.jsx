@@ -789,8 +789,8 @@ const StatistiquesFiches = () => {
                       <td>{fiche.prenom || ''}</td>
                       <td>{fiche.tel || fiche.gsm1 || ''}</td>
                       <td>{fiche.cp || ''}</td>
-                      <td>{formatDateOnly(fiche.date_insert_time)}</td>
-                      <td>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                      <td className="fiche-col-date">{formatDateOnly(fiche.date_insert_time)}</td>
+                      <td className="fiche-col-date">{formatRdvDateTime(fiche.date_rdv_time)}</td>
                       <td>{fiche.confirmateur_nom || ''}</td>
                       <td>{fiche.commercial_nom || ''}</td>
                       <td className="etat-col-cell">

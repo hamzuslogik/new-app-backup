@@ -31,20 +31,22 @@ body.rdv-vue-page {
 html.rdv-vue-page .rdv-vue .fiches-table,
 body.rdv-vue-page .rdv-vue .fiches-table {
   min-width: 1400px !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  width: max-content !important;
+  max-width: none !important;
   table-layout: auto !important;
   border-collapse: collapse !important;
 }
 
 html.rdv-vue-page .rdv-vue .fiches-table-container,
 body.rdv-vue-page .rdv-vue .fiches-table-container {
-  min-width: 1400px !important;
+  min-width: 0 !important;
   width: 100% !important;
-  max-width: none !important;
-  overflow: visible !important;
+  max-width: 100% !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
   overscroll-behavior: auto !important;
   touch-action: pan-x pan-y pinch-zoom;
+  scrollbar-gutter: stable;
 }
 
 html[data-desktop-viewport] .rdv-vue-page .rdv-vue .fiches-table-container,
@@ -102,11 +104,13 @@ body.rdv-vue-page[data-desktop-viewport] .fiches-table {
 
   html.rdv-vue-page .rdv-vue .fiches-table-container,
   body.rdv-vue-page .rdv-vue .fiches-table-container {
-    min-width: 1400px !important;
+    min-width: 0 !important;
     width: 100% !important;
-    max-width: none !important;
-    overflow: visible !important;
+    max-width: 100% !important;
+    overflow-x: scroll !important;
+    overflow-y: visible !important;
     touch-action: pan-x pan-y pinch-zoom !important;
+    scrollbar-gutter: stable;
   }
 }
 
@@ -140,11 +144,13 @@ body.rdv-vue-page[data-desktop-viewport] .fiches-table {
 
   html.rdv-vue-page .rdv-vue .fiches-table-container,
   body.rdv-vue-page .rdv-vue .fiches-table-container {
-    min-width: 1400px !important;
+    min-width: 0 !important;
     width: 100% !important;
-    max-width: none !important;
-    overflow: visible !important;
+    max-width: 100% !important;
+    overflow-x: scroll !important;
+    overflow-y: visible !important;
     touch-action: pan-x pan-y pinch-zoom !important;
+    scrollbar-gutter: stable;
   }
 }
 
@@ -472,22 +478,13 @@ body.rdv-vue-page .rdv-vue .fiches-table thead th.rdv-vue-col-details {
   text-align: center;
 }
 
-/* Date Insertion (col 6) : format "12/05/2026", largeur reduite */
-.fiches-table th:nth-child(6),
-.fiches-table td:nth-child(6) {
-  width: 92px;
-  min-width: 92px;
-  max-width: 96px;
-  white-space: nowrap;
-}
-
-/* Date RDV (col 7) : format "12/05/2026 09:00", largeur reduite */
-.fiches-table th:nth-child(7),
-.fiches-table td:nth-child(7) {
-  width: 132px;
-  min-width: 132px;
-  max-width: 136px;
-  white-space: nowrap;
+/* Dates : une seule ligne (classe fiche-col-date) */
+.fiches-table th.fiche-col-date,
+.fiches-table td.fiche-col-date {
+  width: auto;
+  min-width: max-content;
+  max-width: none;
+  white-space: nowrap !important;
 }
 
 /* Colonne Validé plus étroite */

@@ -475,7 +475,7 @@ const CQSignatures = () => {
                     <td className="wrap-word-cell prenom-col">{sig.prenom || '-'}</td>
                     <td className="telephone-col">{sig.tel || sig.fiche_tel || '-'}</td>
                     <td className="cp-col">{sig.cp || '-'}</td>
-                    <td className="date-rdv-col">{sig.date_planning ? formatRdvDateTime(sig.date_planning) : '-'}</td>
+                    <td className="date-rdv-col fiche-col-date">{sig.date_planning ? formatRdvDateTime(sig.date_planning) : '-'}</td>
                     <td className="etat-col etat-col-cell">
                       <span className="etat-text etat-text--wrap">{getEtatTitle(sig)}</span>
                     </td>
@@ -494,7 +494,7 @@ const CQSignatures = () => {
                         {getProduitLabel(sig.produit)}
                       </span>
                     </td>
-                    <td className="date-signature-col">{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
+                    <td className="date-signature-col fiche-col-date">{sig.date_heure ? formatRdvDateTime(sig.date_heure) : '-'}</td>
                     <td className="wrap-word-cell cq-etat-col">{sig.cq_etat_titre || '-'}</td>
                     <td className="wrap-word-cell cq-dossier-col">{sig.cq_dossier_titre || '-'}</td>
                     <td className="wrap-word-cell observation-col">{cleanObservationCQ(sig.observations_cq) || '-'}</td>

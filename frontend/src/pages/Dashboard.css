@@ -23,12 +23,14 @@ body.dashboard-page {
 
 .dashboard-page .fiches-table-container,
 .dashboard-page .confirmateurs-table-container {
-  min-width: 1400px !important;
+  min-width: 0 !important;
   width: 100% !important;
-  max-width: none !important;
-  overflow: visible !important;
+  max-width: 100% !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
   overscroll-behavior: auto !important;
   touch-action: pan-x pan-y pinch-zoom;
+  scrollbar-gutter: stable;
 }
 
 /* Désactiver toute règle responsive mobile existante */
@@ -63,11 +65,13 @@ body.dashboard-page {
   
   .dashboard-page .fiches-table-container,
   .dashboard-page .confirmateurs-table-container {
-    min-width: 1400px !important;
+    min-width: 0 !important;
     width: 100% !important;
-    max-width: none !important;
-    overflow: visible !important;
+    max-width: 100% !important;
+    overflow-x: scroll !important;
+    overflow-y: visible !important;
     touch-action: pan-x pan-y pinch-zoom !important;
+    scrollbar-gutter: stable;
   }
 }
 
@@ -102,11 +106,13 @@ body.dashboard-page {
   
   .dashboard-page .fiches-table-container,
   .dashboard-page .confirmateurs-table-container {
-    min-width: 1400px !important;
+    min-width: 0 !important;
     width: 100% !important;
-    max-width: none !important;
-    overflow: visible !important;
+    max-width: 100% !important;
+    overflow-x: scroll !important;
+    overflow-y: visible !important;
     touch-action: pan-x pan-y pinch-zoom !important;
+    scrollbar-gutter: stable;
   }
 }
 
@@ -4510,6 +4516,17 @@ body.dashboard-page.dashboard-page--extranet-scroll .confirmateurs-table td {
   word-break: break-word;
 }
 
+/* Dates : jamais de retour à la ligne (écrase la règle 15ch ci-dessus) */
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table th.fiche-col-date,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td.fiche-col-date,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td[data-label^="Date"] {
+  white-space: nowrap !important;
+  max-width: none !important;
+  min-width: max-content !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+}
+
 html.viewport-zoomed.dashboard-page.dashboard-page--extranet-scroll,
 html.viewport-zoomed body.dashboard-page.dashboard-page--extranet-scroll {
   overflow: auto !important;
@@ -5008,6 +5025,18 @@ html body.dashboard-page .fiches-table td:nth-child(n) {
   overflow-wrap: anywhere !important;
   word-break: break-word !important;
   hyphens: manual;
+}
+
+/* Dates / heures : jamais de coupe à 15ch */
+html body.dashboard-page .fiches-table th.fiche-col-date,
+html body.dashboard-page .fiches-table td.fiche-col-date,
+html body.dashboard-page .fiches-table td[data-label^="Date"] {
+  max-width: none !important;
+  min-width: max-content !important;
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
 }
 
 html body.dashboard-page .fiches-table td:nth-child(n) .etat-badge,

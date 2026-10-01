@@ -317,3 +317,149 @@ html body .phase3-table > tbody > tr.fiche-row-by-etat > td:nth-child(even) {
   background-image: none !important;
   background-color: transparent !important;
 }
+
+/* Dates / heures : toujours une seule ligne (toutes pages, bat les overrides page) */
+html body table.fiches-table th.fiche-col-date,
+html body table.fiches-table td.fiche-col-date,
+html body table.fiches-table th.col-date,
+html body table.fiches-table td.col-date,
+html body table.fiches-table th.date-rdv-col,
+html body table.fiches-table td.date-rdv-col,
+html body table.fiches-table th.date-signature-col,
+html body table.fiches-table td.date-signature-col,
+html body .fiches-table th.fiche-col-date,
+html body .fiches-table td.fiche-col-date,
+html body .fiches-table th.col-date,
+html body .fiches-table td.col-date,
+html body .fiches-table td[data-label^="Date"],
+html body .fiches-table td[data-label*="Date RDV"],
+html body .fiches-table td[data-label*="Date Insertion"],
+html body .fiches-table td[data-label*="Date création"],
+html body .fiches-table td[data-label*="Date audit"],
+html body .fiches-table td[data-label*="Date / Heure"],
+html body .fiches-table td[data-label*="À rappeler"],
+html body .cq-table th.date-rdv-col,
+html body .cq-table td.date-rdv-col,
+html body .cq-table th.date-signature-col,
+html body .cq-table td.date-signature-col,
+html body .cq-table th.fiche-col-date,
+html body .cq-table td.fiche-col-date,
+html body .fiches-detail-table th.fiche-col-date,
+html body .fiches-detail-table td.fiche-col-date,
+html body .phase3-table th.fiche-col-date,
+html body .phase3-table td.fiche-col-date,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table th.fiche-col-date,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td.fiche-col-date,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td[data-label^="Date"],
+html.planning-commercial-page .planning-commercial .fiches-table th.fiche-col-date,
+html.planning-commercial-page .planning-commercial .fiches-table td.fiche-col-date,
+body.planning-commercial-page .planning-commercial .fiches-table th.fiche-col-date,
+body.planning-commercial-page .planning-commercial .fiches-table td.fiche-col-date {
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  word-wrap: normal !important;
+  max-width: none !important;
+  min-width: max-content !important;
+  width: auto !important;
+  hyphens: none !important;
+}
+
+/*
+ * Barre de défilement horizontale sous les tableaux fiches (petits écrans desktop).
+ * Le conteneur reste à 100% de la largeur dispo ; le tableau peut dépasser en max-content.
+ * Écrase les overflow:visible / min-width:1400px des pages qui masquaient la barre.
+ */
+html body .fiches-table-container,
+html body .confirmateurs-table-container,
+html body .cq-table-container,
+html body .fiches-table-wrapper,
+.dashboard-page .fiches-table-container,
+.dashboard-page .confirmateurs-table-container,
+.dashboard-admin-page .fiches-table-container,
+.fiches-page .fiches-table-container,
+.affectation-page .fiches-table-container,
+.controle-qualite .fiches-table-container,
+.production-qualif .fiches-table-container,
+.stats-agents-qualite-page .fiches-table-container,
+.suivi-agents-qualif .fiches-table-container,
+.cq-signatures-page .cq-table-container,
+html.rdv-vue-page .rdv-vue .fiches-table-container,
+body.rdv-vue-page .rdv-vue .fiches-table-container,
+html.planning-commercial-page .planning-commercial .fiches-table-container,
+body.planning-commercial-page .planning-commercial .fiches-table-container,
+body.dashboard-page .fiches-table-container,
+body.dashboard-page .confirmateurs-table-container,
+body.dashboard-page[data-desktop-viewport] .fiches-table-container,
+body.dashboard-page.dashboard-page--table-desktop-view .fiches-table-container,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table-container,
+body.planning-commercial-page.planning-commercial-page--table-desktop-view .fiches-table-container,
+body.rdv-vue-page[data-desktop-viewport] .fiches-table-container {
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y pinch-zoom;
+  scrollbar-gutter: stable;
+}
+
+html body .fiches-table-container > .fiches-table,
+html body .confirmateurs-table-container > .confirmateurs-table,
+html body .cq-table-container > .cq-table,
+.dashboard-page .fiches-table-container > .fiches-table,
+.dashboard-page .confirmateurs-table-container > .confirmateurs-table,
+.fiches-page .fiches-table-container > .fiches-table,
+html.rdv-vue-page .rdv-vue .fiches-table-container > .fiches-table,
+body.rdv-vue-page .rdv-vue .fiches-table-container > .fiches-table,
+html.planning-commercial-page .planning-commercial .fiches-table-container > .fiches-table,
+body.planning-commercial-page .planning-commercial .fiches-table-container > .fiches-table {
+  width: max-content !important;
+  min-width: 100% !important;
+  max-width: none !important;
+}
+
+/* Barre horizontale bien visible (Windows / overlay scrollbars) */
+html body .fiches-table-container::-webkit-scrollbar,
+html body .confirmateurs-table-container::-webkit-scrollbar,
+html body .cq-table-container::-webkit-scrollbar,
+html body .fiches-table-wrapper::-webkit-scrollbar {
+  height: 14px;
+  width: 14px;
+}
+
+html body .fiches-table-container::-webkit-scrollbar-track,
+html body .confirmateurs-table-container::-webkit-scrollbar-track,
+html body .cq-table-container::-webkit-scrollbar-track,
+html body .fiches-table-wrapper::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 7px;
+}
+
+html body .fiches-table-container::-webkit-scrollbar-thumb,
+html body .confirmateurs-table-container::-webkit-scrollbar-thumb,
+html body .cq-table-container::-webkit-scrollbar-thumb,
+html body .fiches-table-wrapper::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 7px;
+  border: 2px solid #e5e7eb;
+}
+
+html body .fiches-table-container::-webkit-scrollbar-thumb:hover,
+html body .confirmateurs-table-container::-webkit-scrollbar-thumb:hover,
+html body .cq-table-container::-webkit-scrollbar-thumb:hover,
+html body .fiches-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+html body .fiches-table-container,
+html body .confirmateurs-table-container,
+html body .cq-table-container,
+html body .fiches-table-wrapper {
+  scrollbar-width: auto;
+  scrollbar-color: #6b7280 #e5e7eb;
+}

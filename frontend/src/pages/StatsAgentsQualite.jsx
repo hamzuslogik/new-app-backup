@@ -788,7 +788,7 @@ const StatsAgentsQualite = () => {
                         ].filter(Boolean).join(' ')}
                         style={{ backgroundColor: fiche.etat_color || '#ccc' }}
                       >
-                        <td>{formatDateTime(fiche.date_audit)}</td>
+                        <td className="fiche-col-date">{formatDateTime(fiche.date_audit)}</td>
                         <td>
                           <div className="name-cell">
                             <span className="nom">{fiche.nom || ''}</span>
@@ -950,8 +950,8 @@ const StatsAgentsQualite = () => {
                   <tbody>
                     {filteredRdvsAudites.map((rdv) => (
                       <tr key={rdv.id}>
-                        <td>{formatDateTime(rdv.date_audit || rdv.date_modif_time)}</td>
-                        <td>{formatDateTime(rdv.date_rdv_time)}</td>
+                        <td className="fiche-col-date">{formatDateTime(rdv.date_audit || rdv.date_modif_time)}</td>
+                        <td className="fiche-col-date">{formatDateTime(rdv.date_rdv_time)}</td>
                         <td>
                           <div className="name-cell">
                             <span className="nom">{rdv.nom || ''}</span>

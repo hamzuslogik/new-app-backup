@@ -1235,17 +1235,17 @@ body.dashboard-admin-page {
   max-width: 116px;
 }
 
-/* Colonnes Date Insertion et Date RDV - largeur augmentée */
+/* Colonnes Date Insertion et Date RDV - une seule ligne */
 .fiches-table th:nth-child(5),
-.fiches-table td:nth-child(5) {
-  min-width: 140px;
-  width: 140px;
-}
-
+.fiches-table td:nth-child(5),
 .fiches-table th:nth-child(6),
-.fiches-table td:nth-child(6) {
-  min-width: 140px;
-  width: 140px;
+.fiches-table td:nth-child(6),
+.fiches-table th.fiche-col-date,
+.fiches-table td.fiche-col-date {
+  min-width: max-content;
+  width: auto;
+  max-width: none;
+  white-space: nowrap !important;
 }
 
 /* CP - colonne réduite */
@@ -1816,18 +1816,18 @@ body.dashboard-admin-page {
   animation: fadeIn 0.8s ease-in-out;
 }
 
-/* Colonnes Date Insertion et Date RDV - largeur augmentée sur mobile */
+/* Colonnes Date Insertion et Date RDV - une seule ligne sur mobile */
 @media (max-width: 768px) {
   .fiches-table th:nth-child(5),
-  .fiches-table td:nth-child(5) {
-    min-width: 160px !important;
-    width: 160px !important;
-  }
-
+  .fiches-table td:nth-child(5),
   .fiches-table th:nth-child(6),
-  .fiches-table td:nth-child(6) {
-    min-width: 160px !important;
-    width: 160px !important;
+  .fiches-table td:nth-child(6),
+  .fiches-table th.fiche-col-date,
+  .fiches-table td.fiche-col-date {
+    min-width: max-content !important;
+    width: auto !important;
+    max-width: none !important;
+    white-space: nowrap !important;
   }
 }
 

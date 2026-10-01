@@ -825,7 +825,7 @@ const ProductionQualif = () => {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th className="col-date">Date création</th>
+                    <th className="col-date fiche-col-date">Date création</th>
                     <th className="col-agent">Agent</th>
                     <th className="col-nom">Nom</th>
                     <th className="col-prenom">Prénom</th>

@@ -1039,13 +1039,15 @@ table.fiches-table thead,
   text-align: center;
 }
 
-/* Date Insertion (col 5) : format "12/05/2026 09:00", largeur reduite */
+/* Date Insertion (col 5) : une seule ligne "12/05/2026 09:00" */
 .fiches-table th:nth-child(5),
-.fiches-table td:nth-child(5) {
-  min-width: 124px;
-  width: 124px;
-  max-width: 128px;
-  white-space: nowrap;
+.fiches-table td:nth-child(5),
+.fiches-table th.fiche-col-date,
+.fiches-table td.fiche-col-date {
+  min-width: max-content;
+  width: auto;
+  max-width: none;
+  white-space: nowrap !important;
 }
 
 /* État Final */
@@ -1202,12 +1204,14 @@ table.fiches-table thead,
     text-align: center !important;
   }
 
-  /* Date Insertion (col 5) : largeur reduite pour "12/05/2026 09:00" */
+  /* Date Insertion (col 5) : une seule ligne */
   .fiches-table th:nth-child(5),
-  .fiches-table td:nth-child(5) {
-    min-width: 124px !important;
-    width: 124px !important;
-    max-width: 128px !important;
+  .fiches-table td:nth-child(5),
+  .fiches-table th.fiche-col-date,
+  .fiches-table td.fiche-col-date {
+    min-width: max-content !important;
+    width: auto !important;
+    max-width: none !important;
     white-space: nowrap !important;
   }
 
@@ -1965,12 +1969,14 @@ table.fiches-table thead,
     text-align: center !important;
   }
 
-  /* Date Insertion (col 5) : largeur reduite pour "12/05/2026 09:00" */
+  /* Date Insertion (col 5) : une seule ligne */
   .fiches-table th:nth-child(5),
-  .fiches-table td:nth-child(5) {
-    min-width: 124px !important;
-    width: 124px !important;
-    max-width: 128px !important;
+  .fiches-table td:nth-child(5),
+  .fiches-table th.fiche-col-date,
+  .fiches-table td.fiche-col-date {
+    min-width: max-content !important;
+    width: auto !important;
+    max-width: none !important;
     white-space: nowrap !important;
   }
 

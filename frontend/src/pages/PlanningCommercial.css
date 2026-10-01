@@ -332,20 +332,22 @@ body.planning-commercial-page {
 /* Tableau — même logique que Dashboard (.dashboard-page .fiches-table) : largeur min 1400px, colonnes fixes */
 html.planning-commercial-page .planning-commercial .fiches-table-container,
 body.planning-commercial-page .planning-commercial .fiches-table-container {
-  min-width: 1400px !important;
+  min-width: 0 !important;
   width: 100% !important;
-  max-width: none !important;
-  overflow: visible !important;
+  max-width: 100% !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
   overscroll-behavior: auto !important;
   touch-action: pan-x pan-y pinch-zoom;
   margin-bottom: 16px;
+  scrollbar-gutter: stable;
 }
 
 html.planning-commercial-page .planning-commercial .fiches-table,
 body.planning-commercial-page .planning-commercial .fiches-table {
   min-width: 1400px !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  width: max-content !important;
+  max-width: none !important;
   table-layout: auto !important;
   border-collapse: collapse !important;
   font-size: 11px;
@@ -389,6 +391,15 @@ body.planning-commercial-page .planning-commercial .fiches-table--commercial {
   word-break: break-word;
   overflow-wrap: anywhere;
   vertical-align: top;
+}
+
+.fiches-table td.fiche-col-date,
+.fiches-table th.fiche-col-date {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  max-width: none !important;
+  min-width: max-content !important;
 }
 
 /* Ordre colonnes Planning Commercial : Date RDV, Nom, Prénom, Tél, CP, Ville, Commercial, Produit, État, Compte rendu, Centre|Validé, [SEUL, R2 si commercial], Actions */
@@ -704,11 +715,13 @@ html.planning-commercial-page .planning-commercial .fiches-table--commercial td:
 
   html.planning-commercial-page .planning-commercial .fiches-table-container,
   body.planning-commercial-page .planning-commercial .fiches-table-container {
-    min-width: 1400px !important;
+    min-width: 0 !important;
     width: 100% !important;
-    max-width: none !important;
-    overflow: visible !important;
+    max-width: 100% !important;
+    overflow-x: scroll !important;
+    overflow-y: visible !important;
     touch-action: pan-x pan-y pinch-zoom !important;
+    scrollbar-gutter: stable;
   }
 
   .planning-commercial {
@@ -759,11 +772,13 @@ html.planning-commercial-page .planning-commercial .fiches-table--commercial td:
 
   html.planning-commercial-page .planning-commercial .fiches-table-container,
   body.planning-commercial-page .planning-commercial .fiches-table-container {
-    min-width: 1400px !important;
+    min-width: 0 !important;
     width: 100% !important;
-    max-width: none !important;
-    overflow: visible !important;
+    max-width: 100% !important;
+    overflow-x: scroll !important;
+    overflow-y: visible !important;
     touch-action: pan-x pan-y pinch-zoom !important;
+    scrollbar-gutter: stable;
   }
 }
 
@@ -1051,8 +1066,13 @@ body.planning-commercial-page.planning-commercial-page--table-desktop-view .fich
 }
 
 body.planning-commercial-page.planning-commercial-page--table-desktop-view .fiches-table-container {
-  overflow: visible !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: scroll !important;
+  overflow-y: visible !important;
   touch-action: pan-x pan-y pinch-zoom;
+  scrollbar-gutter: stable;
 }
 
 body.planning-commercial-page.planning-commercial-page--table-desktop-view .search-form-grid {
