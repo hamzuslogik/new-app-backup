@@ -6,20 +6,120 @@ function nextFrame() {
   });
 }
 
-function forceVisibleTree(root) {
-  if (!(root instanceof Element)) return;
-  root.style.setProperty('animation', 'none', 'important');
-  root.style.setProperty('transition', 'none', 'important');
-  root.style.setProperty('opacity', '1', 'important');
-  root.style.setProperty('transform', 'none', 'important');
-  root.style.setProperty('visibility', 'visible', 'important');
-  root.querySelectorAll('*').forEach((el) => {
-    if (!(el instanceof HTMLElement)) return;
-    el.style.setProperty('animation', 'none', 'important');
-    el.style.setProperty('transition', 'none', 'important');
-    el.style.setProperty('opacity', '1', 'important');
-    el.style.setProperty('transform', 'none', 'important');
-    el.style.setProperty('visibility', 'visible', 'important');
+function copyCellBoxStyles(srcCell, dstCell) {
+  if (!(srcCell instanceof HTMLElement) || !(dstCell instanceof HTMLElement)) return;
+  const cs = window.getComputedStyle(srcCell);
+  const h = Math.ceil(srcCell.getBoundingClientRect().height || srcCell.offsetHeight || 0);
+  dstCell.style.boxSizing = 'border-box';
+  dstCell.style.padding = cs.padding;
+  dstCell.style.paddingTop = cs.paddingTop;
+  dstCell.style.paddingBottom = cs.paddingBottom;
+  dstCell.style.paddingLeft = cs.paddingLeft;
+  dstCell.style.paddingRight = cs.paddingRight;
+  dstCell.style.fontSize = cs.fontSize;
+  dstCell.style.fontWeight = cs.fontWeight;
+  dstCell.style.fontFamily = cs.fontFamily;
+  dstCell.style.lineHeight = cs.lineHeight === 'normal' ? '1.25' : cs.lineHeight;
+  dstCell.style.letterSpacing = cs.letterSpacing;
+  dstCell.style.textAlign = cs.textAlign;
+  dstCell.style.verticalAlign = 'middle';
+  dstCell.style.whiteSpace = 'nowrap';
+  dstCell.style.border = cs.border;
+  dstCell.style.borderBottom = cs.borderBottom;
+  dstCell.style.color = cs.color;
+  dstCell.style.backgroundColor = cs.backgroundColor;
+  if (h > 0) {
+    dstCell.style.height = `${h}px`;
+    dstCell.style.minHeight = `${h}px`;
+  }
+}
+
+/** Recadre les bandes blanches / transparentes autour de l’image. */
+function trimCanvasWhitespace(dataUrl, { padding = 2 } = {}) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      const isBlank = (i) => {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const a = data[i + 3];
+        if (a < 8) return true;
+        // presque blanc
+        return r > 248 && g > 248 && b > 248;
+      };
+
+      let top = 0;
+      let bottom = height - 1;
+      let left = 0;
+      let right = width - 1;
+      let found = false;
+
+      outerTop: for (; top < height; top += 1) {
+        for (let x = 0; x < width; x += 1) {
+          if (!isBlank((top * width + x) * 4)) {
+            found = true;
+            break outerTop;
+          }
+        }
+      }
+      if (!found) {
+        resolve(dataUrl);
+        return;
+      }
+      outerBottom: for (; bottom >= top; bottom -= 1) {
+        for (let x = 0; x < width; x += 1) {
+          if (!isBlank((bottom * width + x) * 4)) break outerBottom;
+        }
+      }
+      outerLeft: for (; left < width; left += 1) {
+        for (let y = top; y <= bottom; y += 1) {
+          if (!isBlank((y * width + left) * 4)) break outerLeft;
+        }
+      }
+      outerRight: for (; right >= left; right -= 1) {
+        for (let y = top; y <= bottom; y += 1) {
+          if (!isBlank((y * width + right) * 4)) break outerRight;
+        }
+      }
+
+      const t = Math.max(0, top - padding);
+      const b = Math.min(height - 1, bottom + padding);
+      const l = Math.max(0, left - padding);
+      const r = Math.min(width - 1, right + padding);
+      const w = r - l + 1;
+      const h = b - t + 1;
+      if (w <= 0 || h <= 0 || (w === width && h === height && t === 0 && l === 0)) {
+        resolve(dataUrl);
+        return;
+      }
+
+      const out = document.createElement('canvas');
+      out.width = w;
+      out.height = h;
+      const octx = out.getContext('2d');
+      if (!octx) {
+        resolve(dataUrl);
+        return;
+      }
+      octx.fillStyle = '#ffffff';
+      octx.fillRect(0, 0, w, h);
+      octx.drawImage(canvas, l, t, w, h, 0, 0, w, h);
+      resolve(out.toDataURL('image/png'));
+    };
+    img.onerror = () => reject(new Error('Recadrage impossible'));
+    img.src = dataUrl;
   });
 }
 
@@ -46,115 +146,128 @@ export async function captureFicheTableRowScreenshot(hash, options = {}) {
   const host = document.createElement('div');
   host.className = 'fiche-row-capture-host';
   host.setAttribute('aria-hidden', 'true');
-  // Dans le viewport (pas left:-99999) : html-to-image rate sinon le rendu
   host.style.cssText = [
     'position:fixed',
     'left:0',
     'top:0',
-    'z-index:2147483000',
+    'z-index:-1',
     'pointer-events:none',
+    'margin:0',
+    'padding:0',
+    'border:0',
     'background:#ffffff',
-    'padding:12px',
-    'box-sizing:border-box',
-    'max-width:none',
     'overflow:visible',
   ].join(';');
 
-  const styleReset = document.createElement('style');
-  styleReset.textContent = `
-    .fiche-row-capture-host table,
-    .fiche-row-capture-host thead,
-    .fiche-row-capture-host tbody,
-    .fiche-row-capture-host tr,
-    .fiche-row-capture-host th,
-    .fiche-row-capture-host td,
-    .fiche-row-capture-host td * {
-      animation: none !important;
-      transition: none !important;
-      opacity: 1 !important;
-      visibility: visible !important;
-    }
-    .fiche-row-capture-host table {
-      display: table !important;
-      width: max-content !important;
-      max-width: none !important;
-      border-collapse: collapse !important;
-      background: #fff !important;
-      transform: none !important;
-    }
-    .fiche-row-capture-host thead { display: table-header-group !important; }
-    .fiche-row-capture-host tbody { display: table-row-group !important; }
-    .fiche-row-capture-host tr { display: table-row !important; transform: none !important; }
-    .fiche-row-capture-host th,
-    .fiche-row-capture-host td {
-      display: table-cell !important;
-      white-space: nowrap !important;
-      vertical-align: middle !important;
-      transform: none !important;
-    }
-  `;
-  host.appendChild(styleReset);
+  const cloneTable = document.createElement('table');
+  cloneTable.className = 'fiches-table fiche-row-capture-table';
+  cloneTable.style.cssText = [
+    'margin:0',
+    'padding:0',
+    'border-collapse:collapse',
+    'border-spacing:0',
+    'background:#ffffff',
+    'width:max-content',
+    'max-width:none',
+    'table-layout:auto',
+  ].join(';');
 
-  // Hors écran mais toujours « layouté » (évite le flash + bug capture)
-  host.style.transform = 'translate(-12000px, 0)';
-
-  const cloneTable = sourceTable.cloneNode(false);
-  cloneTable.className = sourceTable.className || 'fiches-table';
-
+  // En-tête
   if (sourceTable.tHead) {
-    cloneTable.appendChild(sourceTable.tHead.cloneNode(true));
+    const thead = document.createElement('thead');
+    const srcHeadRow = sourceTable.tHead.rows[0];
+    if (srcHeadRow) {
+      const headTr = document.createElement('tr');
+      const headBg =
+        window.getComputedStyle(srcHeadRow.cells[0] || srcHeadRow).backgroundColor || '#444444';
+      Array.from(srcHeadRow.cells).forEach((srcTh) => {
+        const th = document.createElement('th');
+        th.textContent = (srcTh.textContent || '').replace(/\s+/g, ' ').trim();
+        copyCellBoxStyles(srcTh, th);
+        th.style.backgroundColor = window.getComputedStyle(srcTh).backgroundColor || headBg;
+        th.style.color = window.getComputedStyle(srcTh).color || '#ffffff';
+        th.style.fontWeight = '700';
+        headTr.appendChild(th);
+      });
+      thead.appendChild(headTr);
+    }
+    cloneTable.appendChild(thead);
   }
 
+  // Ligne données — dimensions reprises de la ligne live
   const tbody = document.createElement('tbody');
-  const clonedTr = tr.cloneNode(true);
-  // Copier le fond inline (couleur état) au cas où
-  const bg = tr.style.backgroundColor || window.getComputedStyle(tr).backgroundColor;
-  if (bg) {
-    clonedTr.style.backgroundColor = bg;
-    clonedTr.querySelectorAll('td').forEach((td) => {
-      if (!td.style.backgroundColor) td.style.backgroundColor = bg;
-    });
-  }
+  const clonedTr = document.createElement('tr');
+  const rowBg = tr.style.backgroundColor || window.getComputedStyle(tr).backgroundColor || '#ffffff';
+  const rowHeight = Math.ceil(tr.getBoundingClientRect().height || tr.offsetHeight || 36);
+
+  Array.from(tr.cells).forEach((srcTd) => {
+    const td = document.createElement('td');
+    // Conserver le contenu visuel (texte + badges simples)
+    td.innerHTML = srcTd.innerHTML;
+    copyCellBoxStyles(srcTd, td);
+    td.style.backgroundColor = rowBg;
+    td.style.color = window.getComputedStyle(srcTd).color || '#111111';
+    // Garantir hauteur complète (évite coupe bas)
+    const cellH = Math.max(
+      rowHeight,
+      Math.ceil(srcTd.getBoundingClientRect().height || 0),
+      36
+    );
+    td.style.height = `${cellH}px`;
+    td.style.minHeight = `${cellH}px`;
+    td.style.paddingTop = '8px';
+    td.style.paddingBottom = '8px';
+    clonedTr.appendChild(td);
+  });
+
+  clonedTr.style.backgroundColor = rowBg;
+  clonedTr.style.height = `${Math.max(rowHeight, 40)}px`;
   tbody.appendChild(clonedTr);
   cloneTable.appendChild(tbody);
   host.appendChild(cloneTable);
   document.body.appendChild(host);
 
-  forceVisibleTree(cloneTable);
-
+  // Largeur réelle
   const fullWidth = Math.max(
-    tr.scrollWidth || 0,
-    sourceTable.scrollWidth || 0,
-    Array.from(tr.cells).reduce((sum, cell) => sum + (cell.offsetWidth || 0), 0),
+    Math.ceil(tr.scrollWidth || 0),
+    Math.ceil(sourceTable.scrollWidth || 0),
+    Array.from(tr.cells).reduce((sum, c) => sum + Math.ceil(c.getBoundingClientRect().width || 0), 0),
     600
   );
   cloneTable.style.width = `${fullWidth}px`;
   cloneTable.style.minWidth = `${fullWidth}px`;
 
+  // Désactiver animations / forcer visibilité sur le clone
+  cloneTable.querySelectorAll('*').forEach((el) => {
+    if (!(el instanceof HTMLElement)) return;
+    el.style.animation = 'none';
+    el.style.transition = 'none';
+    el.style.opacity = '1';
+    el.style.visibility = 'visible';
+    el.style.transform = 'none';
+  });
+
   await nextFrame();
 
-  // Si la ligne a encore une hauteur nulle, forcer une hauteur mini
-  if ((clonedTr.offsetHeight || 0) < 2) {
-    clonedTr.style.height = '40px';
-    Array.from(clonedTr.cells).forEach((td) => {
-      td.style.minHeight = '32px';
-      td.style.padding = '6px 8px';
-    });
-    await nextFrame();
-  }
+  const captureW = Math.ceil(cloneTable.scrollWidth || cloneTable.offsetWidth || fullWidth);
+  const captureH = Math.ceil(cloneTable.scrollHeight || cloneTable.offsetHeight || rowHeight + 40);
 
   try {
-    const dataUrl = await toPng(cloneTable, {
+    let dataUrl = await toPng(cloneTable, {
       cacheBust: true,
-      pixelRatio: Math.min(2, window.devicePixelRatio || 2),
+      pixelRatio: 2,
       backgroundColor: '#ffffff',
-      // ignorer les nœuds encore à opacity 0 (filet de sécurité)
-      filter: (node) => {
-        if (!(node instanceof Element)) return true;
-        if (node.tagName === 'STYLE') return false;
-        return true;
+      width: captureW,
+      height: captureH,
+      style: {
+        margin: '0',
+        padding: '0',
+        transform: 'none',
+        background: '#ffffff',
       },
     });
+
+    dataUrl = await trimCanvasWhitespace(dataUrl, { padding: 2 });
 
     const fiche = options.fiche || {};
     const label = [fiche.nom, fiche.prenom].filter(Boolean).join('_') || String(hash).slice(0, 12);
