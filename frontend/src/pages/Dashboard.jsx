@@ -16,6 +16,7 @@ import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
+import { captureFicheTableRowScreenshot } from '../utils/captureFicheTableRowScreenshot';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
 import { getEtatDisplayWithSousEtat, getEtatTableAbbr } from '../utils/etatSignerComplet';
 import { getCentreTableAbbr } from '../utils/tableAbbreviations';
@@ -1646,6 +1647,18 @@ const Dashboard = () => {
     generatePdfFromMenuMutation.mutate(hash);
   };
 
+  const captureFicheRowFromMenu = async () => {
+    const fiche = ficheContextMenu?.fiche;
+    if (!fiche?.hash) return;
+    setFicheContextMenu(null);
+    try {
+      await captureFicheTableRowScreenshot(fiche.hash, { fiche });
+    } catch (err) {
+      console.error(err);
+      alert(err?.message || 'Capture d’écran impossible');
+    }
+  };
+
   const openFicheDetailFromMenu = () => {
     if (!ficheContextMenu?.fiche?.hash) return;
     openDashboardFicheDetail({ hash: ficheContextMenu.fiche.hash });
@@ -1673,7 +1686,7 @@ const Dashboard = () => {
     const ITEM_HEIGHT = 38;
     const MENU_PADDING_Y = 8;
     const VIEWPORT_PADDING = 8;
-    const itemCount = hasPermission('fiche_validate') ? 9 : 8;
+    const itemCount = (hasPermission('fiche_validate') ? 9 : 8) + 1;
     const menuHeight = (itemCount * ITEM_HEIGHT) + MENU_PADDING_Y;
     const spaceBelow = window.innerHeight - ficheContextMenu.y;
     const spaceAbove = ficheContextMenu.y;
@@ -2393,6 +2406,7 @@ const Dashboard = () => {
                       <tr
                         key={fiche.hash}
                         className="fiche-row-by-etat"
+                        data-fiche-hash={fiche.hash}
                         {...bindFicheRowContextMenu(fiche, { enabled: canFicheContextMenu })}
                         style={{
                           backgroundColor: etatColor,
@@ -3119,6 +3133,9 @@ const Dashboard = () => {
             disabled={generatePdfFromMenuMutation.isLoading}
           >
             {generatePdfFromMenuMutation.isLoading ? 'Génération PDF…' : 'Impression PDF…'}
+          </button>
+          <button type="button" className="dashboard-fiche-context-menu-item" onClick={captureFicheRowFromMenu}>
+            Capture écran
           </button>
           <button type="button" className="dashboard-fiche-context-menu-item" onClick={openFicheHistoriqueOverlay}>
             Voir historique (modal)…
