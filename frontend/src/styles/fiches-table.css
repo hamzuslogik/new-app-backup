@@ -13,19 +13,19 @@ html body table.cq-table th.fiche-col-select,
 html body table.cq-table td.fiche-col-select,
 html body table.fiches-detail-table th.fiche-col-select,
 html body table.fiches-detail-table td.fiche-col-select {
-  width: 2.25rem !important;
-  min-width: 2.25rem !important;
-  max-width: 2.5rem !important;
+  width: 0.75rem !important;
+  min-width: 0.75rem !important;
+  max-width: 0.9rem !important;
   text-align: center !important;
   vertical-align: middle !important;
-  padding-left: 0.35rem !important;
-  padding-right: 0.35rem !important;
+  padding-left: 0.15rem !important;
+  padding-right: 0.15rem !important;
   white-space: nowrap !important;
 }
 
 html body .fiche-row-select-checkbox {
-  width: 1rem;
-  height: 1rem;
+  width: calc(1rem / 3);
+  height: calc(1rem / 3);
   margin: 0;
   cursor: pointer;
   accent-color: #16a34a;
@@ -34,8 +34,8 @@ html body .fiche-row-select-checkbox {
 
 html body .fiche-col-select-spacer {
   display: inline-block;
-  width: 1rem;
-  height: 1rem;
+  width: calc(1rem / 3);
+  height: calc(1rem / 3);
 }
 
 /* Sigle Validé (✔) : noir par défaut, blanc sur fond sombre */
@@ -363,6 +363,35 @@ html body .fiches-detail-table tbody tr.fiche-row-by-etat--dark .etat-text,
 html body .phase3-table tbody tr.fiche-row-by-etat--dark .etat-text,
 html body table tbody tr.fiche-row-by-etat--dark a,
 html body .fiches-table tbody tr.fiche-row-by-etat--dark a {
+  color: #ffffff !important;
+}
+
+/* Lignes claires : forcer noir partout (évite blanc résiduel sur certaines colonnes) */
+html body .fiches-table tbody tr.fiche-row-by-etat--light > td,
+html body .cq-table tbody tr.fiche-row-by-etat--light > td,
+html body .fiches-detail-table tbody tr.fiche-row-by-etat--light > td,
+html.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat--light td,
+body.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat--light td {
+  color: #000000 !important;
+}
+
+html body .fiches-table tbody tr.fiche-row-by-etat--light .fiche-row-lead-label,
+html body .fiches-table tbody tr.fiche-row-by-etat--light .etat-text,
+html.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat--light .fiche-row-lead-label,
+html.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat--light .etat-text,
+body.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat--light .fiche-row-lead-label,
+body.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat--light .etat-text {
+  color: #000000 !important;
+}
+
+/* Badges produit / indicateurs : blanc sur leur propre fond coloré */
+html body .fiches-table .produit-indicator,
+html body .fiches-table .cq-produit-indicator,
+html body .fiches-table .indicator,
+html.rdv-vue-page .rdv-vue .fiches-table .produit-indicator,
+html.rdv-vue-page .rdv-vue .fiches-table .indicator,
+body.rdv-vue-page .rdv-vue .fiches-table .produit-indicator,
+body.rdv-vue-page .rdv-vue .fiches-table .indicator {
   color: #ffffff !important;
 }
 

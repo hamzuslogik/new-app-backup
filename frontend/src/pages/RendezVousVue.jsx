@@ -776,7 +776,7 @@ const RendezVousVue = () => {
                             {getProduitName(f.produit) || ''}
                           </span>
                         </td>
-                        <td style={{ color: '#000000', textAlign: 'center', fontWeight: 700 }}>
+                        <td className="fiche-col-valide" style={{ textAlign: 'center', fontWeight: 700 }}>
                           {Number(f.valider) > 0 ? '✓' : ''}
                         </td>
                         <td className="rdv-vue-col-details">

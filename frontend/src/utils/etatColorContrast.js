@@ -10,16 +10,19 @@ export function normalizeHex(hex) {
   return raw;
 }
 
-/** Texte noir sur fond clair, blanc sur fond sombre. */
+/** Texte noir sur fond clair, blanc sur fond sombre.
+ * Seuil bas : blanc seulement si le fond est vraiment sombre
+ * (évite texte blanc illisible sur pastels / verts moyens).
+ */
 export function getEtatContrastColor(bgHex) {
   const hex = normalizeHex(bgHex).replace('#', '');
-  if (hex.length !== 6) return '#ffffff';
+  if (hex.length !== 6) return '#000000';
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);
-  if ([r, g, b].some((n) => Number.isNaN(n))) return '#ffffff';
+  if ([r, g, b].some((n) => Number.isNaN(n))) return '#000000';
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.58 ? '#000000' : '#ffffff';
+  return luminance > 0.45 ? '#000000' : '#ffffff';
 }
 
 /** className pour ligne tableau colorée par état (texte clair/sombre). */
