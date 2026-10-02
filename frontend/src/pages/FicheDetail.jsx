@@ -2854,6 +2854,13 @@ const FicheDetail = ({
   // Gérer le changement d'état
   const handleEtatChange = (newEtatId) => {
     setSelectedEtat(newEtatId);
+    // Warning créneau fermé / 0 dispo : uniquement pour Confirmer — ne pas conserver le statut d’un créneau planning
+    if (newEtatId !== 7) {
+      pendingKnownSlotStatusRef.current = null;
+      slotCodeVerifiedRef.current = false;
+      setSlotCodeModal(null);
+      pendingAfterSlotCodeRef.current = null;
+    }
     if ([5, 6, 11, 12, 22, 23, 24, 25, 26, 29, 34].includes(newEtatId)) {
       setEtatFormData(prev => ({ ...prev, motif_qualif: '' }));
     }

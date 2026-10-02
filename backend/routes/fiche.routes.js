@@ -7103,8 +7103,19 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
     const now = toMysqlLocalDateTime();
     ficheData.date_modif_time = now;
 
-    // Vérifier si un RDV est créé/modifié et si le créneau est fermé
-    if (ficheData.date_rdv_time !== undefined && ficheData.date_rdv_time !== null && ficheData.date_rdv_time !== '') {
+    // Vérifier créneau fermé uniquement pour une confirmation RDV (état CONFIRMER = 7).
+    // Les rappels bureau / « à rappeler le » écrivent aussi date_rdv_time mais ne doivent pas être bloqués.
+    const targetEtatForSlotCheck = parseEtatId(
+      ficheData.id_etat_final !== undefined && ficheData.id_etat_final !== null && ficheData.id_etat_final !== ''
+        ? ficheData.id_etat_final
+        : fiche?.id_etat_final
+    );
+    if (
+      targetEtatForSlotCheck === 7 &&
+      ficheData.date_rdv_time !== undefined &&
+      ficheData.date_rdv_time !== null &&
+      ficheData.date_rdv_time !== ''
+    ) {
       const incomingRdv = String(ficheData.date_rdv_time).trim();
       const previousRdv = fiche.date_rdv_time == null ? '' : String(fiche.date_rdv_time).trim();
       // Création / changement de date RDV : refuser une date calendaire < aujourd'hui
@@ -7175,6 +7186,20 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       } catch (error) {
         console.error('Erreur lors de la vérification du créneau fermé:', error);
         // Ne pas bloquer la mise à jour en cas d'erreur de vérification
+      }
+    } else if (
+      ficheData.date_rdv_time !== undefined &&
+      ficheData.date_rdv_time !== null &&
+      ficheData.date_rdv_time !== ''
+    ) {
+      // Hors confirmation : garder uniquement le refus des dates passées (rappels, etc.)
+      const incomingRdv = String(ficheData.date_rdv_time).trim();
+      const previousRdv = fiche.date_rdv_time == null ? '' : String(fiche.date_rdv_time).trim();
+      if (incomingRdv !== previousRdv && (isRdvDateBeforeToday(incomingRdv) || isRdvDateTimePast(incomingRdv))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Impossible de créer un RDV à une date antérieure à aujourd\'hui.'
+        });
       }
     }
 
