@@ -91,6 +91,22 @@ const Sidebar = ({ collapsed }) => {
   );
   const messagesUnreadCount = messagesUnread ?? 0;
 
+  /** Admin (1,7), Confirmateur (6), Backoffice (11), RP (13), RE (14) */
+  const canSeeDecalagePendingAlert = [1, 6, 7, 11, 13, 14].includes(Number(fonctionId));
+  const { data: decalagesPendingCount = 0 } = useQuery(
+    ['decalages-pending-count', user?.id, fonctionId],
+    async () => {
+      const res = await api.get('/decalages/pending-count');
+      return Number(res.data?.count ?? 0);
+    },
+    {
+      enabled: !!user && canSeeDecalagePendingAlert && hasPermission('decalage_view'),
+      refetchInterval: 15000,
+      refetchOnWindowFocus: true,
+    }
+  );
+  const hasDecalagesPending = Number(decalagesPendingCount) > 0;
+
   const { data: departementsData = [] } = useQuery(
     'sidebar-admin-departements',
     async () => {
@@ -717,7 +733,15 @@ const Sidebar = ({ collapsed }) => {
           <ul className="sidebar-submenu">
             <li>
               <NavLink to={urls.decalages} className={nestedLinkClass}>
+                {hasDecalagesPending && (
+                  <span className="sidebar-decalage-pending-blink" title="Demande(s) de décalage en attente" aria-hidden />
+                )}
                 <span>Liste des décalages</span>
+                {hasDecalagesPending && (
+                  <span className="sidebar-decalage-pending-label" aria-label={`${decalagesPendingCount} en attente`}>
+                    ({decalagesPendingCount})
+                  </span>
+                )}
               </NavLink>
             </li>
             <li>
@@ -808,6 +832,7 @@ const Sidebar = ({ collapsed }) => {
       {flatMenuItems.filter(isItemVisible).map((item) => {
         const Icon = item.icon;
         const showMessagesDot = item.path === '/messages' && messagesUnreadCount > 0;
+        const showDecalagePending = item.path === '/decalages' && hasDecalagesPending;
         return (
           <li key={item.path}>
             <NavLink
@@ -816,8 +841,20 @@ const Sidebar = ({ collapsed }) => {
               className={linkClass}
             >
               {showMessagesDot && <span className="sidebar-link-dot" aria-hidden />}
+              {showDecalagePending && (
+                <span className="sidebar-decalage-pending-blink" title="Demande(s) de décalage en attente" aria-hidden />
+              )}
               <Icon className="sidebar-icon" />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && (
+                <>
+                  <span>{item.label}</span>
+                  {showDecalagePending && (
+                    <span className="sidebar-decalage-pending-label" aria-label={`${decalagesPendingCount} en attente`}>
+                      ({decalagesPendingCount})
+                    </span>
+                  )}
+                </>
+              )}
             </NavLink>
           </li>
         );

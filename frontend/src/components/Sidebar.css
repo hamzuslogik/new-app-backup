@@ -233,6 +233,51 @@
   margin-right: 8px;
 }
 
+/* Indicateur clignotant : demandes de décalage en attente */
+.sidebar-decalage-pending-blink {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  margin-right: 8px;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+  animation: sidebar-decalage-blink 0.8s steps(1, end) infinite;
+  flex-shrink: 0;
+}
+
+.sidebar-decalage-pending-label {
+  margin-left: 6px;
+  color: #ef4444;
+  font-weight: 700;
+  animation: sidebar-decalage-label-blink 0.8s steps(1, end) infinite;
+}
+
+@keyframes sidebar-decalage-blink {
+  0% {
+    background-color: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.95);
+    opacity: 1;
+  }
+  50% {
+    background-color: #fecaca;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 1);
+    opacity: 0.35;
+  }
+}
+
+@keyframes sidebar-decalage-label-blink {
+  0% {
+    color: #ef4444;
+    opacity: 1;
+  }
+  50% {
+    color: #fca5a5;
+    opacity: 0.45;
+  }
+}
+
 .sidebar-link.active .sidebar-icon {
   color: #ffffff !important;
 }

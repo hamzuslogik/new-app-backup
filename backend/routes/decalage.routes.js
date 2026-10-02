@@ -114,6 +114,49 @@ async function getFicheWorkflowContext(idFiche) {
   }
 }
 
+// Compteur de décalages en attente (menu sidebar) — mêmes règles de visibilité que GET /
+router.get('/pending-count', authenticate, async (req, res) => {
+  try {
+    let whereClause = '';
+    let params = [];
+
+    if (req.user.fonction === 6) {
+      whereClause = 'WHERE d.destination = ?';
+      params = [req.user.id];
+    } else if (req.user.fonction === 5) {
+      whereClause = 'WHERE d.expediteur = ?';
+      params = [req.user.id];
+    } else if ([1, 2, 7, 11, 13, 14].includes(Number(req.user.fonction))) {
+      whereClause = '';
+      params = [];
+    } else {
+      whereClause = 'WHERE (d.destination = ? OR d.expediteur = ?)';
+      params = [req.user.id, req.user.id];
+    }
+
+    const pendingClause = whereClause
+      ? `${whereClause} AND (d.id_etat IS NULL OR d.id_etat = 1)`
+      : 'WHERE (d.id_etat IS NULL OR d.id_etat = 1)';
+
+    const row = await queryOne(
+      `SELECT COUNT(*) AS count FROM decalages d ${pendingClause}`,
+      params
+    );
+
+    res.json({
+      success: true,
+      count: Number(row?.count || 0)
+    });
+  } catch (error) {
+    console.error('Erreur lors du comptage des décalages en attente:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors du comptage des décalages en attente',
+      count: 0
+    });
+  }
+});
+
 // Récupérer les décalages avec règles de consultation :
 // - Confirmateurs (fonction 6) : voient les décalages où ils sont destinataires
 // - Commerciaux (fonction 5) : voient leurs propres décalages créés

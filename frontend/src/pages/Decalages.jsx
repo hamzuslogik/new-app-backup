@@ -101,6 +101,7 @@ const Decalages = () => {
         setAcceptDate('');
         setAcceptTime('');
         queryClient.invalidateQueries(['decalages']);
+        queryClient.invalidateQueries(['decalages-pending-count']);
         queryClient.invalidateQueries(['fiche']);
         queryClient.invalidateQueries(['modifica']);
         queryClient.invalidateQueries(['planning-commercial']);

@@ -263,6 +263,169 @@ function renderHeureRdvAvantBadge(heureRdvAvant) {
   );
 }
 
+/** Cadre infos demande(s) de décalage sous la Date RDV (état CONFIRMER actuel / historique). */
+function normalizeDecalageDateTime(value) {
+  if (value == null || value === '') return '';
+  const s = String(value).trim().replace('T', ' ');
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[ ](\d{1,2}):(\d{2})/);
+  if (!m) return s;
+  return `${m[1]} ${String(m[2]).padStart(2, '0')}:${m[3]}`;
+}
+
+function isSameDecalageDateTime(a, b) {
+  const na = normalizeDecalageDateTime(a);
+  const nb = normalizeDecalageDateTime(b);
+  return Boolean(na && nb && na === nb);
+}
+
+function parseDecalageDatePart(value) {
+  const m = String(value || '').match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : '';
+}
+
+function isDecalageSansHeure(decalage) {
+  if (!decalage?.date_nouvelle) return true;
+  return isSameDecalageDateTime(decalage.date_nouvelle, decalage.date_prevu);
+}
+
+function isDecalagePending(decalage) {
+  return decalage?.id_etat == null || Number(decalage.id_etat) === 1;
+}
+
+function renderDecalageDemandesUnderRdv(decalages, actions = null) {
+  if (!Array.isArray(decalages) || decalages.length === 0) return null;
+  const sorted = [...decalages].sort((a, b) => {
+    const ta = a?.date_creation ? new Date(a.date_creation).getTime() : 0;
+    const tb = b?.date_creation ? new Date(b.date_creation).getTime() : 0;
+    return tb - ta;
+  });
+  const canTreat = !!actions?.canTreat;
+  const isLoading = !!actions?.isLoading;
+  return (
+    <div
+      className="fiche-etat-decalage-demandes"
+      style={{
+        marginTop: '10px',
+        width: '100%',
+        maxWidth: '720px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      {sorted.map((d, idx) => {
+        const etatLabel =
+          (d.etat_dec && String(d.etat_dec).trim()) ||
+          (isDecalagePending(d) ? 'En attente' : `État #${d.id_etat}`);
+        const expediteur =
+          (d.expediteur_pseudo && String(d.expediteur_pseudo).trim()) ||
+          (d.expediteur != null ? `ID ${d.expediteur}` : '—');
+        const message = d.message != null && String(d.message).trim() !== '' ? String(d.message).trim() : '—';
+        const dateCreation = d.date_creation
+          ? new Date(d.date_creation).toLocaleString('fr-FR')
+          : '—';
+        const isPending = isDecalagePending(d);
+        const showActions = canTreat && isPending && d?.id;
+        return (
+          <div
+            key={d.id || `decalage-${idx}`}
+            className={`fiche-etat-decalage-demande-box${isPending ? ' fiche-etat-decalage-demande-box--pending' : ''}`}
+            style={{
+              background: isPending ? '#fff7ed' : '#ffffff',
+              color: '#1f2937',
+              border: isPending ? '2px solid #ea580c' : '2px solid #94a3b8',
+              borderRadius: '6px',
+              padding: '10px 12px',
+              fontSize: '13px',
+              fontWeight: 600,
+              lineHeight: 1.45,
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                marginBottom: '6px',
+                color: isPending ? '#c2410c' : '#334155',
+              }}
+            >
+              Décalage{sorted.length > 1 ? ` #${idx + 1}` : ''}
+              {isDecalageSansHeure(d) ? ' · Sans heure' : ''}
+            </div>
+            <div>
+              <strong>État :</strong> {etatLabel}
+            </div>
+            <div>
+              <strong>Qui a envoyé :</strong> {expediteur}
+            </div>
+            <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              <strong>Message :</strong> {message}
+            </div>
+            <div>
+              <strong>Date création :</strong> {dateCreation}
+            </div>
+            {showActions && (
+              <div
+                className="fiche-etat-decalage-demande-actions"
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  marginTop: '10px',
+                }}
+              >
+                <button
+                  type="button"
+                  className="fiche-etat-decalage-btn fiche-etat-decalage-btn--accept"
+                  disabled={isLoading}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    actions.onAccept?.(d);
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: '#16a34a',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    cursor: isLoading ? 'wait' : 'pointer',
+                  }}
+                >
+                  Acceptée
+                </button>
+                <button
+                  type="button"
+                  className="fiche-etat-decalage-btn fiche-etat-decalage-btn--refuse"
+                  disabled={isLoading}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    actions.onRefuse?.(d);
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    cursor: isLoading ? 'wait' : 'pointer',
+                  }}
+                >
+                  Refusée
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Date d'appel exploitable pour affichage (détails fiche, pas historique). */
 function parseFicheDateAppel(fiche) {
   if (!fiche) return null;
@@ -994,6 +1157,9 @@ const FicheDetail = ({
   const [showConfConfirmateur3, setShowConfConfirmateur3] = useState(false);
   const [showRdvConfirmateur2, setShowRdvConfirmateur2] = useState(false);
   const [showRdvConfirmateur3, setShowRdvConfirmateur3] = useState(false);
+  const [decalageAcceptModal, setDecalageAcceptModal] = useState(null); // { decalage, id_etat, step }
+  const [decalageAcceptDate, setDecalageAcceptDate] = useState('');
+  const [decalageAcceptTime, setDecalageAcceptTime] = useState('');
   const [confFormData, setConfFormData] = useState({
     produit: '',
     id_confirmateur: '',
@@ -1476,6 +1642,8 @@ const FicheDetail = ({
     isREConfirmation || isRPConfirmation || isConfirmateurSession;
   const showCompletudeTabBadge =
     isConfirmateurSession || isREConfirmation || isRPConfirmation;
+  /** Badge DECALAGE (demande en attente) : admin, backoffice, RE/RP confirmation, confirmateur */
+  const showDecalageTabBadge = [1, 6, 7, 11, 13, 14].includes(Number(userFonction));
 
   const { data: completudeIndicatorList = [] } = useQuery(
     ['fiche-completude-indicator', hash],
@@ -1500,6 +1668,16 @@ const FicheDetail = ({
     window.setTimeout(() => {
       document
         .querySelector('.fiche-completude-section')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  };
+
+  const scrollToDecalageSection = () => {
+    setActiveTab('fiches');
+    setShowEtatActuel(true);
+    window.setTimeout(() => {
+      document
+        .querySelector('.etat-actuel-wrapper')
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
   };
@@ -1676,7 +1854,8 @@ const FicheDetail = ({
     },
     {
       enabled: Number.isFinite(currentFicheId) && currentFicheId > 0,
-      refetchInterval: isCommercial ? 15000 : false,
+      refetchInterval: isCommercial || showDecalageTabBadge ? 15000 : false,
+      refetchOnWindowFocus: true,
     }
   );
 
@@ -1684,6 +1863,13 @@ const FicheDetail = ({
     if (!Array.isArray(decalagesData)) return [];
     return decalagesData.filter(isCurrentFicheDecalage);
   }, [decalagesData, currentFicheId]);
+
+  const hasPendingDecalageTabAlert = useMemo(() => {
+    if (!showDecalageTabBadge) return false;
+    return decalagesPourFiche.some(
+      (d) => d.id_etat == null || Number(d.id_etat) === ID_ETAT_DECALAGE_EN_ATTENTE
+    );
+  }, [decalagesPourFiche, showDecalageTabBadge]);
 
   const commercialPendingDecalage = useMemo(() => {
     if (!isCommercial || decalagesPourFiche.length === 0) return null;
@@ -1812,12 +1998,146 @@ const FicheDetail = ({
       onSuccess: () => {
         queryClient.invalidateQueries(['decalages', 'fiche', currentFicheId]);
         queryClient.invalidateQueries(['decalages']);
+        queryClient.invalidateQueries(['decalages-pending-count']);
         queryClient.invalidateQueries(['fiche', hash]);
       },
       onError: (err) => {
         alert(err.response?.data?.message || 'Impossible d\'annuler le décalage.');
       }
     }
+  );
+
+  const { data: etatsDecalageFiche = [] } = useQuery(
+    'etats-decalage',
+    async () => {
+      const res = await api.get('/management/etat-decalage');
+      return res.data.data || [];
+    }
+  );
+
+  const resolveDecalageEtatId = useCallback(
+    (kind) => {
+      const list = Array.isArray(etatsDecalageFiche) ? etatsDecalageFiche : [];
+      const norm = (t) =>
+        String(t || '')
+          .toUpperCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+      if (kind === 'accept') {
+        const found = list.find((e) => {
+          const t = norm(e.titre);
+          return Number(e.id) === 2 || t.includes('ACCEPT') || t.includes('VALID');
+        });
+        return found ? Number(found.id) : 2;
+      }
+      const found = list.find((e) => {
+        const t = norm(e.titre);
+        return Number(e.id) === 3 || Number(e.id) === 4 || t.includes('REFUS');
+      });
+      return found ? Number(found.id) : 3;
+    },
+    [etatsDecalageFiche]
+  );
+
+  const updateDecalageStatutMutation = useMutation(
+    async ({ id, id_etat, date_nouvelle, appliquer_fiche }) => {
+      const payload = { id_etat };
+      if (date_nouvelle) payload.date_nouvelle = date_nouvelle;
+      if (appliquer_fiche !== undefined) payload.appliquer_fiche = appliquer_fiche;
+      const res = await api.put(`/decalages/${id}/statut`, payload);
+      return res.data;
+    },
+    {
+      onSuccess: () => {
+        setDecalageAcceptModal(null);
+        setDecalageAcceptDate('');
+        setDecalageAcceptTime('');
+        queryClient.invalidateQueries(['decalages', 'fiche', currentFicheId]);
+        queryClient.invalidateQueries(['decalages']);
+        queryClient.invalidateQueries(['decalages-pending-count']);
+        queryClient.invalidateQueries(['fiche', hash]);
+        queryClient.invalidateQueries(['modifica', hash]);
+        queryClient.invalidateQueries(['planning-commercial']);
+      },
+      onError: (err) => {
+        alert(err.response?.data?.message || 'Impossible de mettre à jour le décalage.');
+      },
+    }
+  );
+
+  const canTreatDecalageFromFiche = [1, 2, 6, 7, 11, 13, 14].includes(Number(userFonction));
+
+  const buildDecalageAcceptedDateNouvelle = () => {
+    if (!decalageAcceptDate || !decalageAcceptTime) {
+      alert('Veuillez saisir la date et l\'heure du RDV accepté par le client.');
+      return null;
+    }
+    const date_nouvelle = `${decalageAcceptDate} ${decalageAcceptTime}:00`;
+    if (isRdvDateBeforeToday(date_nouvelle)) {
+      alert('La date du RDV ne peut pas être antérieure à aujourd\'hui.');
+      return null;
+    }
+    return date_nouvelle;
+  };
+
+  const handleRefuseDecalageFromFiche = (decalage) => {
+    if (!decalage?.id || !isDecalagePending(decalage)) return;
+    if (!window.confirm('Refuser cette demande de décalage ?')) return;
+    updateDecalageStatutMutation.mutate({
+      id: decalage.id,
+      id_etat: resolveDecalageEtatId('refuse'),
+    });
+  };
+
+  const handleAcceptDecalageFromFiche = (decalage) => {
+    if (!decalage?.id || !isDecalagePending(decalage)) return;
+    const idAccept = resolveDecalageEtatId('accept');
+    if (isDecalageSansHeure(decalage)) {
+      setDecalageAcceptModal({ decalage, id_etat: idAccept, step: 'saisie' });
+      setDecalageAcceptDate(parseDecalageDatePart(decalage.date_prevu) || formatLocalYmd());
+      setDecalageAcceptTime('');
+      return;
+    }
+    if (!window.confirm('Accepter cette demande de décalage ?')) return;
+    updateDecalageStatutMutation.mutate({
+      id: decalage.id,
+      id_etat: idAccept,
+      appliquer_fiche: true,
+    });
+  };
+
+  const submitDecalageAcceptModal = (e) => {
+    e?.preventDefault?.();
+    if (!decalageAcceptModal?.decalage?.id) return;
+    if (!buildDecalageAcceptedDateNouvelle()) return;
+    setDecalageAcceptModal((prev) => (prev ? { ...prev, step: 'appliquer' } : prev));
+  };
+
+  const confirmDecalageAcceptModal = (appliquerFiche) => {
+    if (!decalageAcceptModal?.decalage?.id) return;
+    const date_nouvelle = buildDecalageAcceptedDateNouvelle();
+    if (!date_nouvelle) {
+      setDecalageAcceptModal((prev) => (prev ? { ...prev, step: 'saisie' } : prev));
+      return;
+    }
+    updateDecalageStatutMutation.mutate({
+      id: decalageAcceptModal.decalage.id,
+      id_etat: decalageAcceptModal.id_etat,
+      date_nouvelle,
+      appliquer_fiche: !!appliquerFiche,
+    });
+  };
+
+  const decalageDemandesActions = useMemo(
+    () => ({
+      canTreat: canTreatDecalageFromFiche,
+      onAccept: handleAcceptDecalageFromFiche,
+      onRefuse: handleRefuseDecalageFromFiche,
+      isLoading: updateDecalageStatutMutation.isLoading,
+    }),
+    // handlers stables via closures ; re-render quand loading / droits / etats changent
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canTreatDecalageFromFiche, updateDecalageStatutMutation.isLoading, etatsDecalageFiche]
   );
 
   // Mutation pour créer/mettre à jour un décalage
@@ -1830,6 +2150,7 @@ const FicheDetail = ({
       onSuccess: () => {
         queryClient.invalidateQueries(['decalages', 'fiche', currentFicheId]);
         queryClient.invalidateQueries(['decalages']);
+        queryClient.invalidateQueries(['decalages-pending-count']);
         queryClient.invalidateQueries(['fiche', hash]);
         alert('Décalage créé avec succès');
         setDecalageFormData({
@@ -3908,19 +4229,34 @@ const FicheDetail = ({
           </button>
         )}
         </div>
-        {showCompletudeTabBadge && hasCompletudeTabAlert && (
-          <button
-            type="button"
-            className="fiche-tab-completude-alert"
-            onClick={scrollToCompletudeSection}
-            title="Complétude en attente — cliquer pour afficher"
-          >
-            <span className="fiche-tab-completude-alert-inner">
-              <FaInfoCircle aria-hidden />
-              <span>Complétude</span>
-            </span>
-          </button>
-        )}
+        <div className="fiche-tabs-alerts">
+          {showDecalageTabBadge && hasPendingDecalageTabAlert && (
+            <button
+              type="button"
+              className="fiche-tab-completude-alert fiche-tab-decalage-alert"
+              onClick={scrollToDecalageSection}
+              title="Demande de décalage en attente — cliquer pour afficher l'état actuel"
+            >
+              <span className="fiche-tab-completude-alert-inner">
+                <FaInfoCircle aria-hidden />
+                <span>DECALAGE</span>
+              </span>
+            </button>
+          )}
+          {showCompletudeTabBadge && hasCompletudeTabAlert && (
+            <button
+              type="button"
+              className="fiche-tab-completude-alert"
+              onClick={scrollToCompletudeSection}
+              title="Complétude en attente — cliquer pour afficher"
+            >
+              <span className="fiche-tab-completude-alert-inner">
+                <FaInfoCircle aria-hidden />
+                <span>Complétude</span>
+              </span>
+            </button>
+          )}
+        </div>
       </div>
 
 
@@ -5489,6 +5825,9 @@ const FicheDetail = ({
                                           histo.etat_titre,
                                           item.label
                                         );
+                                        const showDecalageUnderRdv =
+                                          item.label === 'Date RDV' &&
+                                          isEtatConfirmerLike(histo.id_etat, histoEtatTitre);
                                         return (
                                           <div key={idx} style={{ width: '100%', lineHeight: 1.45, color: '#ffffff', fontWeight: 'bold' }}>
                                             <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#ffffff' }}>
@@ -5505,6 +5844,7 @@ const FicheDetail = ({
                                                 {item.value || '-'}
                                               </span>
                                             </span>
+                                            {showDecalageUnderRdv && renderDecalageDemandesUnderRdv(decalagesPourFiche, decalageDemandesActions)}
                                           </div>
                                         );
                                       })}
@@ -5917,6 +6257,9 @@ const FicheDetail = ({
                                             </div>
                                           );
                                         })()}
+                                        {item.label === 'Date RDV' &&
+                                          isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
+                                          renderDecalageDemandesUnderRdv(decalagesPourFiche, decalageDemandesActions)}
                                       </>
                                     ) : (
                                       <>
@@ -6065,6 +6408,9 @@ const FicheDetail = ({
                                         {item.value || (canEditEtatActuelComment && isCommentItem ? '—' : '-')}
                                       </span>
                                       {item.label === 'Date RDV' && renderHeureRdvAvantBadge(heureRdvAvantDecalage)}
+                                      {item.label === 'Date RDV' &&
+                                        isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
+                                        renderDecalageDemandesUnderRdv(decalagesPourFiche, decalageDemandesActions)}
                                       {item.label === 'Date RDV' && (() => {
                                           const sinceTs = etatActuel.date_creation
                                             ? new Date(etatActuel.date_creation).getTime()
@@ -9608,6 +9954,113 @@ const FicheDetail = ({
             setSlotCodeModal(null);
           }}
         />,
+        document.body
+      )}
+
+      {decalageAcceptModal && createPortal(
+        <div
+          className="fiche-decalage-accept-modal-overlay"
+          onClick={() => {
+            if (!updateDecalageStatutMutation.isLoading) setDecalageAcceptModal(null);
+          }}
+        >
+          <form
+            className="fiche-decalage-accept-modal"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={submitDecalageAcceptModal}
+          >
+            {decalageAcceptModal.step === 'appliquer' ? (
+              <>
+                <h2>Appliquer à la fiche ?</h2>
+                <p>
+                  Date saisie :{' '}
+                  <strong>
+                    {formatRdvDateTime(`${decalageAcceptDate} ${decalageAcceptTime}:00`)}
+                  </strong>
+                  <br />
+                  Enregistrer cette date sur la fiche ?
+                </p>
+                <div className="fiche-decalage-accept-modal-actions">
+                  <button
+                    type="button"
+                    className="fiche-decalage-accept-modal-cancel"
+                    onClick={() =>
+                      setDecalageAcceptModal((prev) => (prev ? { ...prev, step: 'saisie' } : prev))
+                    }
+                    disabled={updateDecalageStatutMutation.isLoading}
+                  >
+                    Retour
+                  </button>
+                  <button
+                    type="button"
+                    className="fiche-decalage-accept-modal-no"
+                    onClick={() => confirmDecalageAcceptModal(false)}
+                    disabled={updateDecalageStatutMutation.isLoading}
+                  >
+                    Non
+                  </button>
+                  <button
+                    type="button"
+                    className="fiche-decalage-accept-modal-confirm"
+                    onClick={() => confirmDecalageAcceptModal(true)}
+                    disabled={updateDecalageStatutMutation.isLoading}
+                  >
+                    {updateDecalageStatutMutation.isLoading ? 'Enregistrement…' : 'Oui'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2>RDV accepté par le client</h2>
+                <p>
+                  La demande est sans heure. Saisissez la date et l&apos;heure du RDV accepté.
+                </p>
+                <div className="fiche-decalage-accept-modal-fields">
+                  <label>
+                    Date
+                    <input
+                      type="date"
+                      value={decalageAcceptDate}
+                      min={formatLocalYmd()}
+                      onChange={(e) => setDecalageAcceptDate(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Heure
+                    <input
+                      type="time"
+                      value={decalageAcceptTime}
+                      onChange={(e) => setDecalageAcceptTime(e.target.value)}
+                      required
+                    />
+                  </label>
+                </div>
+                <div className="fiche-decalage-accept-modal-actions">
+                  <button
+                    type="button"
+                    className="fiche-decalage-accept-modal-cancel"
+                    onClick={() => setDecalageAcceptModal(null)}
+                    disabled={updateDecalageStatutMutation.isLoading}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    className="fiche-decalage-accept-modal-confirm"
+                    disabled={
+                      updateDecalageStatutMutation.isLoading ||
+                      !decalageAcceptDate ||
+                      !decalageAcceptTime
+                    }
+                  >
+                    Continuer
+                  </button>
+                </div>
+              </>
+            )}
+          </form>
+        </div>,
         document.body
       )}
     </div>
