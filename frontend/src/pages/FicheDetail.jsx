@@ -292,6 +292,25 @@ function isDecalagePending(decalage) {
   return decalage?.id_etat == null || Number(decalage.id_etat) === 1;
 }
 
+function getDecalageDemandeStatus(decalage) {
+  if (isDecalagePending(decalage)) return 'pending';
+  const id = Number(decalage?.id_etat);
+  const titre = String(decalage?.etat_dec || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  if (id === 3 || id === 4 || titre.includes('REFUS')) return 'refused';
+  if (id === 2 || titre.includes('ACCEPT') || titre.includes('VALID')) return 'accepted';
+  if (id === 6 || titre.includes('ANNUL')) return 'refused';
+  return 'pending';
+}
+
+function getDecalageDemandeBorderColor(status) {
+  if (status === 'accepted') return '#16a34a'; // vert
+  if (status === 'refused') return '#dc2626'; // rouge
+  return '#ea580c'; // orangé — en cours
+}
+
 function renderDecalageDemandesUnderRdv(decalages, actions = null) {
   if (!Array.isArray(decalages) || decalages.length === 0) return null;
   const sorted = [...decalages].sort((a, b) => {
@@ -325,15 +344,17 @@ function renderDecalageDemandesUnderRdv(decalages, actions = null) {
           ? new Date(d.date_creation).toLocaleString('fr-FR')
           : '—';
         const isPending = isDecalagePending(d);
+        const status = getDecalageDemandeStatus(d);
+        const borderColor = getDecalageDemandeBorderColor(status);
         const showActions = canTreat && isPending && d?.id;
         return (
           <div
             key={d.id || `decalage-${idx}`}
-            className={`fiche-etat-decalage-demande-box${isPending ? ' fiche-etat-decalage-demande-box--pending' : ''}`}
+            className={`fiche-etat-decalage-demande-box fiche-etat-decalage-demande-box--${status}`}
             style={{
-              background: isPending ? '#fff7ed' : '#ffffff',
-              color: '#1f2937',
-              border: isPending ? '2px solid #ea580c' : '2px solid #94a3b8',
+              background: 'transparent',
+              color: '#ffffff',
+              border: `2px solid ${borderColor}`,
               borderRadius: '6px',
               padding: '10px 12px',
               fontSize: '13px',
@@ -347,7 +368,7 @@ function renderDecalageDemandesUnderRdv(decalages, actions = null) {
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
                 marginBottom: '6px',
-                color: isPending ? '#c2410c' : '#334155',
+                color: borderColor,
               }}
             >
               Décalage{sorted.length > 1 ? ` #${idx + 1}` : ''}
