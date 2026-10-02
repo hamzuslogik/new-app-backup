@@ -188,6 +188,16 @@ html body .fiches-table .produit-indicator {
   word-break: keep-all !important;
 }
 
+/* Nom produit dans le badge : gras pour meilleure lisibilité */
+html body .produit-indicator,
+html body .cq-produit-indicator,
+html body table .produit-indicator,
+html body .fiches-table .produit-indicator,
+html body .cq-table .cq-produit-indicator {
+  font-weight: 800 !important;
+  letter-spacing: 0.02em;
+}
+
 /* Nom dans .fiche-row-lead-label : wrap par mot, plafonné par la cellule 15ch */
 html body table.fiches-table .fiche-row-lead-label,
 html body .fiches-table .fiche-row-lead-label {
