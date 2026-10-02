@@ -391,6 +391,7 @@ const EMPTY_CONF_FORM_BASE = {
   annee_systeme_chauffage: '',
   surface_chauffee: '',
   consommation_chauffage: '',
+  surface_habitable: '',
   conf_commentaire_produit: '',
   id_commercial_2: '',
   is_r2: '',
@@ -469,6 +470,44 @@ function buildR2PayloadFromForm(form) {
   };
 }
 
+/** Normalise OUI/NON pour les selects de confirmation / RDV. */
+function normalizeOuiNonSelect(value) {
+  if (value == null || String(value).trim() === '') return '';
+  const u = String(value).trim().toUpperCase();
+  if (u === 'OUI' || u === 'YES' || u === '1' || u === 'TRUE') return 'OUI';
+  if (u === 'NON' || u === 'NO' || u === '0' || u === 'FALSE') return 'NON';
+  return String(value).trim();
+}
+
+/** Normalise MR / MME / AUTRE pour conf_rdv_avec et conf_appel_tunisie_avec. */
+function normalizeMrMmeSelect(value) {
+  if (value == null || String(value).trim() === '') return '';
+  const s = String(value).trim();
+  const u = s.toUpperCase();
+  if (u === 'MR' || u === 'MONSIEUR' || u === 'M.' || u === 'M') return 'MR';
+  if (u === 'MME' || u === 'MADAME' || u === 'MLLE' || u === 'MLE') return 'MME';
+  if (u === 'AUTRE') return 'AUTRE';
+  return s;
+}
+
+/**
+ * Commentaire de la dernière confirmation (état 7) :
+ * priorité à l'historique CONFIRMER, puis champ fiche si encore confirmée.
+ */
+function getLastConfirmationCommentaire(ficheData) {
+  if (!ficheData) return '';
+  const hist = Array.isArray(ficheData.historique) ? ficheData.historique : [];
+  for (let i = hist.length - 1; i >= 0; i -= 1) {
+    const h = hist[i];
+    if (Number(h?.id_etat) !== 7) continue;
+    const c = String(h?.conf_commentaire_produit || '').trim();
+    if (c) return c;
+  }
+  const fromFiche = String(ficheData.conf_commentaire_produit || '').trim();
+  if (fromFiche) return fromFiche;
+  return String(ficheData.commentaire || '').trim();
+}
+
 /**
  * Formulaire « Informations de confirmation » (état 7) prérempli depuis la fiche (tous les champs conf_* + produit / RDV).
  * Même logique que la création RDV : conf_appel_tunisie_avec avec repli sur entretien si besoin.
@@ -512,13 +551,10 @@ function buildConfFormStateFromFiche(ficheData, user) {
 
   const confAppelTunisie = (() => {
     const c = ficheData.conf_appel_tunisie_avec;
-    if (c != null && String(c).trim() !== '') return String(c).trim();
+    if (c != null && String(c).trim() !== '') return normalizeMrMmeSelect(c);
     const e = String(ficheData.entretien || '').trim();
     if (!e) return '';
-    const u = e.toUpperCase();
-    if (u === 'MONSIEUR' || e === 'MR') return 'MR';
-    if (u === 'MADAME' || e === 'MME') return 'MME';
-    return '';
+    return normalizeMrMmeSelect(e);
   })();
 
   const produit =
@@ -528,6 +564,12 @@ function buildConfFormStateFromFiche(ficheData, user) {
         ? String(ficheData.conf_produit)
         : '';
 
+  const dejaEtude = normalizeOuiNonSelect(
+    ficheData.conf_deja_etude || ficheData.conf_deja_fait_etude || ficheData.etude || ''
+  );
+  const presenceCoupleRaw = ficheData.conf_presence_couple || '';
+  const presenceCoupleNorm = getRdvSeulRawLabel({ conf_presence_couple: presenceCoupleRaw }) || presenceCoupleRaw;
+
   return {
     produit,
     id_confirmateur: idConf1,
@@ -535,10 +577,10 @@ function buildConfFormStateFromFiche(ficheData, user) {
     id_confirmateur_3: idConf3,
     conf_rdv_date: rdvDate,
     conf_rdv_time: rdvTime,
-    conf_rdv_avec: ficheData.conf_rdv_avec || '',
+    conf_rdv_avec: normalizeMrMmeSelect(ficheData.conf_rdv_avec || ''),
     conf_appel_tunisie_avec: confAppelTunisie,
-    conf_deja_etude: ficheData.conf_deja_etude || ficheData.conf_deja_fait_etude || ficheData.etude || '',
-    conf_deja_fait_etude: ficheData.conf_deja_fait_etude || ficheData.conf_deja_etude || ficheData.etude || '',
+    conf_deja_etude: dejaEtude,
+    conf_deja_fait_etude: dejaEtude,
     conf_details_etude: ficheData.conf_details_etude || ficheData.details_etude || '',
     conf_profession_monsieur: ficheData.conf_profession_monsieur != null ? String(ficheData.conf_profession_monsieur) : '',
     conf_type_contrat_mr: ficheData.conf_type_contrat_mr != null ? String(ficheData.conf_type_contrat_mr) : '',
@@ -559,9 +601,14 @@ function buildConfFormStateFromFiche(ficheData, user) {
         : ficheData.consommation_electricite != null
           ? String(ficheData.consommation_electricite)
           : '',
-    conf_consommation_chauffage: ficheData.conf_consommation_chauffage || ficheData.consommation_chauffage || '',
-    conf_rdv_annule_precedent: ficheData.conf_rdv_annule_precedent || '',
-    conf_presence_couple: ficheData.conf_presence_couple || '',
+    conf_consommation_chauffage:
+      ficheData.conf_consommation_chauffage != null && String(ficheData.conf_consommation_chauffage).trim() !== ''
+        ? String(ficheData.conf_consommation_chauffage)
+        : ficheData.consommation_chauffage != null
+          ? String(ficheData.consommation_chauffage)
+          : '',
+    conf_rdv_annule_precedent: normalizeOuiNonSelect(ficheData.conf_rdv_annule_precedent || ''),
+    conf_presence_couple: presenceCoupleNorm || '',
     conf_orientation_toiture: (ficheData.conf_orientation_toiture || ficheData.orientation_toiture || '').toString(),
     conf_zones_ombres: (ficheData.conf_zones_ombres || ficheData.zones_ombres || '').toString(),
     conf_site_classe: (ficheData.conf_site_classe || ficheData.site_classe || '').toString(),
@@ -569,7 +616,11 @@ function buildConfFormStateFromFiche(ficheData, user) {
     annee_systeme_chauffage: ficheData.annee_systeme_chauffage != null ? String(ficheData.annee_systeme_chauffage) : '',
     surface_chauffee: ficheData.surface_chauffee != null && ficheData.surface_chauffee !== '' ? String(ficheData.surface_chauffee) : '',
     consommation_chauffage: ficheData.consommation_chauffage || '',
-    conf_commentaire_produit: ficheData.conf_commentaire_produit || ficheData.commentaire || '',
+    surface_habitable:
+      ficheData.surface_habitable != null && ficheData.surface_habitable !== ''
+        ? String(ficheData.surface_habitable)
+        : '',
+    conf_commentaire_produit: getLastConfirmationCommentaire(ficheData),
     id_commercial_2:
       ficheData.id_commercial_2 != null && Number(ficheData.id_commercial_2) > 0
         ? String(ficheData.id_commercial_2)
@@ -586,6 +637,24 @@ function buildConfFormStateFromFiche(ficheData, user) {
         ? String(ficheData.id_commercial_r1)
         : '',
     commentaire_r1: ficheData.commentaire_r1 || '',
+  };
+}
+
+/**
+ * Formulaire création RDV prérempli depuis une fiche déjà confirmée (tous champs conf + commentaire confirmation).
+ */
+function buildRdvFormStateFromFiche(ficheData, user, { dateStr, timeStr } = {}) {
+  const conf = buildConfFormStateFromFiche(ficheData, user);
+  const datePart = dateStr || conf.conf_rdv_date || '';
+  const timePart = timeStr || conf.conf_rdv_time || '';
+  return {
+    ...conf,
+    date_rdv_time: datePart && timePart ? `${datePart} ${timePart}` : '',
+    id_etat_final: 7,
+    is_urgent:
+      ficheData?.rdv_urgent === 1 ||
+      ficheData?.rdv_urgent === true ||
+      ficheData?.qualification_code === 'RDV_URGENT',
   };
 }
 
@@ -2218,112 +2287,12 @@ const FicheDetail = ({
       zero: isZeroAvailabilityCell(slotCell)
     };
     
-    // Construire dateTime pour le formulaire (format: YYYY-MM-DD HH:MM)
-    // Ne pas utiliser new Date() car cela peut causer des problèmes de timezone
-    const dateTime = `${dateStr} ${timeStr}`;
-    
-    // Confirmateurs : slots actuels de la fiche (conf1/2/3)
-    const baseConf1 = ficheData?.id_confirmateur
-      ? String(ficheData.id_confirmateur)
-      : (Array.isArray(ficheData?.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo[0]
-        ? String(ficheData.confirmateurs_from_histo[0])
-        : '');
-    const baseConf2 = ficheData?.id_confirmateur_2
-      ? String(ficheData.id_confirmateur_2)
-      : (Array.isArray(ficheData?.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo[1]
-        ? String(ficheData.confirmateurs_from_histo[1])
-        : '');
-    const baseConf3 = ficheData?.id_confirmateur_3
-      ? String(ficheData.id_confirmateur_3)
-      : (Array.isArray(ficheData?.confirmateurs_from_histo) && ficheData.confirmateurs_from_histo[2]
-        ? String(ficheData.confirmateurs_from_histo[2])
-        : '');
-
-    // Initialiser le formulaire avec les données de la fiche
-    const nextRdvFormData = {
-      date_rdv_time: `${dateStr} ${timeStr}`,
-      id_etat_final: 7, // CONFIRMER par défaut
-      is_urgent: ficheData?.rdv_urgent === 1 || ficheData?.rdv_urgent === true || ficheData?.qualification_code === 'RDV_URGENT', // RDV_URGENT
-      id_confirmateur: baseConf1,
-      id_confirmateur_2: baseConf2,
-      id_confirmateur_3: baseConf3,
-      produit: ficheData?.produit ? String(ficheData.produit) : '',
-      conf_rdv_avec: ficheData?.conf_rdv_avec || '',
-      conf_appel_tunisie_avec: (() => {
-        const c = ficheData?.conf_appel_tunisie_avec;
-        if (c != null && String(c).trim() !== '') return String(c).trim();
-        const e = String(ficheData?.entretien || '').trim();
-        if (!e) return '';
-        const u = e.toUpperCase();
-        if (u === 'MONSIEUR' || e === 'MR') return 'MR';
-        if (u === 'MADAME' || e === 'MME') return 'MME';
-        return '';
-      })(),
-      conf_deja_etude: ficheData?.conf_deja_etude || ficheData?.conf_deja_fait_etude || ficheData?.etude || '',
-      conf_deja_fait_etude: ficheData?.conf_deja_fait_etude || ficheData?.conf_deja_etude || ficheData?.etude || '',
-      conf_details_etude: ficheData?.conf_details_etude || ficheData?.details_etude || '',
-      conf_profession_monsieur:
-        ficheData?.conf_profession_monsieur != null ? String(ficheData.conf_profession_monsieur) : '',
-      conf_type_contrat_mr:
-        ficheData?.conf_type_contrat_mr != null ? String(ficheData.conf_type_contrat_mr) : '',
-      conf_profession_madame:
-        ficheData?.conf_profession_madame != null ? String(ficheData.conf_profession_madame) : '',
-      conf_type_contrat_madame:
-        ficheData?.conf_type_contrat_madame != null ? String(ficheData.conf_type_contrat_madame) : '',
-      conf_revenu: ficheData?.conf_revenu || '',
-      conf_credit: ficheData?.conf_credit || '',
-      conf_rdv_annule_precedent: ficheData?.conf_rdv_annule_precedent || '',
-      conf_presence_couple: ficheData?.conf_presence_couple || '',
-      // Champs spécifiques PV
-      surface_habitable: ficheData?.surface_habitable || '',
-      conf_orientation_toiture: (ficheData?.conf_orientation_toiture || ficheData?.orientation_toiture || '').toString(),
-      conf_zones_ombres: (ficheData?.conf_zones_ombres || ficheData?.zones_ombres || '').toString(),
-      conf_site_classe: (ficheData?.conf_site_classe || ficheData?.site_classe || '').toString(),
-      conf_consommation_electricite: (ficheData?.conf_consommation_electricite != null ? String(ficheData.conf_consommation_electricite) : (ficheData?.consommation_electricite != null ? String(ficheData.consommation_electricite) : '')),
-      nb_pans: ficheData?.nb_pans != null ? String(ficheData.nb_pans) : '',
-      // Champs spécifiques PAC
-      surface_chauffee: ficheData?.surface_chauffee || '',
-      consommation_chauffage: ficheData?.consommation_chauffage || '',
-      conf_mode_chauffage:
-        ficheData?.conf_mode_chauffage != null && ficheData?.conf_mode_chauffage !== ''
-          ? String(ficheData.conf_mode_chauffage)
-          : ficheData?.mode_chauffage
-            ? String(ficheData.mode_chauffage)
-            : '',
-      conf_complement_chauffage: ficheData?.conf_complement_chauffage || '',
-      annee_systeme_chauffage: ficheData?.annee_systeme_chauffage || '',
-      conf_commentaire_produit: ficheData?.conf_commentaire_produit || ficheData?.commentaire || '',
-      id_commercial_2:
-        ficheData?.id_commercial_2 != null && Number(ficheData.id_commercial_2) > 0
-          ? String(ficheData.id_commercial_2)
-          : '',
-      is_r2:
-        ficheData?.is_r2 === 1 || ficheData?.is_r2 === '1' || ficheData?.is_r2 === true
-          ? 'OUI'
-          : ficheData?.is_r2 === 0 || ficheData?.is_r2 === '0' || ficheData?.is_r2 === false
-            ? 'NON'
-            : '',
-      date_r1: mysqlToDatetimeLocal(ficheData?.date_r1),
-      id_commercial_r1:
-        ficheData?.id_commercial_r1 != null && Number(ficheData.id_commercial_r1) > 0
-          ? String(ficheData.id_commercial_r1)
-          : '',
-      commentaire_r1: ficheData?.commentaire_r1 || '',
-    };
-
-    // Confirmateur (6) : conf1 = soi ; 2/3 vides (ajout manuel). Autres sessions : slots fiche.
-    if (Number(user?.fonction) === 6) {
-      nextRdvFormData.id_confirmateur = user?.id ? String(user.id) : '';
-      nextRdvFormData.id_confirmateur_2 = '';
-      nextRdvFormData.id_confirmateur_3 = '';
-    } else if (isNouvelleConfirmationConf1Seul(ficheData)) {
-      nextRdvFormData.id_confirmateur_2 = '';
-      nextRdvFormData.id_confirmateur_3 = '';
-    }
+    // Initialiser le formulaire avec toutes les données de confirmation déjà saisies
+    const nextRdvFormData = buildRdvFormStateFromFiche(ficheData, user, { dateStr, timeStr });
 
     setRdvFormData(nextRdvFormData);
-    setShowRdvConfirmateur2(false);
-    setShowRdvConfirmateur3(false);
+    setShowRdvConfirmateur2(!!nextRdvFormData.id_confirmateur_2);
+    setShowRdvConfirmateur3(!!nextRdvFormData.id_confirmateur_3);
     
     setSelectedSlot({ date, hour });
     setShowRdvModal(true);
@@ -11133,58 +11102,34 @@ const CreateRdvModal = ({
     return confirmateurs || [];
   })();
 
-  // Préremplir les champs PV depuis ficheData si ils sont vides dans rdvFormData
+  // Préremplir tous les champs confirmation vides depuis la fiche (déjà confirmée auparavant)
   useEffect(() => {
     if (!ficheData) return;
-    
+
+    const fromFiche = buildConfFormStateFromFiche(ficheData, user);
+
     setRdvFormData((prev) => {
       const updates = {};
       let hasChanges = false;
 
-      // Orientation toiture
-      if (!prev.conf_orientation_toiture && (ficheData.conf_orientation_toiture || ficheData.orientation_toiture)) {
-        updates.conf_orientation_toiture = (ficheData.conf_orientation_toiture || ficheData.orientation_toiture).toString();
-        hasChanges = true;
-      }
-
-      // Zones ombres
-      if (!prev.conf_zones_ombres && (ficheData.conf_zones_ombres || ficheData.zones_ombres)) {
-        updates.conf_zones_ombres = (ficheData.conf_zones_ombres || ficheData.zones_ombres).toString();
-        hasChanges = true;
-      }
-
-      // Site classé
-      if (!prev.conf_site_classe && (ficheData.conf_site_classe || ficheData.site_classe)) {
-        updates.conf_site_classe = (ficheData.conf_site_classe || ficheData.site_classe).toString();
-        hasChanges = true;
-      }
-
-      // Consommation électricité
-      if (!prev.conf_consommation_electricite && (ficheData.conf_consommation_electricite != null || ficheData.consommation_electricite != null)) {
-        updates.conf_consommation_electricite = String(ficheData.conf_consommation_electricite != null ? ficheData.conf_consommation_electricite : ficheData.consommation_electricite);
-        hasChanges = true;
-      }
-
-      // Nombre de pans
-      if (!prev.nb_pans && ficheData.nb_pans != null) {
-        updates.nb_pans = String(ficheData.nb_pans);
-        hasChanges = true;
-      }
-
-      // Professions déjà confirmées : les reprendre dans la création RDV si le formulaire est vide.
-      if (!prev.conf_profession_monsieur && ficheData.conf_profession_monsieur != null) {
-        updates.conf_profession_monsieur = String(ficheData.conf_profession_monsieur);
-        hasChanges = true;
-      }
-
-      if (!prev.conf_profession_madame && ficheData.conf_profession_madame != null) {
-        updates.conf_profession_madame = String(ficheData.conf_profession_madame);
-        hasChanges = true;
-      }
+      Object.keys(fromFiche).forEach((key) => {
+        if (key === 'conf_rdv_date' || key === 'conf_rdv_time') return;
+        const prevVal = prev[key];
+        const nextVal = fromFiche[key];
+        const prevEmpty = prevVal == null || String(prevVal).trim() === '';
+        const nextFilled = nextVal != null && String(nextVal).trim() !== '';
+        if (prevEmpty && nextFilled) {
+          updates[key] = nextVal;
+          hasChanges = true;
+        }
+      });
 
       return hasChanges ? { ...prev, ...updates } : prev;
     });
-  }, [ficheData, setRdvFormData]);
+
+    if (fromFiche.id_confirmateur_2) setShowRdvConfirmateur2(true);
+    if (fromFiche.id_confirmateur_3) setShowRdvConfirmateur3(true);
+  }, [ficheData, user, setRdvFormData, setShowRdvConfirmateur2, setShowRdvConfirmateur3]);
 
   const { data: typeContratRdv } = useQuery('type-contrat', async () => {
     const res = await api.get('/management/type-contrat');
