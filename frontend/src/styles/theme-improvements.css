@@ -71,10 +71,19 @@ label,
   color: var(--text-primary, #000000) !important;
 }
 
-/* Textes dans les tableaux (corps uniquement — les th sont gérés plus bas) */
-table:not(.planning-table):not(.planning-grid):not(.distance-table),
-table:not(.planning-table):not(.planning-grid):not(.production-table):not(.distance-table) td {
+/* Textes dans les tableaux (corps uniquement — les th sont gérés plus bas)
+ * Exclure fiches-table / cq-table / etc. : texte noir géré dans fiches-table.css */
+table:not(.planning-table):not(.planning-grid):not(.distance-table):not(.fiches-table):not(.cq-table):not(.fiches-detail-table):not(.phase3-table),
+table:not(.planning-table):not(.planning-grid):not(.production-table):not(.distance-table):not(.fiches-table):not(.cq-table):not(.fiches-detail-table):not(.phase3-table) td {
   color: var(--text-primary, #333333) !important;
+}
+
+/* Tableaux fiches : noir uniforme sur toutes les colonnes (nom, prénom, tel, cp…) */
+table.fiches-table tbody td,
+table.cq-table tbody td,
+table.fiches-detail-table tbody td,
+table.phase3-table tbody td {
+  color: #000000 !important;
 }
 
 /* En-têtes de tableaux avec fond sombre - texte blanc */

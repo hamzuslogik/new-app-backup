@@ -4,7 +4,7 @@
  * - Dates : toujours sur une seule ligne
  */
 
-/* Colonne case à cocher (sélection visuelle, sans action) */
+/* Colonne case à cocher (sélection visuelle, sans action) — taille ÷ 3 */
 html body table.fiches-table th.fiche-col-select,
 html body table.fiches-table td.fiche-col-select,
 html body .fiches-table th.fiche-col-select,
@@ -13,29 +13,42 @@ html body table.cq-table th.fiche-col-select,
 html body table.cq-table td.fiche-col-select,
 html body table.fiches-detail-table th.fiche-col-select,
 html body table.fiches-detail-table td.fiche-col-select {
-  width: 0.75rem !important;
-  min-width: 0.75rem !important;
-  max-width: 0.9rem !important;
+  width: 12px !important;
+  min-width: 12px !important;
+  max-width: 14px !important;
   text-align: center !important;
   vertical-align: middle !important;
-  padding-left: 0.15rem !important;
-  padding-right: 0.15rem !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
   white-space: nowrap !important;
+  overflow: visible !important;
 }
 
+/* Les checkbox natives ignorent souvent width/height → scale obligatoire */
+html body input.fiche-row-select-checkbox[type="checkbox"],
 html body .fiche-row-select-checkbox {
-  width: calc(1rem / 3);
-  height: calc(1rem / 3);
-  margin: 0;
-  cursor: pointer;
+  -webkit-appearance: checkbox !important;
+  appearance: auto !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  margin: -5px !important; /* compense l’espace layout après scale(1/3) */
+  padding: 0 !important;
+  transform: scale(0.333) !important;
+  transform-origin: center center !important;
+  cursor: pointer !important;
   accent-color: #16a34a;
   vertical-align: middle;
+  box-sizing: border-box !important;
 }
 
 html body .fiche-col-select-spacer {
   display: inline-block;
-  width: calc(1rem / 3);
-  height: calc(1rem / 3);
+  width: 5px;
+  height: 5px;
 }
 
 /* Sigle Validé (✔) : noir par défaut, blanc sur fond sombre */
@@ -292,12 +305,12 @@ html body .fiches-table td.fiche-col-badge {
   color: #6b7280;
 }
 
-/* Lignes colorées par état (toutes pages) : fond = couleur état, texte contrasté */
-html body table tbody tr.fiche-row-by-etat > td,
+/* Lignes colorées par état (toutes pages) : texte noir uniforme toutes colonnes */
+html body table.fiches-table tbody tr.fiche-row-by-etat > td,
+html body table.cq-table tbody tr.fiche-row-by-etat > td,
+html body table.fiches-detail-table tbody tr.fiche-row-by-etat > td,
+html body table.phase3-table tbody tr.fiche-row-by-etat > td,
 html body .fiches-table tbody tr.fiche-row-by-etat > td,
-html body .cq-table tbody tr.fiche-row-by-etat > td,
-html body .fiches-detail-table tbody tr.fiche-row-by-etat > td,
-html body .phase3-table tbody tr.fiche-row-by-etat > td,
 .dashboard-page .fiches-table tbody tr.fiche-row-by-etat td,
 .dashboard-admin-page .fiches-table tbody tr.fiche-row-by-etat td,
 .fiches-page .fiches-table tbody tr.fiche-row-by-etat td,
@@ -314,8 +327,8 @@ body.planning-commercial-page .planning-commercial .fiches-table tbody tr.fiche-
   font-weight: 800 !important;
 }
 
-html body table tbody tr.fiche-row-by-etat .fiche-row-lead-label,
-html body table tbody tr.fiche-row-by-etat .etat-text,
+html body table.fiches-table tbody tr.fiche-row-by-etat .fiche-row-lead-label,
+html body table.fiches-table tbody tr.fiche-row-by-etat .etat-text,
 html body .fiches-table tbody tr.fiche-row-by-etat .fiche-row-lead-label,
 html body .fiches-table tbody tr.fiche-row-by-etat .etat-text,
 html body .cq-table tbody tr.fiche-row-by-etat .etat-text,
@@ -325,20 +338,20 @@ html body .phase3-table tbody tr.fiche-row-by-etat .etat-text {
   font-weight: 800 !important;
 }
 
-/* Fonds sombres : texte blanc */
-html body table tbody tr.fiche-row-by-etat--dark,
-html body .fiches-table tbody tr.fiche-row-by-etat--dark,
-html body .cq-table tbody tr.fiche-row-by-etat--dark,
-html body .fiches-detail-table tbody tr.fiche-row-by-etat--dark,
-html body .phase3-table tbody tr.fiche-row-by-etat--dark {
+/* Fonds sombres : texte blanc (y compris spans nom/état) */
+html body table.fiches-table tbody tr.fiche-row-by-etat--dark,
+html body table.cq-table tbody tr.fiche-row-by-etat--dark,
+html body table.fiches-detail-table tbody tr.fiche-row-by-etat--dark,
+html body table.phase3-table tbody tr.fiche-row-by-etat--dark,
+html body .fiches-table tbody tr.fiche-row-by-etat--dark {
   color: #ffffff !important;
 }
 
-html body table tbody tr.fiche-row-by-etat--dark > td,
+html body table.fiches-table tbody tr.fiche-row-by-etat--dark > td,
+html body table.cq-table tbody tr.fiche-row-by-etat--dark > td,
+html body table.fiches-detail-table tbody tr.fiche-row-by-etat--dark > td,
+html body table.phase3-table tbody tr.fiche-row-by-etat--dark > td,
 html body .fiches-table tbody tr.fiche-row-by-etat--dark > td,
-html body .cq-table tbody tr.fiche-row-by-etat--dark > td,
-html body .fiches-detail-table tbody tr.fiche-row-by-etat--dark > td,
-html body .phase3-table tbody tr.fiche-row-by-etat--dark > td,
 .dashboard-page .fiches-table tbody tr.fiche-row-by-etat--dark td,
 .dashboard-admin-page .fiches-table tbody tr.fiche-row-by-etat--dark td,
 .fiches-page .fiches-table tbody tr.fiche-row-by-etat--dark td,
@@ -354,27 +367,29 @@ body.planning-commercial-page .planning-commercial .fiches-table tbody tr.fiche-
   color: #ffffff !important;
 }
 
-html body table tbody tr.fiche-row-by-etat--dark .fiche-row-lead-label,
-html body table tbody tr.fiche-row-by-etat--dark .etat-text,
+html body table.fiches-table tbody tr.fiche-row-by-etat--dark .fiche-row-lead-label,
+html body table.fiches-table tbody tr.fiche-row-by-etat--dark .etat-text,
 html body .fiches-table tbody tr.fiche-row-by-etat--dark .fiche-row-lead-label,
 html body .fiches-table tbody tr.fiche-row-by-etat--dark .etat-text,
 html body .cq-table tbody tr.fiche-row-by-etat--dark .etat-text,
 html body .fiches-detail-table tbody tr.fiche-row-by-etat--dark .etat-text,
 html body .phase3-table tbody tr.fiche-row-by-etat--dark .etat-text,
-html body table tbody tr.fiche-row-by-etat--dark a,
+html body table.fiches-table tbody tr.fiche-row-by-etat--dark a,
 html body .fiches-table tbody tr.fiche-row-by-etat--dark a {
   color: #ffffff !important;
 }
 
-/* Lignes claires : forcer noir partout (évite blanc résiduel sur certaines colonnes) */
-html body .fiches-table tbody tr.fiche-row-by-etat--light > td,
-html body .cq-table tbody tr.fiche-row-by-etat--light > td,
-html body .fiches-detail-table tbody tr.fiche-row-by-etat--light > td,
+/* Lignes claires : noir partout */
+html body table.fiches-table tbody tr.fiche-row-by-etat--light > td,
+html body table.cq-table tbody tr.fiche-row-by-etat--light > td,
+html body table.fiches-detail-table tbody tr.fiche-row-by-etat--light > td,
 html.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat--light td,
 body.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat--light td {
   color: #000000 !important;
 }
 
+html body table.fiches-table tbody tr.fiche-row-by-etat--light .fiche-row-lead-label,
+html body table.fiches-table tbody tr.fiche-row-by-etat--light .etat-text,
 html body .fiches-table tbody tr.fiche-row-by-etat--light .fiche-row-lead-label,
 html body .fiches-table tbody tr.fiche-row-by-etat--light .etat-text,
 html.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat--light .fiche-row-lead-label,
