@@ -52,7 +52,7 @@ export function FicheAdminValideCell({ valider, confRdvAvec }) {
     <td data-label="Validé:" className="fiche-col-badge fiche-col-valide" style={{ textAlign: 'center' }}>
       {valider > 0 ? (
         <FaCheck
-          style={{ color: '#28a745', fontSize: '15.3px' }}
+          style={{ color: '#000000', fontSize: '15.3px' }}
           title={`Validée${confRdvAvec ? ` avec ${confRdvAvec}` : ''}`}
         />
       ) : null}

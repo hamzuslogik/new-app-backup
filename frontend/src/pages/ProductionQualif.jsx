@@ -8,6 +8,7 @@ import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import SystemMessageBanner from '../components/SystemMessageBanner';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { getTodayLocal, toDateTimeLocalValue, splitDateTimeLocalValue, formatDateTimeFr } from '../utils/dateUtils';
 import './ProductionQualif.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
@@ -842,7 +843,7 @@ const ProductionQualif = () => {
                     return (
                       <tr
                         key={fiche.id || fiche.hash}
-                        className="fiche-row-by-etat"
+                        className={getFicheRowByEtatClassName(displayColor)}
                         style={{ backgroundColor: displayColor }}
                       >
                         <td className="col-date fiche-col-date">{formatDateTimeFr(fiche.date_insert_time)}</td>

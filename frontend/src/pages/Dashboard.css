@@ -1707,14 +1707,14 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   background-color: #fafafa;
 }
 
-/* Lignes colorées par état : texte noir très gras (style type Excel) */
+/* Lignes colorées par état : texte contrasté (blanc si fond sombre) */
 .dashboard-page .fiches-table tbody tr.fiche-row-by-etat td {
-  color: #000000;
+  color: inherit;
   font-weight: 800;
 }
 
 .dashboard-page .fiches-table tbody tr.fiche-row-by-etat .fiche-row-lead-label {
-  color: #000000;
+  color: inherit;
   font-weight: 800;
 }
 

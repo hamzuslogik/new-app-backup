@@ -11,6 +11,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { getEffectiveEtatColor, getEffectiveEtatTitle, getEtatTableAbbr, getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
 import { getCentreTableAbbr } from '../utils/tableAbbreviations';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import {
@@ -1625,7 +1626,7 @@ const Fiches = () => {
                     return (
                       <tr
                         key={fiche.hash}
-                        className={`fiche-row-by-etat${isArchived ? ' archived' : ''}`}
+                        className={getFicheRowByEtatClassName(etatColor, isArchived ? 'archived' : '')}
                         style={{ backgroundColor: etatColor }}
                       >
                         <td data-label="Nom:" className="fiche-col-nom">{fiche.nom || ''}</td>
@@ -1767,7 +1768,7 @@ const Fiches = () => {
                             <td data-label="Validé:" style={{ textAlign: 'center' }}>
                               {fiche.valider > 0 ? (
                                 <FaCheck
-                                  style={{ color: '#28a745', fontSize: '15.3px', cursor: 'pointer' }}
+                                  style={{ color: '#000000', fontSize: '15.3px', cursor: 'pointer' }}
                                   title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
                                 />
                               ) : null}

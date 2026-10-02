@@ -22,6 +22,7 @@ import { useSidebar } from '../contexts/SidebarContext';
 import FicheDetailModal from '../components/FicheDetailModal';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getCentreTableAbbr } from '../utils/tableAbbreviations';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { getEtatTableAbbr, getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
 import {
@@ -55,6 +56,7 @@ import {
   FicheAdminActionCell,
   FicheAdminIndicatorCells,
 } from '../components/fiches/FicheAdminBadgeColumns';
+import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
 import './RendezVousVue.css';
 
 const RDV_VUE_PAGE_CLASS = 'rdv-vue-page';
@@ -660,6 +662,7 @@ const RendezVousVue = () => {
 <table className={`fiches-table${isAdminFicheLayout ? ' fiches-table--admin-layout' : ''}`}>
               <thead>
                 <tr>
+                  <FicheRowSelectHeader />
                   <th className="sortable-header fiche-col-nom" onClick={() => handleSort('nom')}>Nom {getSortIndicator('nom')}</th>
                   <th className="sortable-header fiche-col-prenom" onClick={() => handleSort('prenom')}>Prénom {getSortIndicator('prenom')}</th>
                   <th className="sortable-header" onClick={() => handleSort('tel')}>Téléphone {getSortIndicator('tel')}</th>
@@ -703,10 +706,11 @@ const RendezVousVue = () => {
                   return (
                   <tr
                     key={f.id}
-                    className="fiche-row-by-etat"
+                    className={getFicheRowByEtatClassName(etatColor)}
                     {...bindFicheRowContextMenu(f)}
                     style={{ backgroundColor: etatColor }}
                   >
+                    <FicheRowSelectCell />
                     <td className="fiche-row-lead-cell fiche-col-nom">
                       <div className="fiche-row-lead-cell-inner">
                         <FicheTableMobileDetailButton
@@ -772,7 +776,9 @@ const RendezVousVue = () => {
                             {getProduitName(f.produit) || ''}
                           </span>
                         </td>
-                        <td>{Number(f.valider) > 0 ? '✓' : ''}</td>
+                        <td style={{ color: '#000000', textAlign: 'center', fontWeight: 700 }}>
+                          {Number(f.valider) > 0 ? '✓' : ''}
+                        </td>
                         <td className="rdv-vue-col-details">
                           <div className="fiche-indicators">
                             {ficheHasR2Placed(f) && <span className="indicator r2" title="R2 placé">R2</span>}

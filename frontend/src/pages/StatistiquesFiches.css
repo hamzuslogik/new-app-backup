@@ -746,13 +746,8 @@
   background: #f8f9fa;
 }
 
-.fiches-detail-table tbody tr.fiche-row-by-etat:hover {
-  filter: brightness(0.96);
-  background: inherit;
-}
-
 .fiches-detail-table tbody tr.fiche-row-by-etat > td {
-  color: #000000 !important;
+  color: inherit !important;
   font-weight: 800 !important;
   background-color: transparent !important;
 }

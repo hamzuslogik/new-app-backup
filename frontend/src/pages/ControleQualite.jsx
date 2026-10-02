@@ -34,6 +34,7 @@ import RemarquesContent from '../components/RemarquesContent';
 import KoMotifModal from '../components/KoMotifModal';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import SystemMessageBanner from '../components/SystemMessageBanner';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import './ControleQualite.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -1135,13 +1136,15 @@ const ControleQualite = () => {
                 {fiches.map((fiche) => (
                   <tr
                     key={fiche.hash}
-                    className={[
-                      'fiche-row-by-etat',
-                      isFicheLockedForUser(fiche) ? 'fiche-row-locked' : '',
-                      (fiche.archive === 1 || fiche.archive === '1') ? 'fiche-row-archive' : '',
-                      contextMenu?.fiche?.hash === fiche.hash ? 'cq-row-context-active' : '',
-                      selectedFicheHash === fiche.hash ? 'cq-row-selected' : '',
-                    ].filter(Boolean).join(' ')}
+                    className={getFicheRowByEtatClassName(
+                      getEtatActuelColor(fiche),
+                      [
+                        isFicheLockedForUser(fiche) ? 'fiche-row-locked' : '',
+                        (fiche.archive === 1 || fiche.archive === '1') ? 'fiche-row-archive' : '',
+                        contextMenu?.fiche?.hash === fiche.hash ? 'cq-row-context-active' : '',
+                        selectedFicheHash === fiche.hash ? 'cq-row-selected' : '',
+                      ].filter(Boolean).join(' ')
+                    )}
                     style={{ backgroundColor: getEtatActuelColor(fiche) }}
                     onContextMenu={(e) => openRowContextMenu(e, fiche)}
                     onDoubleClick={(e) => handleRowDoubleClick(e, fiche)}

@@ -17,6 +17,8 @@ import {
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
 import { formatFicheCommercialDisplay } from '../utils/ficheCommercialDisplay';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
+import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
 import './DashboardAdmin.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -1074,6 +1076,7 @@ const DashboardAdmin = () => {
               <table className="fiches-table fiches-table--admin-layout">
                 <thead>
                   <tr>
+                    <FicheRowSelectHeader />
                     <th onClick={() => handleSort('Nom')} className="sortable-header fiche-col-nom">
                       Nom {getSortIcon('Nom')}
                     </th>
@@ -1132,9 +1135,10 @@ const DashboardAdmin = () => {
                     return (
                       <tr
                         key={fiche.hash}
-                        className="fiche-row-by-etat"
+                        className={getFicheRowByEtatClassName(etatColor)}
                         style={{ backgroundColor: etatColor }}
                       >
+                        <FicheRowSelectCell />
                         <td data-label="Nom:" className="fiche-col-nom">{fiche.nom || ''}</td>
                         <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>
@@ -1145,7 +1149,7 @@ const DashboardAdmin = () => {
                           {fiche.valider > 0 ? (
                             <FaCheck
                               style={{
-                                color: '#28a745',
+                                color: '#000000',
                                 fontSize: '15.3px',
                                 cursor: 'pointer'
                               }}

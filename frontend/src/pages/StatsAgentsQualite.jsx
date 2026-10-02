@@ -19,6 +19,8 @@ import {
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import './StatsAgentsQualite.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
@@ -764,6 +766,7 @@ const StatsAgentsQualite = () => {
                 <table className="fiches-table">
                   <thead>
                     <tr>
+                      <FicheRowSelectHeader />
                       <th>Date audit</th>
                       <th>Nom / Prénom</th>
                       <th>Téléphone</th>
@@ -781,13 +784,13 @@ const StatsAgentsQualite = () => {
                     {filteredFichesAuditeesQualif.map((fiche) => (
                       <tr
                         key={fiche.id}
-                        className={[
-                          'fiche-row-by-etat',
-                          fiche.ko ? 'row-ko' : '',
-                          fiche.hc ? 'row-hc' : '',
-                        ].filter(Boolean).join(' ')}
+                        className={getFicheRowByEtatClassName(
+                          fiche.etat_color || '#ccc',
+                          [fiche.ko ? 'row-ko' : '', fiche.hc ? 'row-hc' : ''].filter(Boolean).join(' ')
+                        )}
                         style={{ backgroundColor: fiche.etat_color || '#ccc' }}
                       >
+                        <FicheRowSelectCell />
                         <td className="fiche-col-date">{formatDateTime(fiche.date_audit)}</td>
                         <td>
                           <div className="name-cell">
@@ -936,6 +939,7 @@ const StatsAgentsQualite = () => {
                 <table className="fiches-table rdvs-audites-table">
                   <thead>
                     <tr>
+                      <FicheRowSelectHeader />
                       <th>Date audit</th>
                       <th>Date RDV</th>
                       <th>Nom / Prénom</th>
@@ -950,6 +954,7 @@ const StatsAgentsQualite = () => {
                   <tbody>
                     {filteredRdvsAudites.map((rdv) => (
                       <tr key={rdv.id}>
+                        <FicheRowSelectCell />
                         <td className="fiche-col-date">{formatDateTime(rdv.date_audit || rdv.date_modif_time)}</td>
                         <td className="fiche-col-date">{formatDateTime(rdv.date_rdv_time)}</td>
                         <td>

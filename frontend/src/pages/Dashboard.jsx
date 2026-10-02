@@ -20,6 +20,7 @@ import { captureFicheTableRowScreenshot } from '../utils/captureFicheTableRowScr
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
 import { getEtatDisplayWithSousEtat, getEtatTableAbbr } from '../utils/etatSignerComplet';
 import { getCentreTableAbbr } from '../utils/tableAbbreviations';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import {
   getFicheTableIndicators,
   ficheHasDecalageRequest,
@@ -33,6 +34,7 @@ import {
   FicheAdminActionCell,
   FicheAdminIndicatorCells,
 } from '../components/fiches/FicheAdminBadgeColumns';
+import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
 import {
   applyForceDesktopViewport,
   applyMobileNativeViewport,
@@ -2320,6 +2322,7 @@ const Dashboard = () => {
 <table className={`fiches-table${isAdminFicheLayout ? " fiches-table--admin-layout" : ""}`}>
                 <thead>
                   <tr>
+                    <FicheRowSelectHeader />
                     <th onClick={() => handleSort('Nom')} className="sortable-header fiche-col-nom">
                       Nom {getSortIcon('Nom')}
                     </th>
@@ -2405,7 +2408,7 @@ const Dashboard = () => {
                     return (
                       <tr
                         key={fiche.hash}
-                        className="fiche-row-by-etat"
+                        className={getFicheRowByEtatClassName(etatColor)}
                         data-fiche-hash={fiche.hash}
                         {...bindFicheRowContextMenu(fiche, { enabled: canFicheContextMenu })}
                         style={{
@@ -2413,6 +2416,7 @@ const Dashboard = () => {
                         }}
                         title={getTooltipComment(fiche) || undefined}
                       >
+                        <FicheRowSelectCell />
                         <td data-label="" className="fiche-row-lead-cell fiche-col-nom">
                           <div className="fiche-row-lead-cell-inner">
                             <FicheTableMobileDetailButton
@@ -2506,7 +2510,7 @@ const Dashboard = () => {
                               {fiche.valider > 0 ? (
                                 <FaCheck
                                   style={{
-                                    color: '#28a745',
+                                    color: '#000000',
                                     fontSize: '15.3px',
                                     cursor: 'pointer'
                                   }}

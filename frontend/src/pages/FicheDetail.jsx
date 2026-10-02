@@ -672,6 +672,17 @@ const ETATS_AVEC_COMMENTAIRE_MOTIF = [5, 6, 11, 12, 22, 23, 24, 25, 26, 29, 34];
 /** À la validation du passage d'état : commentaire obligatoire (motif_qualif). */
 const ETATS_MOTIF_QUALIF_REQUIS = [5, 6, 11, 12, 22, 24, 25, 26, 29];
 
+/**
+ * Préremplissage commentaire depuis le titre du sous-état.
+ * Exception : sous-état « AUTRE » → laisser le commentaire vide (saisie libre).
+ */
+function getCommentPrefillFromSousEtatTitre(titre) {
+  const t = String(titre || '').trim();
+  if (!t) return '';
+  if (t.toUpperCase() === 'AUTRE') return '';
+  return t;
+}
+
 // Helper pour calculer le timeKey à partir d'une heure (HH:MM:SS)
 // Évite les problèmes de fuseau horaire en calculant directement les secondes depuis minuit UTC
 function hourToTimeKey(hour) {
@@ -8563,9 +8574,9 @@ const FicheDetail = ({
                         setEtatFormData({
                           ...etatFormData,
                           id_sous_etat: selectedId,
-                          // Préremplit le commentaire avec le sous-état choisi.
+                          // Préremplit le commentaire avec le sous-état choisi (sauf AUTRE).
                           // Le confirmateur peut ensuite le modifier librement.
-                          motif_qualif: selectedSousEtat?.titre || ''
+                          motif_qualif: getCommentPrefillFromSousEtatTitre(selectedSousEtat?.titre)
                         });
                       }}
                     >

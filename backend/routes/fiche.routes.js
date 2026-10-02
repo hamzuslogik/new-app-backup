@@ -1756,15 +1756,15 @@ router.get('/', authenticate, async (req, res) => {
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           if (dateDebut && dateFin) {
             histoIdsSubquerySql =
-              'SELECT DISTINCT id_fiche FROM fiches_histo WHERE date_creation >= ? AND date_creation <= ?';
+              'SELECT id_fiche FROM fiches_histo WHERE date_creation >= ? AND date_creation <= ? GROUP BY id_fiche';
             histoIdsSubqueryParams = [startDatetime, endDatetime];
           } else if (dateDebut) {
             histoIdsSubquerySql =
-              'SELECT DISTINCT id_fiche FROM fiches_histo WHERE date_creation >= ?';
+              'SELECT id_fiche FROM fiches_histo WHERE date_creation >= ? GROUP BY id_fiche';
             histoIdsSubqueryParams = [startDatetime];
           } else if (dateFin) {
             histoIdsSubquerySql =
-              'SELECT DISTINCT id_fiche FROM fiches_histo WHERE date_creation <= ?';
+              'SELECT id_fiche FROM fiches_histo WHERE date_creation <= ? GROUP BY id_fiche';
             histoIdsSubqueryParams = [endDatetime];
           }
           if (histoIdsSubquerySql) {
@@ -1908,6 +1908,12 @@ router.get('/', authenticate, async (req, res) => {
     const countResult = await queryOne(countSql, countParams);
     const total = countResult.total;
     const countDuration = Date.now() - countStartTime;
+    if (countDuration >= 800) {
+      console.warn(
+        `[FICHES-${requestId}] COUNT lent ${countDuration}ms total=${total} date_champ=${date_champ || '-'} ` +
+          `(histoIds=${histoIdsSubquerySql ? 'yes' : 'no'})`
+      );
+    }
 
     if (req.user.fonction === 6 && isActiveSearch && Number(total) === 0) {
       try {
@@ -1943,6 +1949,8 @@ router.get('/', authenticate, async (req, res) => {
     // Récupérer les fiches avec historique et décalages
     // Optimisation: utiliser une sous-requête pour l'historique au lieu de GROUP_CONCAT avec JOIN
     // Cela évite de créer un produit cartésien qui peut ralentir la requête
+    // Si histoIdsSubquerySql (déjà 1 ligne / fiche), GROUP BY est inutile et coûteux.
+    const groupByClause = histoIdsSubquerySql ? '' : 'GROUP BY fiche.id';
     const selectStartTime = Date.now();
     const selectQuery = `SELECT fiche.*,
        etat.titre as etat_titre,
@@ -1987,7 +1995,7 @@ router.get('/', authenticate, async (req, res) => {
        ${histoJoinForFichesHisto}
        ${qualifJoin}
        ${whereClause}
-       GROUP BY fiche.id
+       ${groupByClause}
        ${orderByClause}
        LIMIT ? OFFSET ?`;
     const selectParams = histoJoinForFichesHisto
@@ -1995,6 +2003,12 @@ router.get('/', authenticate, async (req, res) => {
       : [...params, parsedLimit, offset];
     const fiches = await query(selectQuery, selectParams);
     const selectDuration = Date.now() - selectStartTime;
+    if (selectDuration >= 800) {
+      console.warn(
+        `[FICHES-${requestId}] SELECT lent ${selectDuration}ms rows=${fiches.length} limit=${parsedLimit} ` +
+          `date_champ=${date_champ || '-'} groupBy=${groupByClause ? 'yes' : 'no'}`
+      );
+    }
 
     // « Mes actions » : éviter GROUP_CONCAT sur tout l'historique (très lent sur grosses tables)
     if (!histoIdsSubquerySql) {

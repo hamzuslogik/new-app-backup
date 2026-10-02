@@ -16,6 +16,8 @@ import {
 } from 'recharts';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FicheDetailLink from '../components/FicheDetailLink';
+import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFirstOfMonthLocal, getLastDayOfMonthLocal } from '../utils/dateUtils';
 import './StatistiquesFiches.css';
@@ -627,6 +629,7 @@ const StatistiquesFiches = () => {
             <table className="fiches-detail-table">
               <thead>
                 <tr>
+                  <FicheRowSelectHeader />
                   <th
                     scope="col"
                     className="fiches-detail-th-sortable"
@@ -782,9 +785,10 @@ const StatistiquesFiches = () => {
                   return (
                     <tr
                       key={fiche.id || fiche.hash}
-                      className="fiche-row-by-etat"
+                      className={getFicheRowByEtatClassName(etatColor)}
                       style={{ backgroundColor: etatColor }}
                     >
+                      <FicheRowSelectCell />
                       <td>{fiche.nom || ''}</td>
                       <td>{fiche.prenom || ''}</td>
                       <td>{fiche.tel || fiche.gsm1 || ''}</td>

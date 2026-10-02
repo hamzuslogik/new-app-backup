@@ -11,6 +11,7 @@ import {
   FaEyeSlash,
   FaSearch,
   FaClipboardCheck,
+  FaSync,
 } from 'react-icons/fa';
 import FicheDetailLink from '../components/FicheDetailLink';
 import {
@@ -19,6 +20,7 @@ import {
 } from '../components/QualiteConfirmationAuditModal';
 import { isFicheAuditeeQualiteConfirmation } from '../utils/qualiteConfirmationAudit';
 import { formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
+import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
 import './Validation.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -59,7 +61,7 @@ const Validation = () => {
   const canLoadValidation =
     !!user && [1, 2, 4, 6, 7, 11, 13, 14].includes(Number(user.fonction));
 
-  const { data: validationData, isLoading, error } = useQuery(
+  const { data: validationData, isLoading, isFetching, error, refetch } = useQuery(
     ['validation-rdv', filters],
     async () => {
       const params = {
@@ -121,6 +123,15 @@ const Validation = () => {
           <PageIcon /> {pageTitle}
         </h1>
         <div className="header-buttons">
+          <button
+            className="refresh-btn"
+            type="button"
+            onClick={() => refetch()}
+            disabled={!canLoadValidation || isFetching}
+            title="Actualiser la liste"
+          >
+            <FaSync className={isFetching ? 'spinning' : ''} /> Actualiser
+          </button>
           <button className="filter-toggle-btn" type="button" onClick={() => setShowFilters(!showFilters)}>
             <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
           </button>
@@ -294,6 +305,7 @@ const Validation = () => {
             <table className="fiches-table">
               <thead>
                 <tr>
+                  <FicheRowSelectHeader />
                   <th>Nom</th>
                   <th>Prénom</th>
                   <th className="detail-column">Téléphone</th>
@@ -324,6 +336,7 @@ const Validation = () => {
 
                   return (
                     <tr key={fiche.id}>
+                      <FicheRowSelectCell />
                       <td>{fiche.nom || ''}</td>
                       <td>{fiche.prenom || ''}</td>
                       <td className="detail-column">{fiche.tel || ''}</td>

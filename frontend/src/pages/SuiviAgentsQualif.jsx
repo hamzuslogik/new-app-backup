@@ -6,6 +6,7 @@ import { FaUserTie, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf, FaChe
 import { toast } from 'react-toastify';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import SystemMessageBanner from '../components/SystemMessageBanner';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import './SuiviAgentsQualif.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -859,7 +860,7 @@ const SuiviAgentsQualif = () => {
                     return (
                     <tr
                       key={fiche.id}
-                      className="fiche-row-by-etat"
+                      className={getFicheRowByEtatClassName(rowColor)}
                       style={{ backgroundColor: rowColor }}
                     >
                       <td>{fiche.id}</td>

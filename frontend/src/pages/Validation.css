@@ -68,6 +68,38 @@
   background: #1976D2;
 }
 
+.refresh-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  background: #4caf50;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6.4px;
+  transition: background 0.3s;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #43a047;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.refresh-btn .spinning {
+  animation: validation-spin 0.8s linear infinite;
+}
+
+@keyframes validation-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .validation-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

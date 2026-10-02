@@ -6,6 +6,7 @@ import { FaCheckCircle, FaTimesCircle, FaCalendarWeek, FaCalendarAlt, FaFileAlt,
 import { Link } from 'react-router-dom';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import './Phase3.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -87,7 +88,7 @@ const Phase3 = () => {
     return (
       <tr
         key={fiche.id}
-        className="fiche-row-by-etat"
+        className={getFicheRowByEtatClassName(etatInfo.color)}
         style={{ backgroundColor: etatInfo.color }}
       >
         <td>{fiche.nom}</td>

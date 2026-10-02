@@ -10,7 +10,9 @@ import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
 import { cleanObservationCQ } from '../utils/cleanObservationCQ';
 import { getEtatDisplayWithSousEtat, getEtatTableAbbr } from '../utils/etatSignerComplet';
 import { abbreviateCentreName } from '../utils/tableAbbreviations';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { exportToCSV, exportToExcel } from '../utils/exportUtils';
+import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
 import './CQSignatures.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -450,6 +452,7 @@ const CQSignatures = () => {
             <table className="cq-table">
               <thead>
                 <tr>
+                  <FicheRowSelectHeader />
                   <th className="sortable-header wrap-header nom-col" onClick={() => handleSort('nom')}>Nom <span>{sortIndicator('nom')}</span></th>
                   <th className="sortable-header wrap-header prenom-col" onClick={() => handleSort('prenom')}>Prénom <span>{sortIndicator('prenom')}</span></th>
                   <th className="sortable-header telephone-col" onClick={() => handleSort('telephone')}>Téléphone <span>{sortIndicator('telephone')}</span></th>
@@ -472,9 +475,10 @@ const CQSignatures = () => {
                 {sortedRows.map((sig) => (
                   <tr
                     key={sig.id_fiche || sig.id}
-                    className="fiche-row-by-etat cq-table-row-by-etat"
+                    className={getFicheRowByEtatClassName(getEtatColor(sig), 'cq-table-row-by-etat')}
                     style={{ backgroundColor: getEtatColor(sig) }}
                   >
+                    <FicheRowSelectCell />
                     <td className="wrap-word-cell nom-col">{sig.nom || '-'}</td>
                     <td className="wrap-word-cell prenom-col">{sig.prenom || '-'}</td>
                     <td className="telephone-col">{sig.tel || sig.fiche_tel || '-'}</td>

@@ -161,7 +161,7 @@
 }
 
 .cq-table tbody tr.fiche-row-by-etat > td {
-  color: #000000 !important;
+  color: inherit !important;
   font-weight: 800 !important;
   background-color: transparent !important;
 }

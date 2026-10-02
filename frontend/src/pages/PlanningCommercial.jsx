@@ -12,8 +12,10 @@ import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getFicheTableIndicators } from '../utils/ficheTableIndicators';
 import { abbreviateCentreName } from '../utils/tableAbbreviations';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { getEtatTableAbbr, getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
 import SystemMessageBanner from '../components/SystemMessageBanner';
+import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
 import {
   applyForceDesktopViewport,
   applyMobileNativeViewport,
@@ -963,6 +965,7 @@ const PlanningCommercial = () => {
               <table className={`fiches-table${isCommercial ? ' fiches-table--commercial' : ''}`}>
                 <thead>
                   <tr>
+                    <FicheRowSelectHeader />
                     <th className="fiche-col-date">Date RDV</th>
                     <th className="fiche-col-nom">Nom</th>
                     <th className="fiche-col-prenom">Prénom</th>
@@ -991,9 +994,10 @@ const PlanningCommercial = () => {
                     return (
                       <tr 
                         key={fiche.hash}
-                        className="fiche-row-by-etat"
+                        className={getFicheRowByEtatClassName(etatColor)}
                         style={{ backgroundColor: etatColor }}
                       >
+                        <FicheRowSelectCell />
                         <td data-label="Date RDV:" className="fiche-col-date">
                           <strong>{formatRdvDateTime(fiche.date_rdv_time)}</strong>
                           {fiche.rdv_urgent === 1 || fiche.qualification_code === 'RDV_URGENT' ? (
@@ -1085,7 +1089,7 @@ const PlanningCommercial = () => {
                             {fiche.valider > 0 ? (
                               <FaCheck
                                 style={{
-                                  color: '#28a745',
+                                  color: '#000000',
                                   fontSize: '15.3px',
                                 }}
                                 title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}

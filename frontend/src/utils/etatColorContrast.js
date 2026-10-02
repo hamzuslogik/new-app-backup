@@ -22,6 +22,13 @@ export function getEtatContrastColor(bgHex) {
   return luminance > 0.58 ? '#000000' : '#ffffff';
 }
 
+/** className pour ligne tableau colorée par état (texte clair/sombre). */
+export function getFicheRowByEtatClassName(bgHex, extraClass = '') {
+  const fg = getEtatContrastColor(bgHex);
+  const tone = fg === '#ffffff' ? 'fiche-row-by-etat--dark' : 'fiche-row-by-etat--light';
+  return ['fiche-row-by-etat', tone, extraClass].filter(Boolean).join(' ');
+}
+
 export function getEtatStatCellStyle(etat) {
   return getEtatStatCellProps(etat).style;
 }

@@ -6,6 +6,7 @@ import { FaUserCheck, FaCheck, FaSearch } from 'react-icons/fa';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getEtatDisplayWithSousEtat, getEtatTableAbbr } from '../utils/etatSignerComplet';
 import { abbreviateCentreName } from '../utils/tableAbbreviations';
+import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import {
   getFicheTableIndicators,
@@ -465,7 +466,7 @@ const Affectation = () => {
                   return (
                     <tr
                       key={fiche.id}
-                      className={`fiche-row-by-etat ${selectedFiches.includes(fiche.id) ? 'selected' : ''}`}
+                      className={getFicheRowByEtatClassName(etatColor, selectedFiches.includes(fiche.id) ? 'selected' : '')}
                       style={{
                         backgroundColor: etatColor,
                       }}
@@ -540,7 +541,7 @@ const Affectation = () => {
                           <td data-label="Validé:" style={{ textAlign: 'center' }}>
                             {fiche.valider > 0 ? (
                               <FaCheck
-                                style={{ color: '#28a745', fontSize: '15.3px' }}
+                                style={{ color: '#000000', fontSize: '15.3px' }}
                                 title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
                               />
                             ) : null}

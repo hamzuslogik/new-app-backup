@@ -100,16 +100,12 @@
 }
 
 .phase3-table tbody tr.fiche-row-by-etat > td {
-  color: #000000 !important;
+  color: inherit !important;
   font-weight: 800 !important;
   background-color: transparent !important;
 }
 
-.phase3-table tbody tr.fiche-row-by-etat:hover {
-  filter: brightness(0.96);
-}
-
-.phase3-table tbody tr:hover:not(.fiche-row-by-etat) {
+.phase3-table tbody tr:hover {
   background: #f8f9fa;
 }
 

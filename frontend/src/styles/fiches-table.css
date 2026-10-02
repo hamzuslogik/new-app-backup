@@ -4,6 +4,57 @@
  * - Dates : toujours sur une seule ligne
  */
 
+/* Colonne case à cocher (sélection visuelle, sans action) */
+html body table.fiches-table th.fiche-col-select,
+html body table.fiches-table td.fiche-col-select,
+html body .fiches-table th.fiche-col-select,
+html body .fiches-table td.fiche-col-select,
+html body table.cq-table th.fiche-col-select,
+html body table.cq-table td.fiche-col-select,
+html body table.fiches-detail-table th.fiche-col-select,
+html body table.fiches-detail-table td.fiche-col-select {
+  width: 2.25rem !important;
+  min-width: 2.25rem !important;
+  max-width: 2.5rem !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  padding-left: 0.35rem !important;
+  padding-right: 0.35rem !important;
+  white-space: nowrap !important;
+}
+
+html body .fiche-row-select-checkbox {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #16a34a;
+  vertical-align: middle;
+}
+
+html body .fiche-col-select-spacer {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Sigle Validé (✔) : noir par défaut, blanc sur fond sombre */
+html body table.fiches-table td.fiche-col-valide svg,
+html body .fiches-table td.fiche-col-valide svg,
+html body table.fiches-table td[data-label="Validé:"] svg,
+html body .fiches-table td[data-label="Validé:"] svg {
+  color: #000000 !important;
+  fill: #000000 !important;
+}
+
+html body table tbody tr.fiche-row-by-etat--dark td.fiche-col-valide svg,
+html body .fiches-table tbody tr.fiche-row-by-etat--dark td.fiche-col-valide svg,
+html body table tbody tr.fiche-row-by-etat--dark td[data-label="Validé:"] svg,
+html body .fiches-table tbody tr.fiche-row-by-etat--dark td[data-label="Validé:"] svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
 html body table.fiches-table,
 html body .fiches-table,
 html.rdv-vue-page .rdv-vue .fiches-table,
@@ -231,7 +282,7 @@ html body .fiches-table td.fiche-col-badge {
   color: #6b7280;
 }
 
-/* Lignes colorées par état (toutes pages) : fond = couleur état, texte noir gras */
+/* Lignes colorées par état (toutes pages) : fond = couleur état, texte contrasté */
 html body table tbody tr.fiche-row-by-etat > td,
 html body .fiches-table tbody tr.fiche-row-by-etat > td,
 html body .cq-table tbody tr.fiche-row-by-etat > td,
@@ -244,10 +295,7 @@ html body .phase3-table tbody tr.fiche-row-by-etat > td,
 .controle-qualite .fiches-table tbody tr.fiche-row-by-etat > td,
 .production-qualif .fiches-table tbody tr.fiche-row-by-etat > td,
 .stats-agents-qualite-page .fiches-table tbody tr.fiche-row-by-etat > td,
-.suivi-agents-qualif .fiches-table tbody tr.fiche-row-by-etat > td {
-  color: #000000 !important;
-  font-weight: 800 !important;
-}
+.suivi-agents-qualif .fiches-table tbody tr.fiche-row-by-etat > td,
 html.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat td,
 body.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat td,
 html.planning-commercial-page .planning-commercial .fiches-table tbody tr.fiche-row-by-etat td,
@@ -265,6 +313,56 @@ html body .fiches-detail-table tbody tr.fiche-row-by-etat .etat-text,
 html body .phase3-table tbody tr.fiche-row-by-etat .etat-text {
   color: #000000 !important;
   font-weight: 800 !important;
+}
+
+/* Fonds sombres : texte blanc */
+html body table tbody tr.fiche-row-by-etat--dark,
+html body .fiches-table tbody tr.fiche-row-by-etat--dark,
+html body .cq-table tbody tr.fiche-row-by-etat--dark,
+html body .fiches-detail-table tbody tr.fiche-row-by-etat--dark,
+html body .phase3-table tbody tr.fiche-row-by-etat--dark {
+  color: #ffffff !important;
+}
+
+html body table tbody tr.fiche-row-by-etat--dark > td,
+html body .fiches-table tbody tr.fiche-row-by-etat--dark > td,
+html body .cq-table tbody tr.fiche-row-by-etat--dark > td,
+html body .fiches-detail-table tbody tr.fiche-row-by-etat--dark > td,
+html body .phase3-table tbody tr.fiche-row-by-etat--dark > td,
+.dashboard-page .fiches-table tbody tr.fiche-row-by-etat--dark td,
+.dashboard-admin-page .fiches-table tbody tr.fiche-row-by-etat--dark td,
+.fiches-page .fiches-table tbody tr.fiche-row-by-etat--dark td,
+.affectation-page .fiches-table tbody tr.fiche-row-by-etat--dark td,
+.controle-qualite .fiches-table tbody tr.fiche-row-by-etat--dark > td,
+.production-qualif .fiches-table tbody tr.fiche-row-by-etat--dark > td,
+.stats-agents-qualite-page .fiches-table tbody tr.fiche-row-by-etat--dark > td,
+.suivi-agents-qualif .fiches-table tbody tr.fiche-row-by-etat--dark > td,
+html.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat--dark td,
+body.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat--dark td,
+html.planning-commercial-page .planning-commercial .fiches-table tbody tr.fiche-row-by-etat--dark td,
+body.planning-commercial-page .planning-commercial .fiches-table tbody tr.fiche-row-by-etat--dark td {
+  color: #ffffff !important;
+}
+
+html body table tbody tr.fiche-row-by-etat--dark .fiche-row-lead-label,
+html body table tbody tr.fiche-row-by-etat--dark .etat-text,
+html body .fiches-table tbody tr.fiche-row-by-etat--dark .fiche-row-lead-label,
+html body .fiches-table tbody tr.fiche-row-by-etat--dark .etat-text,
+html body .cq-table tbody tr.fiche-row-by-etat--dark .etat-text,
+html body .fiches-detail-table tbody tr.fiche-row-by-etat--dark .etat-text,
+html body .phase3-table tbody tr.fiche-row-by-etat--dark .etat-text,
+html body table tbody tr.fiche-row-by-etat--dark a,
+html body .fiches-table tbody tr.fiche-row-by-etat--dark a {
+  color: #ffffff !important;
+}
+
+/* Survol : assombrir légèrement les lignes colorées par état */
+html body table tbody tr.fiche-row-by-etat:hover,
+html body .fiches-table tbody tr.fiche-row-by-etat:hover,
+html body .cq-table tbody tr.fiche-row-by-etat:hover,
+html body .fiches-detail-table tbody tr.fiche-row-by-etat:hover,
+html body .phase3-table tbody tr.fiche-row-by-etat:hover {
+  filter: brightness(0.96);
 }
 
 /* État en texte (plus de badge coloré sur fond déjà coloré) */
