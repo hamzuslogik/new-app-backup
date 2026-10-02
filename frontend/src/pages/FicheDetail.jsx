@@ -3984,14 +3984,24 @@ const FicheDetail = ({
           </h2>
           <table className="fiche-details-table">
             <tbody>
-              {renderField('Étude à faire pour', 'produit',
+              {renderField(
+                'Étude à faire pour',
+                'conf_produit',
                 (fiche.conf_produit != null && fiche.conf_produit !== '')
                   ? (fiche.conf_produit === 1 || fiche.conf_produit === '1' ? 'PAC' : fiche.conf_produit === 2 || fiche.conf_produit === '2' ? 'PV' : String(fiche.conf_produit))
                   : (fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : fiche.produit === 2 ? 'PV' : '-')),
-                'select', [
+                'select',
+                [
                   { id: 1, nom: 'PAC' },
                   { id: 2, nom: 'PV' }
-                ])}
+                ],
+                false,
+                String(
+                  fiche.conf_produit != null && String(fiche.conf_produit).trim() !== ''
+                    ? fiche.conf_produit
+                    : (fiche.produit ?? '')
+                )
+              )}
               {hasConfValue(fiche.conf_commentaire_produit)
                 ? renderField('Commentaire', 'conf_commentaire_produit', fiche.conf_commentaire_produit || '-', 'textarea')
                 : renderField('Commentaire', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')}
@@ -4013,9 +4023,12 @@ const FicheDetail = ({
               )}
               {renderField(
                 'Mode de chauffage',
-                'mode_chauffage',
-                modeChauffageAffiche(fiche.conf_mode_chauffage, fiche.mode_chauffage),
-                'text'
+                'conf_mode_chauffage',
+                modeChauffageAffiche(fiche.conf_mode_chauffage, fiche.mode_chauffage) || '-',
+                'text',
+                null,
+                false,
+                modeChauffageAffiche(fiche.conf_mode_chauffage, fiche.mode_chauffage) || ''
               )}
               {renderField('Année de système de chauffage', 'annee_systeme_chauffage', fiche.annee_systeme_chauffage || '-', 'number')}
               {renderField('Consommation chauffage', 'consommation_chauffage',
@@ -8170,7 +8183,11 @@ const FicheDetail = ({
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_consommation_electricite_gen">Consommations électrique *</label></td>
+                      <td>
+                        <label htmlFor="conf_consommation_electricite_gen">
+                          Consommations électrique{String(confFormData.produit) === '1' ? '' : ' *'}
+                        </label>
+                      </td>
                       <td>
                         <input
                           type="text"
@@ -8178,12 +8195,16 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_consommation_electricite}
                           onChange={(e) => setConfFormData({...confFormData, conf_consommation_electricite: e.target.value})}
-                          required
+                          required={String(confFormData.produit) !== '1'}
                         />
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_consommation_chauffage_gen">Consommations chauffage *</label></td>
+                      <td>
+                        <label htmlFor="conf_consommation_chauffage_gen">
+                          Consommations chauffage{String(confFormData.produit) === '2' ? '' : ' *'}
+                        </label>
+                      </td>
                       <td>
                         <input
                           type="text"
@@ -8191,7 +8212,7 @@ const FicheDetail = ({
                           className="form-control"
                           value={confFormData.conf_consommation_chauffage}
                           onChange={(e) => setConfFormData({...confFormData, conf_consommation_chauffage: e.target.value})}
-                          required
+                          required={String(confFormData.produit) !== '2'}
                         />
                       </td>
                     </tr>
@@ -11811,26 +11832,60 @@ const CreateRdvModal = ({
                   </td>
                     </tr>
                 <tr>
-                  <td><label>Consommations électrique *</label></td>
+                  <td>
+                    <label>
+                      Consommations électrique
+                      {!(
+                        Number(rdvFormData.produit) === 1 ||
+                        String(produits?.find((p) => String(p.id) === String(rdvFormData.produit))?.nom || '')
+                          .toUpperCase()
+                          .includes('PAC')
+                      ) && ' *'}
+                    </label>
+                  </td>
                   <td>
                     <input
                       type="text"
                       className="form-control"
                       value={rdvFormData.conf_consommation_electricite || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_electricite: e.target.value})}
-                      required
+                      required={
+                        !(
+                          Number(rdvFormData.produit) === 1 ||
+                          String(produits?.find((p) => String(p.id) === String(rdvFormData.produit))?.nom || '')
+                            .toUpperCase()
+                            .includes('PAC')
+                        )
+                      }
                     />
                   </td>
                 </tr>
                 <tr>
-                  <td><label>Consommations chauffage *</label></td>
+                  <td>
+                    <label>
+                      Consommations chauffage
+                      {!(
+                        Number(rdvFormData.produit) === 2 ||
+                        String(produits?.find((p) => String(p.id) === String(rdvFormData.produit))?.nom || '')
+                          .toUpperCase()
+                          .includes('PV')
+                      ) && ' *'}
+                    </label>
+                  </td>
                   <td>
                     <input
                       type="text"
                       className="form-control"
                       value={rdvFormData.conf_consommation_chauffage || ''}
                       onChange={(e) => setRdvFormData({...rdvFormData, conf_consommation_chauffage: e.target.value})}
-                      required
+                      required={
+                        !(
+                          Number(rdvFormData.produit) === 2 ||
+                          String(produits?.find((p) => String(p.id) === String(rdvFormData.produit))?.nom || '')
+                            .toUpperCase()
+                            .includes('PV')
+                        )
+                      }
                     />
                   </td>
                 </tr>

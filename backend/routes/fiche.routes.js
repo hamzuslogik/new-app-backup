@@ -5189,6 +5189,68 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       [dbValue, now, id]
     );
 
+    // Mode chauffage : garder conf_mode_chauffage et mode_chauffage synchronisés
+    // (l'affichage préfère conf_mode_chauffage ; l'ancien champ mode_chauffage reste utilisé ailleurs)
+    if (dbField === 'conf_mode_chauffage' || dbField === 'mode_chauffage') {
+      const twinField = dbField === 'conf_mode_chauffage' ? 'mode_chauffage' : 'conf_mode_chauffage';
+      try {
+        await query(
+          `UPDATE fiches SET \`${twinField}\` = ?, date_modif_time = ? WHERE id = ?`,
+          [dbValue, now, id]
+        );
+        if (String(fiche[twinField] ?? '') !== String(dbValue ?? '')) {
+          await logModification(
+            id,
+            req.user.id,
+            req.user.pseudo || 'Utilisateur',
+            twinField,
+            fiche[twinField],
+            dbValue
+          );
+        }
+      } catch (syncModeErr) {
+        console.error('Erreur sync mode_chauffage / conf_mode_chauffage:', syncModeErr);
+      }
+    }
+
+    // Produit : garder conf_produit et produit synchronisés
+    // (l'affichage « Étude à faire pour » préfère conf_produit)
+    if (dbField === 'conf_produit' || dbField === 'produit') {
+      let produitValue = dbValue;
+      if (produitValue !== null && produitValue !== undefined && produitValue !== '') {
+        const parsedProduit = parseInt(produitValue, 10);
+        produitValue = Number.isFinite(parsedProduit) ? parsedProduit : dbValue;
+      } else {
+        produitValue = null;
+      }
+      if (dbField === 'conf_produit') {
+        // Réécrire conf_produit en entier si besoin
+        await query(
+          `UPDATE fiches SET conf_produit = ?, date_modif_time = ? WHERE id = ?`,
+          [produitValue, now, id]
+        );
+      }
+      const twinField = dbField === 'conf_produit' ? 'produit' : 'conf_produit';
+      try {
+        await query(
+          `UPDATE fiches SET \`${twinField}\` = ?, date_modif_time = ? WHERE id = ?`,
+          [produitValue, now, id]
+        );
+        if (String(fiche[twinField] ?? '') !== String(produitValue ?? '')) {
+          await logModification(
+            id,
+            req.user.id,
+            req.user.pseudo || 'Utilisateur',
+            twinField,
+            fiche[twinField],
+            produitValue
+          );
+        }
+      } catch (syncProduitErr) {
+        console.error('Erreur sync produit / conf_produit:', syncProduitErr);
+      }
+    }
+
     if (dbField === 'id_commercial') {
       try {
         await syncAffectationRecord(id, dbValue, now);

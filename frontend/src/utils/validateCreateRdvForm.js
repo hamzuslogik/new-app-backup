@@ -5,6 +5,8 @@
  * - Type de contrat MR / MME
  * - Commercial 2
  * - Confirmateur 2 / 3 (ajout facultatif)
+ * - Consommation électrique si produit PAC
+ * - Consommation chauffage si produit PV
  */
 
 function isUnset(v) {
@@ -76,11 +78,19 @@ export function validateCreateRdvForm({
   requireField(isUnset(data.conf_revenu), 'Revenu');
   requireField(isUnset(data.conf_credit), 'Crédit');
   requireField(isUnset(data.conf_mode_chauffage), 'Mode de chauffage');
-  requireField(isUnset(data.conf_consommation_electricite), 'Consommations électrique');
-  requireField(isUnset(data.conf_consommation_chauffage), 'Consommations chauffage');
-  requireField(isUnset(data.conf_commentaire_produit), 'Commentaire Confirmation');
 
   const kind = resolveProduitKind(data.produit, produits);
+
+  // PAC : conso électricité facultative ; PV : conso chauffage facultative
+  if (kind !== 'pac') {
+    requireField(isUnset(data.conf_consommation_electricite), 'Consommations électrique');
+  }
+  if (kind !== 'pv') {
+    requireField(isUnset(data.conf_consommation_chauffage), 'Consommations chauffage');
+  }
+
+  requireField(isUnset(data.conf_commentaire_produit), 'Commentaire Confirmation');
+
   if (kind === 'pac') {
     requireField(isUnset(data.surface_chauffee), 'Surface chauffée');
     requireField(isUnset(data.consommation_chauffage), 'Consommation chauffage (PAC)');
