@@ -1216,11 +1216,16 @@ router.get('/', authenticate, async (req, res) => {
                           req.query.id_confirmateur || req.query.id_re || req.query.id_centre ||
                           statsDrillHandled;
 
-    /** Confirmateur : recherche par critère, tel ou département → résultats globaux, sans filtre « dernier histo / moi » */
-    const hasCritereOuTelSearch =
-      (critere !== undefined && critere !== null && String(critere).trim() !== '') ||
-      (tel !== undefined && tel !== null && String(tel).trim() !== '') ||
-      (cp !== undefined && cp !== null && String(cp).trim() !== '');
+    /**
+     * Confirmateur (6) : hors périmètre UNIQUEMENT pour une recherche par téléphone.
+     * Département, CP, nom, prénom, état, dates, etc. restent dans son périmètre.
+     */
+    const critereChampNorm = String(critere_champ || 'tel').trim().toLowerCase();
+    const hasConfirmateurIdentitySearch =
+      qNarrow(tel) ||
+      (qNarrow(critere) && critereChampNorm === 'tel');
+    // Alias historique utilisé plus bas (histo join, filtre id_confirmateur)
+    const hasCritereOuTelSearch = hasConfirmateurIdentitySearch;
 
     if (!isActiveSearch && !statsDrillHandled) {
       if (req.user.fonction === 5) {
@@ -1264,10 +1269,9 @@ router.get('/', authenticate, async (req, res) => {
     // Filtre par groupes d'états autorisés (selon les permissions)
     // Pour les agents qualification (fonction 3), on a déjà filtré par groupe 0 dans le filtre par défaut
     // Donc on ne doit pas appliquer le filtre de permissions si c'est un agent qualification sans recherche
-    // Pour les confirmateurs (6) en recherche par critère ou texte (tel, nom, prénom, etc.), ne pas filtrer par état : afficher l'état de la fiche même s'il est hors droit confirmateur
+    // Pour les confirmateurs (6) en recherche téléphone : afficher même hors droits d'état
     const hasRechercheParCritereConfirmateur =
-      req.user.fonction === 6 &&
-      !!(req.query.tel || req.query.critere || qNarrow(nom) || qNarrow(prenom) || qNarrow(cp));
+      req.user.fonction === 6 && hasConfirmateurIdentitySearch;
     const shouldApplyPermissionFilter = !(req.user.fonction === 3 && !req.query.fiche_search && !req.query.affectation && !req.query.suivi)
       && !hasRechercheParCritereConfirmateur;
 
@@ -1846,9 +1850,10 @@ router.get('/', authenticate, async (req, res) => {
       }
     }
 
-    // Session confirmateur (Dashboard / fiche_search) : périmètre depuis la table fiches — id_confirmateur (1er) ;
-    // id_confirmateur_2 et id_confirmateur_3 si include_confirmateur_2=1. La plage « Mes actions (fiches_histo) »
-    // est gérée ci-dessus via dernière ligne fiches_histo : ne pas restreindre en plus sur fiche.id_confirmateur.
+    // Session confirmateur (Dashboard / fiche_search) : périmètre fiche.id_confirmateur (1er) ;
+    // + slots 2/3 si include_confirmateur_2=1. Exception : recherche téléphone
+    // → hors périmètre (hasConfirmateurIdentitySearch). La plage « Mes actions (fiches_histo) »
+    // est gérée ci-dessus via dernière ligne fiches_histo.
     if (req.user.fonction === 6 && isActiveSearch && !hasCritereOuTelSearch && date_champ !== 'fiches_histo') {
       if (includeConfSlots) {
         whereConditions.push(
