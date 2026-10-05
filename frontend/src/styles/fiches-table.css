@@ -1,6 +1,6 @@
 /* Tableaux .fiches-table (toutes pages)
  * - Largeur dynamique selon le contenu
- * - Nom / Prénom : max 15 caractères, retour à la ligne par mot (pas lettre)
+ * - Nom / Prénom : texte intégral (tel qu'enregistré), une ligne
  * - Dates : toujours sur une seule ligne
  */
 
@@ -135,7 +135,26 @@ body.rdv-vue-page .rdv-vue .fiches-table td:nth-child(n),
   hyphens: none;
 }
 
-/* Nom / Prénom : max 15ch, retour à la ligne par mot entier (pas lettre) */
+/* Colonnes CQ (recherche Signer) */
+html body table.fiches-table th.fiche-col-cq,
+html body table.fiches-table td.fiche-col-cq,
+html body .fiches-table th.fiche-col-cq,
+html body .fiches-table td.fiche-col-cq {
+  max-width: 18ch !important;
+  white-space: nowrap !important;
+}
+
+html body table.fiches-table th.fiche-col-cq-obs,
+html body table.fiches-table td.fiche-col-cq-obs,
+html body .fiches-table th.fiche-col-cq-obs,
+html body .fiches-table td.fiche-col-cq-obs {
+  max-width: 28ch !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+/* Nom / Prénom : afficher le texte tel quel (pas de plafond 15ch / pas de coupure) */
 html body table.fiches-table th.fiche-col-nom,
 html body table.fiches-table td.fiche-col-nom,
 html body table.fiches-table th.fiche-col-prenom,
@@ -150,10 +169,10 @@ html body table.fiches-table td[data-label="Nom:"],
 html body table.fiches-table td[data-label="Prénom:"],
 html body .fiches-table td[data-label="Nom:"],
 html body .fiches-table td[data-label="Prénom:"] {
-  max-width: 15ch !important;
-  white-space: normal !important;
+  max-width: none !important;
+  white-space: nowrap !important;
   overflow-wrap: normal !important;
-  word-break: normal !important;
+  word-break: keep-all !important;
   word-wrap: normal !important;
   hyphens: none !important;
 }
@@ -164,10 +183,10 @@ html body table.fiches-table td.fiche-col-nom,
 html body table.fiches-table td.fiche-col-prenom,
 html body .fiches-table td.fiche-col-nom,
 html body .fiches-table td.fiche-col-prenom {
-  max-width: 15ch !important;
-  white-space: normal !important;
+  max-width: none !important;
+  white-space: nowrap !important;
   overflow-wrap: normal !important;
-  word-break: normal !important;
+  word-break: keep-all !important;
 }
 
 /* État : abrégé, une seule ligne (comme dates / centres) */
@@ -211,13 +230,13 @@ html body .cq-table .cq-produit-indicator {
   letter-spacing: 0.02em;
 }
 
-/* Nom dans .fiche-row-lead-label : wrap par mot, plafonné par la cellule 15ch */
+/* Nom dans .fiche-row-lead-label : texte intégral, une ligne */
 html body table.fiches-table .fiche-row-lead-label,
 html body .fiches-table .fiche-row-lead-label {
-  max-width: 100% !important;
-  white-space: normal !important;
+  max-width: none !important;
+  white-space: nowrap !important;
   overflow-wrap: normal !important;
-  word-break: normal !important;
+  word-break: keep-all !important;
 }
 
 /* Colonnes sans contrainte de wrap (décalage, sélection, actions) */

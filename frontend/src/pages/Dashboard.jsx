@@ -18,7 +18,8 @@ import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { captureFicheTableRowScreenshot } from '../utils/captureFicheTableRowScreenshot';
 import { decodeFicheIdFromHash } from '../utils/decodeFicheIdFromHash';
-import { getEtatDisplayWithSousEtat, getEtatTableAbbr } from '../utils/etatSignerComplet';
+import { getEtatDisplayWithSousEtat, getEtatTableAbbr, isSignerSearchFilter } from '../utils/etatSignerComplet';
+import { cleanObservationCQ } from '../utils/cleanObservationCQ';
 import { getCentreTableAbbr } from '../utils/tableAbbreviations';
 import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import {
@@ -26,7 +27,15 @@ import {
   ficheHasDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
-import { isAdminSession, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
+import {
+  isAdminSession,
+  isHonoreASuivreBadgeSession,
+  canToggleFicheBadgeColumns,
+  canCustomizeFicheTableColumns,
+  getFicheBadgesVisiblePref,
+  setFicheBadgesVisiblePref,
+  getFicheTableColumnsPref,
+} from '../utils/adminMenuUrls';
 import { formatFicheCommercialDisplay } from '../utils/ficheCommercialDisplay';
 import {
   FicheAdminBadgeHeaders,
@@ -34,6 +43,7 @@ import {
   FicheAdminActionCell,
   FicheAdminIndicatorCells,
 } from '../components/fiches/FicheAdminBadgeColumns';
+import FicheTableColumnsPicker, { isFicheColumnVisible } from '../components/fiches/FicheTableColumnsPicker';
 import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
 import {
   applyForceDesktopViewport,
@@ -314,6 +324,15 @@ const Dashboard = () => {
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
   const isQualiteConfirmation = Number(user?.fonction) === 4;
   const isAdminFicheLayout = isAdminSession(user);
+  const canToggleBadges = canToggleFicheBadgeColumns(user);
+  const canCustomizeColumns = canCustomizeFicheTableColumns(user);
+  const [showFicheBadges, setShowFicheBadges] = useState(() => getFicheBadgesVisiblePref());
+  const [columnVisibility, setColumnVisibility] = useState(() => getFicheTableColumnsPref());
+  const useBadgeColumnsLayout = isAdminFicheLayout || (canToggleBadges && showFicheBadges);
+  const isColVisible = useCallback(
+    (key) => (canCustomizeColumns ? isFicheColumnVisible(columnVisibility, key) : true),
+    [canCustomizeColumns, columnVisibility]
+  );
   const showHasBadge = isHonoreASuivreBadgeSession(user);
   /** Menu contextuel (clic droit) sur les lignes du tableau : admin (1), backoffice (11), RP (13), RE (14) */
   const canFicheContextMenu = [1, 11, 13, 14].includes(Number(user?.fonction));
@@ -959,6 +978,10 @@ const Dashboard = () => {
     sousEtatsForSelectedEtat.length > 0;
   const showSourceFilter =
     Number(filters.id_etat_final) === 8 || Number(filters.id_etat_final) === 9;
+  const showCqColumns =
+    !!appliedFilters.fiche_search &&
+    statsListOverride !== 'upcoming' &&
+    isSignerSearchFilter(appliedFilters.id_etat_final, etatsData || []);
 
   if (etatsError) {
     console.error('Erreur lors du chargement des états:', etatsError);
@@ -1510,7 +1533,7 @@ const Dashboard = () => {
 
   const fiches = filteredFiches;
   const showDecalageColAdmin =
-    isAdminFicheLayout && fiches.some((f) => ficheHasDecalageRequest(f));
+    useBadgeColumnsLayout && fiches.some((f) => ficheHasDecalageRequest(f));
 
   const copyFicheTelFromMenu = (tel) => {
     const t = (tel || '').trim();
@@ -2276,30 +2299,60 @@ const Dashboard = () => {
                   ? `Résultats de la recherche ${pagination.total}` 
                   : `${pagination.total}`}
             </h2>
-          </div>
-          {isCommercialRdvView && (
-            <div className="dashboard-commercial-day-select">
-              <label htmlFor="dashboard-commercial-day">Jour</label>
-              <select
-                id="dashboard-commercial-day"
-                className="dashboard-commercial-day-select-input"
-                value={commercialDayValue}
-                onChange={(e) => handleCommercialDayChange(e.target.value)}
+            {canToggleBadges && fiches.length > 0 && (
+              <button
+                type="button"
+                className="btn-toggle-fiche-badges"
+                onClick={() => {
+                  setShowFicheBadges((prev) => {
+                    const next = !prev;
+                    setFicheBadgesVisiblePref(next);
+                    return next;
+                  });
+                }}
+                title={showFicheBadges ? 'Cacher les colonnes badges (SIG, CS, R2, HAS, RF…)' : 'Afficher les colonnes badges (SIG, CS, R2, HAS, RF…)'}
               >
-                {commercialDayOptions.map((day) => (
-                  <option key={day.dateStr} value={day.dateStr}>
-                    {day.label}{day.isToday ? " (aujourd'hui)" : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {(isFetchingList) && (
-            <div className="search-loading-indicator">
-              <div className="spinner-small"></div>
-              <span>Recherche en cours...</span>
-            </div>
-          )}
+                {showFicheBadges ? <FaEyeSlash aria-hidden /> : <FaEye aria-hidden />}
+                <span>{showFicheBadges ? 'Cacher les badges' : 'Afficher les badges'}</span>
+              </button>
+            )}
+          </div>
+          <div className="results-header-right">
+            {isCommercialRdvView && (
+              <div className="dashboard-commercial-day-select">
+                <label htmlFor="dashboard-commercial-day">Jour</label>
+                <select
+                  id="dashboard-commercial-day"
+                  className="dashboard-commercial-day-select-input"
+                  value={commercialDayValue}
+                  onChange={(e) => handleCommercialDayChange(e.target.value)}
+                >
+                  {commercialDayOptions.map((day) => (
+                    <option key={day.dateStr} value={day.dateStr}>
+                      {day.label}{day.isToday ? " (aujourd'hui)" : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {canCustomizeColumns && fiches.length > 0 && (
+              <FicheTableColumnsPicker
+                layout={useBadgeColumnsLayout ? 'badge' : 'standard'}
+                availableGroups={{
+                  cq: showCqColumns,
+                  decalage: useBadgeColumnsLayout ? showDecalageColAdmin : true,
+                }}
+                visibility={columnVisibility}
+                onChange={setColumnVisibility}
+              />
+            )}
+            {(isFetchingList) && (
+              <div className="search-loading-indicator">
+                <div className="spinner-small"></div>
+                <span>Recherche en cours...</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {(isLoading || isSearching || isFetching) && fiches.length === 0 ? (
@@ -2319,79 +2372,136 @@ const Dashboard = () => {
         ) : (
           <>
             <div className={`fiches-table-container ${isFetchingList ? 'loading' : ''}`}>
-<table className={`fiches-table${isAdminFicheLayout ? " fiches-table--admin-layout" : ""}`}>
+<table className={`fiches-table${useBadgeColumnsLayout ? " fiches-table--admin-layout" : ""}`}>
                 <thead>
                   <tr>
                     <FicheRowSelectHeader />
-                    <th onClick={() => handleSort('Nom')} className="sortable-header fiche-col-nom">
-                      Nom {getSortIcon('Nom')}
-                    </th>
-                    <th onClick={() => handleSort('Prénom')} className="sortable-header fiche-col-prenom">
-                      Prénom {getSortIcon('Prénom')}
-                    </th>
-                    <th onClick={() => handleSort('Téléphone')} className="sortable-header">
-                      Téléphone {getSortIcon('Téléphone')}
-                    </th>
-                    <th onClick={() => handleSort('CP')} className="sortable-header">
-                      CP {getSortIcon('CP')}
-                    </th>
-                    {isAdminFicheLayout ? (
+                    {isColVisible('nom') ? (
+                      <th onClick={() => handleSort('Nom')} className="sortable-header fiche-col-nom">
+                        Nom {getSortIcon('Nom')}
+                      </th>
+                    ) : null}
+                    {isColVisible('prenom') ? (
+                      <th onClick={() => handleSort('Prénom')} className="sortable-header fiche-col-prenom">
+                        Prénom {getSortIcon('Prénom')}
+                      </th>
+                    ) : null}
+                    {isColVisible('tel') ? (
+                      <th onClick={() => handleSort('Téléphone')} className="sortable-header">
+                        Téléphone {getSortIcon('Téléphone')}
+                      </th>
+                    ) : null}
+                    {isColVisible('cp') ? (
+                      <th onClick={() => handleSort('CP')} className="sortable-header">
+                        CP {getSortIcon('CP')}
+                      </th>
+                    ) : null}
+                    {useBadgeColumnsLayout ? (
                       <>
-                        <th onClick={() => handleSort('Date RDV')} className="sortable-header fiche-col-date">
-                          Date RDV {getSortIcon('Date RDV')}
-                        </th>
-                        <th onClick={() => handleSort('Commercial')} className="sortable-header">
-                          Commercial {getSortIcon('Commercial')}
-                        </th>
+                        {isColVisible('date_rdv') ? (
+                          <th onClick={() => handleSort('Date RDV')} className="sortable-header fiche-col-date">
+                            Date RDV {getSortIcon('Date RDV')}
+                          </th>
+                        ) : null}
+                        {isColVisible('commercial') ? (
+                          <th onClick={() => handleSort('Commercial')} className="sortable-header">
+                            Commercial {getSortIcon('Commercial')}
+                          </th>
+                        ) : null}
                         <FicheAdminBadgeHeaders
                           getSortIcon={getSortIcon}
                           onSortValide={() => handleSort('Validé')}
                           onSortProduit={() => handleSort('Produit')}
+                          isColVisible={isColVisible}
                         />
-                        <th onClick={() => handleSort('Centre')} className="sortable-header">
-                          Centre {getSortIcon('Centre')}
-                        </th>
-                        <th onClick={() => handleSort('Date Insertion')} className="sortable-header fiche-col-date">
-                          Date Insertion {getSortIcon('Date Insertion')}
-                        </th>
-                        <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
-                          Conf {getSortIcon('Confirmateur')}
-                        </th>
-                        <th onClick={() => handleSort('État Final')} className="sortable-header">
-                          {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
-                        </th>
-                        {showDecalageColAdmin ? (
+                        {isColVisible('centre') ? (
+                          <th onClick={() => handleSort('Centre')} className="sortable-header">
+                            Centre {getSortIcon('Centre')}
+                          </th>
+                        ) : null}
+                        {isColVisible('date_insert') ? (
+                          <th onClick={() => handleSort('Date Insertion')} className="sortable-header fiche-col-date">
+                            Date Insertion {getSortIcon('Date Insertion')}
+                          </th>
+                        ) : null}
+                        {isColVisible('conf') ? (
+                          <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
+                            Conf {getSortIcon('Confirmateur')}
+                          </th>
+                        ) : null}
+                        {isColVisible('etat') ? (
+                          <th onClick={() => handleSort('État Final')} className="sortable-header">
+                            {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
+                          </th>
+                        ) : null}
+                        {showCqColumns && isColVisible('cq_etat') ? (
+                          <th className="fiche-col-cq">CQ État</th>
+                        ) : null}
+                        {showCqColumns && isColVisible('cq_dossier') ? (
+                          <th className="fiche-col-cq">CQ Dossier</th>
+                        ) : null}
+                        {showCqColumns && isColVisible('cq_obs') ? (
+                          <th className="fiche-col-cq-obs">Observation</th>
+                        ) : null}
+                        {showDecalageColAdmin && isColVisible('decalage') ? (
                           <th className="dashboard-decalage-col">Décalage</th>
                         ) : null}
                       </>
                     ) : (
                       <>
-                        <th onClick={() => handleSort('Date Insertion')} className="sortable-header fiche-col-date">
-                          Date Insertion {getSortIcon('Date Insertion')}
-                        </th>
-                        <th onClick={() => handleSort('Date RDV')} className="sortable-header fiche-col-date">
-                          Date RDV {getSortIcon('Date RDV')}
-                        </th>
-                        <th onClick={() => handleSort('État Final')} className="sortable-header">
-                          {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
-                        </th>
-                        <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
-                          Confirmateur {getSortIcon('Confirmateur')}
-                        </th>
-                        <th onClick={() => handleSort('Commercial')} className="sortable-header">
-                          Commercial {getSortIcon('Commercial')}
-                        </th>
-                        <th onClick={() => handleSort('Centre')} className="sortable-header">
-                          Centre {getSortIcon('Centre')}
-                        </th>
-                        <th onClick={() => handleSort('Produit')} className="sortable-header">
-                          Produit {getSortIcon('Produit')}
-                        </th>
-                        <th onClick={() => handleSort('Validé')} className="sortable-header">
-                          Validé {getSortIcon('Validé')}
-                        </th>
-                        <th>Actions</th>
-                        <th className="dashboard-decalage-col">État décalage</th>
+                        {isColVisible('date_insert') ? (
+                          <th onClick={() => handleSort('Date Insertion')} className="sortable-header fiche-col-date">
+                            Date Insertion {getSortIcon('Date Insertion')}
+                          </th>
+                        ) : null}
+                        {isColVisible('date_rdv') ? (
+                          <th onClick={() => handleSort('Date RDV')} className="sortable-header fiche-col-date">
+                            Date RDV {getSortIcon('Date RDV')}
+                          </th>
+                        ) : null}
+                        {isColVisible('etat') ? (
+                          <th onClick={() => handleSort('État Final')} className="sortable-header">
+                            {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
+                          </th>
+                        ) : null}
+                        {showCqColumns && isColVisible('cq_etat') ? (
+                          <th className="fiche-col-cq">CQ État</th>
+                        ) : null}
+                        {showCqColumns && isColVisible('cq_dossier') ? (
+                          <th className="fiche-col-cq">CQ Dossier</th>
+                        ) : null}
+                        {showCqColumns && isColVisible('cq_obs') ? (
+                          <th className="fiche-col-cq-obs">Observation</th>
+                        ) : null}
+                        {isColVisible('conf') ? (
+                          <th onClick={() => handleSort('Confirmateur')} className="sortable-header">
+                            Confirmateur {getSortIcon('Confirmateur')}
+                          </th>
+                        ) : null}
+                        {isColVisible('commercial') ? (
+                          <th onClick={() => handleSort('Commercial')} className="sortable-header">
+                            Commercial {getSortIcon('Commercial')}
+                          </th>
+                        ) : null}
+                        {isColVisible('centre') ? (
+                          <th onClick={() => handleSort('Centre')} className="sortable-header">
+                            Centre {getSortIcon('Centre')}
+                          </th>
+                        ) : null}
+                        {isColVisible('prod') ? (
+                          <th onClick={() => handleSort('Produit')} className="sortable-header">
+                            Produit {getSortIcon('Produit')}
+                          </th>
+                        ) : null}
+                        {isColVisible('valide') ? (
+                          <th onClick={() => handleSort('Validé')} className="sortable-header">
+                            Validé {getSortIcon('Validé')}
+                          </th>
+                        ) : null}
+                        {isColVisible('action') ? <th>Actions</th> : null}
+                        {isColVisible('decalage') ? (
+                          <th className="dashboard-decalage-col">État décalage</th>
+                        ) : null}
                       </>
                     )}
                   </tr>
@@ -2401,7 +2511,7 @@ const Dashboard = () => {
                     const indicators = checkIndicators(fiche.id_etat_histo, fiche);
                     const etatColor = getEtatColor(fiche.id_etat_final, fiche);
                     const produitColor = getProduitColor(fiche.produit);
-                    const decalageInfo = isAdminFicheLayout
+                    const decalageInfo = useBadgeColumnsLayout
                       ? (showDecalageColAdmin ? getDecalageDisplayInfo(fiche) : null)
                       : getDecalageDashboardInfo(fiche);
 
@@ -2417,27 +2527,44 @@ const Dashboard = () => {
                         title={getTooltipComment(fiche) || undefined}
                       >
                         <FicheRowSelectCell />
-                        <td data-label="" className="fiche-row-lead-cell fiche-col-nom">
-                          <div className="fiche-row-lead-cell-inner">
-                            <FicheTableMobileDetailButton
-                              show={isDashboardTouchMobile}
-                              onClick={() => openDashboardFicheDetail({ hash: fiche.hash })}
-                              isLastViewed={lastViewedFicheHash === fiche.hash}
-                            />
-                            <span className="fiche-row-lead-label">{fiche.nom || ''}</span>
-                          </div>
-                        </td>
-                        <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
-                        <td data-label="Téléphone:">{fiche.tel || ''}</td>
-                        <td data-label="CP:">{fiche.cp || ''}</td>
-                        {isAdminFicheLayout ? (
+                        {isColVisible('nom') ? (
+                          <td data-label="" className="fiche-row-lead-cell fiche-col-nom">
+                            <div className="fiche-row-lead-cell-inner">
+                              <FicheTableMobileDetailButton
+                                show={isDashboardTouchMobile}
+                                onClick={() => openDashboardFicheDetail({ hash: fiche.hash })}
+                                isLastViewed={lastViewedFicheHash === fiche.hash}
+                              />
+                              <span className="fiche-row-lead-label">{fiche.nom || ''}</span>
+                            </div>
+                          </td>
+                        ) : null}
+                        {isColVisible('prenom') ? (
+                          <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
+                        ) : null}
+                        {isColVisible('tel') ? (
+                          <td data-label="Téléphone:">{fiche.tel || ''}</td>
+                        ) : null}
+                        {isColVisible('cp') ? (
+                          <td data-label="CP:">{fiche.cp || ''}</td>
+                        ) : null}
+                        {useBadgeColumnsLayout ? (
                           <>
-                            <td data-label="Date RDV:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
-                            <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
-                            <FicheAdminValideCell valider={fiche.valider} confRdvAvec={fiche.conf_rdv_avec} />
+                            {isColVisible('date_rdv') ? (
+                              <td data-label="Date RDV:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                            ) : null}
+                            {isColVisible('commercial') ? (
+                              <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
+                            ) : null}
+                            <FicheAdminValideCell
+                              valider={fiche.valider}
+                              confRdvAvec={fiche.conf_rdv_avec}
+                              hidden={!isColVisible('valide')}
+                            />
                             <FicheAdminActionCell
                               onDetail={() => openDashboardFicheDetail({ hash: fiche.hash })}
                               isLastViewed={lastViewedFicheHash === fiche.hash}
+                              hidden={!isColVisible('action')}
                               extras={
                                 isQualiteConfirmation ? (
                                   <QualiteConfirmationAuditButton
@@ -2452,23 +2579,43 @@ const Dashboard = () => {
                               produitName={getProduitName(fiche.produit)}
                               produitColor={produitColor}
                               onPdf={() => runGeneratePdfFromMenu(fiche.hash)}
+                              isColVisible={isColVisible}
                             />
-                            <td data-label="Centre:" className="fiche-col-centre" title={getCentreName(fiche.id_centre) || undefined}>{getCentreDisplay(fiche.id_centre)}</td>
-                            <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
-                            <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
-                            <td
-                              data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
-                              className="etat-col-cell"
-                            >
-                              <span className="etat-text" title={getEtatFullLabel(fiche) || undefined}>
-                                {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
-                                {getEtatDisplayName(fiche)}
-                                {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
-                                  <span className="etat-text-urgent">(RDV_URGENT)</span>
-                                )}
-                              </span>
-                            </td>
-                            {showDecalageColAdmin ? (
+                            {isColVisible('centre') ? (
+                              <td data-label="Centre:" className="fiche-col-centre" title={getCentreName(fiche.id_centre) || undefined}>{getCentreDisplay(fiche.id_centre)}</td>
+                            ) : null}
+                            {isColVisible('date_insert') ? (
+                              <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                            ) : null}
+                            {isColVisible('conf') ? (
+                              <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
+                            ) : null}
+                            {isColVisible('etat') ? (
+                              <td
+                                data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
+                                className="etat-col-cell"
+                              >
+                                <span className="etat-text" title={getEtatFullLabel(fiche) || undefined}>
+                                  {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
+                                  {getEtatDisplayName(fiche)}
+                                  {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
+                                    <span className="etat-text-urgent">(RDV_URGENT)</span>
+                                  )}
+                                </span>
+                              </td>
+                            ) : null}
+                            {showCqColumns && isColVisible('cq_etat') ? (
+                              <td data-label="CQ État:" className="fiche-col-cq">{fiche.cqe || ''}</td>
+                            ) : null}
+                            {showCqColumns && isColVisible('cq_dossier') ? (
+                              <td data-label="CQ Dossier:" className="fiche-col-cq">{fiche.cqd || ''}</td>
+                            ) : null}
+                            {showCqColumns && isColVisible('cq_obs') ? (
+                              <td data-label="Observation:" className="fiche-col-cq-obs" title={cleanObservationCQ(fiche.observations_cq) || undefined}>
+                                {cleanObservationCQ(fiche.observations_cq) || ''}
+                              </td>
+                            ) : null}
+                            {showDecalageColAdmin && isColVisible('decalage') ? (
                               <td data-label="Décalage:" className="dashboard-decalage-cell">
                                 {decalageInfo ? (
                                   <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
@@ -2480,101 +2627,134 @@ const Dashboard = () => {
                           </>
                         ) : (
                           <>
-                            <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
-                            <td data-label="Date RDV:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
-                            <td
-                              data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
-                              className="etat-col-cell"
-                            >
-                              <span className="etat-text" title={getEtatFullLabel(fiche) || undefined}>
-                                {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
-                                {getEtatDisplayName(fiche)}
-                                {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
-                                  <span className="etat-text-urgent">(RDV_URGENT)</span>
-                                )}
-                              </span>
-                            </td>
-                            <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
-                            <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
-                            <td data-label="Centre:" className="fiche-col-centre" title={getCentreName(fiche.id_centre) || undefined}>{getCentreDisplay(fiche.id_centre)}</td>
-                            <td data-label="Produit:">
-                              <span
-                                className="produit-indicator"
-                                style={{ backgroundColor: produitColor, color: '#ffffff' }}
-                                title={getProduitName(fiche.produit)}
+                            {isColVisible('date_insert') ? (
+                              <td data-label="Date Insertion:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatDate(fiche.date_insert_time)}</td>
+                            ) : null}
+                            {isColVisible('date_rdv') ? (
+                              <td data-label="Date RDV:" className="fiche-col-date" style={{ textAlign: 'left' }}>{formatRdvDateTime(fiche.date_rdv_time)}</td>
+                            ) : null}
+                            {isColVisible('etat') ? (
+                              <td
+                                data-label={isConfirmateurOrRE ? 'État actuel:' : 'État:'}
+                                className="etat-col-cell"
                               >
-                                {getProduitName(fiche.produit)}
-                              </span>
-                            </td>
-                            <td data-label="Validé:" style={{ textAlign: 'center' }}>
-                              {fiche.valider > 0 ? (
-                                <FaCheck
-                                  style={{
-                                    color: '#000000',
-                                    fontSize: '15.3px',
-                                    cursor: 'pointer'
-                                  }}
-                                  title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
-                                />
-                              ) : null}
-                            </td>
-                            <td data-label="">
-                              <div className="fiche-indicators">
-                                {indicators.r2 && (
-                                  <span className="indicator r2" title="R2 placé (commercial secondaire)">
-                                    R2
-                                  </span>
-                                )}
-                                {showHasBadge && indicators.has && (
-                                  <span className="indicator has" title="Honoré à suivre">HAS</span>
-                                )}
-                                {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
-                                {indicators.sg && <span className="indicator sg" title="Signé">SIG</span>}
-                                {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
-                                {indicators.cs && <span className="indicator rs" title="SEUL">SEUL</span>}
-                              </div>
-                              <div className="qualite-confirmation-actions-cell dashboard-actions-cell">
-                                {isQualiteConfirmation && (
-                                  <QualiteConfirmationAuditButton
-                                    fiche={fiche}
-                                    onClick={() => setAuditFiche(fiche)}
-                                  />
-                                )}
-                                <button
-                                  onClick={() => openDashboardFicheDetail({ hash: fiche.hash })}
-                                  className="btn-detail"
-                                  title="Voir les détails"
-                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                >
-                                  <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
-                                    {lastViewedFicheHash === fiche.hash && (
-                                      <span
-                                        style={{
-                                          position: 'absolute',
-                                          top: '50%',
-                                          left: '50%',
-                                          transform: 'translate(-50%, -50%)',
-                                          width: '28px',
-                                          height: '28px',
-                                          border: '3px solid #9e9e9e',
-                                          borderRadius: '1px',
-                                          backgroundColor: 'transparent',
-                                          boxSizing: 'border-box'
-                                        }}
-                                      />
-                                    )}
-                                  </span>
-                                </button>
-                              </div>
-                            </td>
-                            <td data-label="État décalage:" className="dashboard-decalage-cell">
-                              {decalageInfo && (
-                                <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
-                                  {decalageInfo.text}
+                                <span className="etat-text" title={getEtatFullLabel(fiche) || undefined}>
+                                  {showCRPrefix(fiche) && <span className="etat-text-cr">&lt;CR&gt;</span>}
+                                  {getEtatDisplayName(fiche)}
+                                  {(fiche.rdv_urgent === 1 || fiche.rdv_urgent === true || fiche.qualification_code === 'RDV_URGENT') && (
+                                    <span className="etat-text-urgent">(RDV_URGENT)</span>
+                                  )}
                                 </span>
-                              )}
-                            </td>
+                              </td>
+                            ) : null}
+                            {showCqColumns && isColVisible('cq_etat') ? (
+                              <td data-label="CQ État:" className="fiche-col-cq">{fiche.cqe || ''}</td>
+                            ) : null}
+                            {showCqColumns && isColVisible('cq_dossier') ? (
+                              <td data-label="CQ Dossier:" className="fiche-col-cq">{fiche.cqd || ''}</td>
+                            ) : null}
+                            {showCqColumns && isColVisible('cq_obs') ? (
+                              <td data-label="Observation:" className="fiche-col-cq-obs" title={cleanObservationCQ(fiche.observations_cq) || undefined}>
+                                {cleanObservationCQ(fiche.observations_cq) || ''}
+                              </td>
+                            ) : null}
+                            {isColVisible('conf') ? (
+                              <td data-label="Confirmateur:">{renderConfirmateurCell(fiche)}</td>
+                            ) : null}
+                            {isColVisible('commercial') ? (
+                              <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
+                            ) : null}
+                            {isColVisible('centre') ? (
+                              <td data-label="Centre:" className="fiche-col-centre" title={getCentreName(fiche.id_centre) || undefined}>{getCentreDisplay(fiche.id_centre)}</td>
+                            ) : null}
+                            {isColVisible('prod') ? (
+                              <td data-label="Produit:">
+                                <span
+                                  className="produit-indicator"
+                                  style={{ backgroundColor: produitColor, color: '#ffffff' }}
+                                  title={getProduitName(fiche.produit)}
+                                >
+                                  {getProduitName(fiche.produit)}
+                                </span>
+                              </td>
+                            ) : null}
+                            {isColVisible('valide') ? (
+                              <td data-label="Validé:" style={{ textAlign: 'center' }}>
+                                {fiche.valider > 0 ? (
+                                  <FaCheck
+                                    style={{
+                                      color: '#000000',
+                                      fontSize: '15.3px',
+                                      cursor: 'pointer'
+                                    }}
+                                    title={`Validée${fiche.conf_rdv_avec ? ` avec ${fiche.conf_rdv_avec}` : ''}`}
+                                  />
+                                ) : null}
+                              </td>
+                            ) : null}
+                            {isColVisible('action') ? (
+                              <td data-label="">
+                                {!canToggleBadges && (
+                                <div className="fiche-indicators">
+                                  {indicators.r2 && (
+                                    <span className="indicator r2" title="R2 placé (commercial secondaire)">
+                                      R2
+                                    </span>
+                                  )}
+                                  {showHasBadge && indicators.has && (
+                                    <span className="indicator has" title="Honoré à suivre">HAS</span>
+                                  )}
+                                  {indicators.rf && <span className="indicator rf" title="Refus">REF</span>}
+                                  {indicators.sg && <span className="indicator sg" title="Signé">SIG</span>}
+                                  {indicators.an && <span className="indicator an" title="Annulation">ANN</span>}
+                                  {indicators.cs && <span className="indicator rs" title="SEUL">SEUL</span>}
+                                </div>
+                                )}
+                                <div className="qualite-confirmation-actions-cell dashboard-actions-cell">
+                                  {isQualiteConfirmation && (
+                                    <QualiteConfirmationAuditButton
+                                      fiche={fiche}
+                                      onClick={() => setAuditFiche(fiche)}
+                                    />
+                                  )}
+                                  <button
+                                    onClick={() => openDashboardFicheDetail({ hash: fiche.hash })}
+                                    className="btn-detail"
+                                    title="Voir les détails"
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                  >
+                                    <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
+                                      {lastViewedFicheHash === fiche.hash && (
+                                        <span
+                                          style={{
+                                            position: 'absolute',
+                                            top: '50%',
+                                            left: '50%',
+                                            transform: 'translate(-50%, -50%)',
+                                            width: '28px',
+                                            height: '28px',
+                                            border: '3px solid #9e9e9e',
+                                            borderRadius: '1px',
+                                            backgroundColor: 'transparent',
+                                            boxSizing: 'border-box'
+                                          }}
+                                        />
+                                      )}
+                                    </span>
+                                  </button>
+                                </div>
+                              </td>
+                            ) : null}
+                            {isColVisible('decalage') ? (
+                              <td data-label="État décalage:" className="dashboard-decalage-cell">
+                                {decalageInfo && (
+                                  <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
+                                    {decalageInfo.text}
+                                  </span>
+                                )}
+                              </td>
+                            ) : null}
                           </>
                         )}
                       </tr>

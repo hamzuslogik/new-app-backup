@@ -164,7 +164,6 @@ const Permissions = () => {
   // Liste de toutes les pages avec leur permission correspondante
   const pagesList = [
     { path: '/dashboard', name: 'Dashboard', permission: 'dashboard_view' },
-    { path: '/recherche-fiches', name: 'Recherche Fiches', permission: 'dashboard_view' },
     { path: '/fiches', name: 'Fiches', permission: 'fiches_view' },
     { path: '/fiches/:id', name: 'Détail Fiche', permission: 'fiches_detail' },
     { path: '/planning', name: 'Planning', permission: 'planning_view' },

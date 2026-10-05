@@ -149,7 +149,7 @@ const Sidebar = ({ collapsed }) => {
       label: 'Recherche fiches',
       icon: FaSearch,
       permission: 'dashboard_view',
-      visible: true,
+      visible: false, // recherche via filtres du Dashboard uniquement
     },
     {
       path: '/fiches',

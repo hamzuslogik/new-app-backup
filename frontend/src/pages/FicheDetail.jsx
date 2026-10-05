@@ -4418,21 +4418,29 @@ const FicheDetail = ({
                 { value: 'PAXE', label: 'Pacsé' }
               ])}
               {renderField('Nombre d\'enfants en Charges', 'nb_enfants', fiche.nb_enfants || '-', 'number')}
-              {renderField('Profession Du MR', 'profession_mr',
-                (fiche.conf_profession_monsieur != null && String(fiche.conf_profession_monsieur).trim() !== '')
-                  ? (professions?.find(p => p.id == fiche.conf_profession_monsieur || (p.nom && String(p.nom).toLowerCase() === String(fiche.conf_profession_monsieur).toLowerCase()))?.nom || fiche.conf_profession_monsieur)
-                  : (professions?.find(p => p.id == fiche.profession_mr)?.nom || fiche.profession_mr || '-'),
-                'select', professions)}
+              {(() => {
+                const rawMr = (fiche.conf_profession_monsieur != null && String(fiche.conf_profession_monsieur).trim() !== '')
+                  ? fiche.conf_profession_monsieur
+                  : fiche.profession_mr;
+                const labelMr = rawMr != null && String(rawMr).trim() !== ''
+                  ? (professions?.find(p => p.id == rawMr || (p.nom && String(p.nom).toLowerCase() === String(rawMr).toLowerCase()))?.nom || String(rawMr))
+                  : '';
+                return renderField('Profession Du MR', 'profession_mr', labelMr || '-', 'text', null, false, labelMr);
+              })()}
               {renderField('Type de Contrat MR', 'type_contrat_mr',
                 (fiche.conf_type_contrat_mr != null && fiche.conf_type_contrat_mr !== '')
                   ? (typeContrat?.find(t => String(t.id) === String(fiche.conf_type_contrat_mr))?.nom || fiche.conf_type_contrat_mr || '-')
                   : (typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_mr))?.nom || fiche.type_contrat_mr || '-'),
                 'select', typeContrat)}
-              {renderField('Profession Du Madame', 'profession_madame',
-                (fiche.conf_profession_madame != null && String(fiche.conf_profession_madame).trim() !== '')
-                  ? (professions?.find(p => p.id == fiche.conf_profession_madame || (p.nom && String(p.nom).toLowerCase() === String(fiche.conf_profession_madame).toLowerCase()))?.nom || fiche.conf_profession_madame)
-                  : (professions?.find(p => p.id == fiche.profession_madame)?.nom || fiche.profession_madame || '-'),
-                'select', professions)}
+              {(() => {
+                const rawMme = (fiche.conf_profession_madame != null && String(fiche.conf_profession_madame).trim() !== '')
+                  ? fiche.conf_profession_madame
+                  : fiche.profession_madame;
+                const labelMme = rawMme != null && String(rawMme).trim() !== ''
+                  ? (professions?.find(p => p.id == rawMme || (p.nom && String(p.nom).toLowerCase() === String(rawMme).toLowerCase()))?.nom || String(rawMme))
+                  : '';
+                return renderField('Profession Du Madame', 'profession_madame', labelMme || '-', 'text', null, false, labelMme);
+              })()}
               {renderField('Type de Contrat MME', 'type_contrat_madame',
                 (fiche.conf_type_contrat_madame != null && fiche.conf_type_contrat_madame !== '')
                   ? (typeContrat?.find(t => String(t.id) === String(fiche.conf_type_contrat_madame))?.nom || fiche.conf_type_contrat_madame || '-')

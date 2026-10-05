@@ -4,7 +4,6 @@
  */
 export const PAGE_ACCUEIL_OPTIONS = [
   { value: '/dashboard', label: 'Tableau de bord' },
-  { value: '/recherche-fiches', label: 'Recherche fiches' },
   { value: '/fiches', label: 'Fiches' },
   { value: '/planning', label: 'Planning' },
   { value: '/planning-commercial', label: 'Planning Commercial' },

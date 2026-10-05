@@ -1203,8 +1203,10 @@ button.stat-card.stat-card-clickable {
 
 .results-header-title-block {
   display: flex;
-  flex-direction: column;
-  gap: 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 
 .results-header h2 {
@@ -1214,11 +1216,138 @@ button.stat-card.stat-card-clickable {
   font-weight: bold;
 }
 
+.btn-toggle-fiche-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid #9cbfc8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #2c3e50;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-toggle-fiche-badges:hover {
+  background: #f0f7f8;
+  border-color: #7aa8b2;
+}
+
+.btn-toggle-fiche-badges svg {
+  flex-shrink: 0;
+}
+
 .results-header-right {
   display: flex;
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.fiche-columns-picker {
+  position: relative;
+  z-index: 20;
+}
+
+.btn-fiche-columns {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid #9cbfc8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #2c3e50;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-fiche-columns:hover,
+.btn-fiche-columns[aria-expanded='true'] {
+  background: #f0f7f8;
+  border-color: #7aa8b2;
+}
+
+.btn-fiche-columns svg {
+  flex-shrink: 0;
+}
+
+.fiche-columns-picker-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  max-height: 360px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #d0dce0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 10px 0;
+}
+
+.fiche-columns-picker-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px 8px;
+  border-bottom: 1px solid #eef2f3;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.fiche-columns-picker-reset {
+  border: none;
+  background: transparent;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fiche-columns-picker-reset:hover {
+  text-decoration: underline;
+}
+
+.fiche-columns-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fiche-columns-picker-list li label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  user-select: none;
+}
+
+.fiche-columns-picker-list li label:hover {
+  background: #f8fafc;
+}
+
+.fiche-columns-picker-list li label.is-locked {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.fiche-columns-picker-list input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: #0f766e;
 }
 
 .dashboard-commercial-day-select {
@@ -1428,7 +1557,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   min-width: 0;
 }
 
-/* Largeurs de colonnes : auto ; Nom/Prénom gérés globalement (15ch, wrap par mot) */
+/* Largeurs de colonnes : auto ; Nom/Prénom = texte intégral (fiches-table.css) */
 .dashboard-page .fiches-table td:nth-child(1),
 .dashboard-page .fiches-table td:nth-child(2),
 .dashboard-page .fiches-table th:nth-child(1),
@@ -4508,10 +4637,17 @@ body.dashboard-page.dashboard-page--extranet-scroll .confirmateurs-table td {
   word-break: break-word;
 }
 
-/* Dates : jamais de retour à la ligne (écrase la règle 15ch ci-dessus) */
+/* Dates / Nom / Prénom : jamais de retour à la ligne (écrase la règle 15ch ci-dessus) */
 body.dashboard-page.dashboard-page--extranet-scroll .fiches-table th.fiche-col-date,
 body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td.fiche-col-date,
-body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td[data-label^="Date"] {
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td[data-label^="Date"],
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table th.fiche-col-nom,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td.fiche-col-nom,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table th.fiche-col-prenom,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td.fiche-col-prenom,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td.fiche-row-lead-cell,
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td[data-label="Nom:"],
+body.dashboard-page.dashboard-page--extranet-scroll .fiches-table td[data-label="Prénom:"] {
   white-space: nowrap !important;
   max-width: none !important;
   min-width: max-content !important;
@@ -5017,10 +5153,18 @@ html body.dashboard-page .fiches-table td:nth-child(n) {
   hyphens: manual;
 }
 
-/* Dates / heures : jamais de coupe à 15ch */
+/* Dates / heures / Nom / Prénom : jamais de coupe à 15ch */
 html body.dashboard-page .fiches-table th.fiche-col-date,
 html body.dashboard-page .fiches-table td.fiche-col-date,
-html body.dashboard-page .fiches-table td[data-label^="Date"] {
+html body.dashboard-page .fiches-table td[data-label^="Date"],
+html body.dashboard-page .fiches-table th.fiche-col-nom,
+html body.dashboard-page .fiches-table td.fiche-col-nom,
+html body.dashboard-page .fiches-table th.fiche-col-prenom,
+html body.dashboard-page .fiches-table td.fiche-col-prenom,
+html body.dashboard-page .fiches-table td.fiche-row-lead-cell,
+html body.dashboard-page .fiches-table td[data-label="Nom:"],
+html body.dashboard-page .fiches-table td[data-label="Prénom:"],
+html body.dashboard-page .fiches-table .fiche-row-lead-label {
   max-width: none !important;
   min-width: max-content !important;
   white-space: nowrap !important;

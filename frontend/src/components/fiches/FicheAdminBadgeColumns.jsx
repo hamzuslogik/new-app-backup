@@ -20,34 +20,42 @@ export function FicheAdminBadgeHeaders({
   onSortProduit,
   valideSortLabel = 'Validé',
   produitSortLabel = 'Produit',
+  isColVisible = () => true,
 }) {
   return (
     <>
-      <th
-        onClick={onSortValide}
-        className={`fiche-col-badge fiche-col-valide${onSortValide ? ' sortable-header' : ''}`}
-        title="Validé"
-      >
-        <FaCheck aria-hidden /> {getSortIcon ? getSortIcon(valideSortLabel) : null}
-      </th>
-      <th className="actions-header"><span>ACTION</span></th>
-      <th className="fiche-col-badge fiche-col-sig">SIG</th>
-      <th className="fiche-col-badge fiche-col-cs">CS</th>
-      <th className="fiche-col-badge fiche-col-r2">R2</th>
-      <th className="fiche-col-badge fiche-col-has">HAS</th>
-      <th className="fiche-col-badge fiche-col-rf">RF</th>
-      <th className="fiche-col-badge fiche-col-pdf">PDF</th>
-      <th
-        onClick={onSortProduit}
-        className={`fiche-col-badge fiche-col-prod${onSortProduit ? ' sortable-header' : ''}`}
-      >
-        PROD {getSortIcon ? getSortIcon(produitSortLabel) : null}
-      </th>
+      {isColVisible('valide') ? (
+        <th
+          onClick={onSortValide}
+          className={`fiche-col-badge fiche-col-valide${onSortValide ? ' sortable-header' : ''}`}
+          title="Validé"
+        >
+          <FaCheck aria-hidden /> {getSortIcon ? getSortIcon(valideSortLabel) : null}
+        </th>
+      ) : null}
+      {isColVisible('action') ? (
+        <th className="actions-header"><span>ACTION</span></th>
+      ) : null}
+      {isColVisible('sig') ? <th className="fiche-col-badge fiche-col-sig">SIG</th> : null}
+      {isColVisible('cs') ? <th className="fiche-col-badge fiche-col-cs">CS</th> : null}
+      {isColVisible('r2') ? <th className="fiche-col-badge fiche-col-r2">R2</th> : null}
+      {isColVisible('has') ? <th className="fiche-col-badge fiche-col-has">HAS</th> : null}
+      {isColVisible('rf') ? <th className="fiche-col-badge fiche-col-rf">RF</th> : null}
+      {isColVisible('pdf') ? <th className="fiche-col-badge fiche-col-pdf">PDF</th> : null}
+      {isColVisible('prod') ? (
+        <th
+          onClick={onSortProduit}
+          className={`fiche-col-badge fiche-col-prod${onSortProduit ? ' sortable-header' : ''}`}
+        >
+          PROD {getSortIcon ? getSortIcon(produitSortLabel) : null}
+        </th>
+      ) : null}
     </>
   );
 }
 
-export function FicheAdminValideCell({ valider, confRdvAvec }) {
+export function FicheAdminValideCell({ valider, confRdvAvec, hidden = false }) {
+  if (hidden) return null;
   return (
     <td data-label="Validé:" className="fiche-col-badge fiche-col-valide" style={{ textAlign: 'center' }}>
       {valider > 0 ? (
@@ -68,7 +76,9 @@ export function FicheAdminActionCell({
   detailButtonProps = {},
   extras = null,
   showDetail = true,
+  hidden = false,
 }) {
+  if (hidden) return null;
   const inner = (
     <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
       <FaSearch style={{ color: '#ffffff', fontSize: '11.9px' }} />
@@ -135,67 +145,82 @@ export function FicheAdminIndicatorCells({
   produitColor,
   onPdf,
   showPdf = true,
+  isColVisible = () => true,
 }) {
   return (
     <>
-      <td data-label="SIG:" className="fiche-col-badge fiche-col-sig">
-        {indicators?.sg ? (
-          <span className="indicator sg" title="Signé">SIG</span>
-        ) : null}
-      </td>
-      <td data-label="CS:" className="fiche-col-badge fiche-col-cs">
-        {indicators?.cs ? (
-          <span className="indicator cs" title="RDV seul">
-            <FaUser aria-hidden />
-          </span>
-        ) : null}
-      </td>
-      <td data-label="R2:" className="fiche-col-badge fiche-col-r2">
-        {indicators?.r2 ? (
-          <span className="indicator r2" title="R2 placé (commercial secondaire)">R2</span>
-        ) : null}
-      </td>
-      <td data-label="HAS:" className="fiche-col-badge fiche-col-has">
-        {indicators?.has ? (
-          <span className="indicator has" title="Honoré à suivre">HAS</span>
-        ) : null}
-      </td>
-      <td data-label="RF:" className="fiche-col-badge fiche-col-rf">
-        <div className="fiche-rf-ann-wrap">
-          {indicators?.rf ? (
-            <span className="indicator rf" title="Refus">RF</span>
+      {isColVisible('sig') ? (
+        <td data-label="SIG:" className="fiche-col-badge fiche-col-sig">
+          {indicators?.sg ? (
+            <span className="indicator sg" title="Signé">SIG</span>
           ) : null}
-          {indicators?.an ? (
-            <span className="indicator an" title="Annulation">ANN</span>
+        </td>
+      ) : null}
+      {isColVisible('cs') ? (
+        <td data-label="CS:" className="fiche-col-badge fiche-col-cs">
+          {indicators?.cs ? (
+            <span className="indicator cs" title="RDV seul">
+              <FaUser aria-hidden />
+            </span>
           ) : null}
-        </div>
-      </td>
-      <td data-label="PDF:" className="fiche-col-badge fiche-col-pdf">
-        {showPdf && onPdf ? (
-          <button
-            type="button"
-            className="fiche-badge-pdf"
-            title="Générer le PDF"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPdf();
-            }}
-          >
-            <FaFilePdf aria-hidden />
-          </button>
-        ) : null}
-      </td>
-      <td data-label="PROD:" className="fiche-col-badge fiche-col-prod">
-        {produitName ? (
-          <span
-            className="produit-indicator"
-            style={{ backgroundColor: produitColor, color: '#ffffff' }}
-            title={produitName}
-          >
-            {produitName}
-          </span>
-        ) : null}
-      </td>
+        </td>
+      ) : null}
+      {isColVisible('r2') ? (
+        <td data-label="R2:" className="fiche-col-badge fiche-col-r2">
+          {indicators?.r2 ? (
+            <span className="indicator r2" title="R2 placé (commercial secondaire)">R2</span>
+          ) : null}
+        </td>
+      ) : null}
+      {isColVisible('has') ? (
+        <td data-label="HAS:" className="fiche-col-badge fiche-col-has">
+          {indicators?.has ? (
+            <span className="indicator has" title="Honoré à suivre">HAS</span>
+          ) : null}
+        </td>
+      ) : null}
+      {isColVisible('rf') ? (
+        <td data-label="RF:" className="fiche-col-badge fiche-col-rf">
+          <div className="fiche-rf-ann-wrap">
+            {indicators?.rf ? (
+              <span className="indicator rf" title="Refus">RF</span>
+            ) : null}
+            {indicators?.an ? (
+              <span className="indicator an" title="Annulation">ANN</span>
+            ) : null}
+          </div>
+        </td>
+      ) : null}
+      {isColVisible('pdf') ? (
+        <td data-label="PDF:" className="fiche-col-badge fiche-col-pdf">
+          {showPdf && onPdf ? (
+            <button
+              type="button"
+              className="fiche-badge-pdf"
+              title="Générer le PDF"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPdf();
+              }}
+            >
+              <FaFilePdf aria-hidden />
+            </button>
+          ) : null}
+        </td>
+      ) : null}
+      {isColVisible('prod') ? (
+        <td data-label="PROD:" className="fiche-col-badge fiche-col-prod">
+          {produitName ? (
+            <span
+              className="produit-indicator"
+              style={{ backgroundColor: produitColor, color: '#ffffff' }}
+              title={produitName}
+            >
+              {produitName}
+            </span>
+          ) : null}
+        </td>
+      ) : null}
     </>
   );
 }

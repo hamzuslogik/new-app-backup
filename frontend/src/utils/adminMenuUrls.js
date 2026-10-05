@@ -12,6 +12,122 @@ export const isAdminSession = (user) => [1, 7].includes(Number(user?.fonction));
 export const isHonoreASuivreBadgeSession = (user) =>
   [11, 13, 14].includes(Number(user?.fonction));
 
+/**
+ * Sessions pouvant afficher les colonnes badges (CS, RF, HAS, SIG, R2…)
+ * comme l’admin, avec bouton afficher/cacher : Qualité Confirmation (4),
+ * Confirmateur (6), Backoffice (11), RP Confirmation (13), RE Confirmation (14).
+ */
+export const canToggleFicheBadgeColumns = (user) =>
+  [4, 6, 11, 13, 14].includes(Number(user?.fonction));
+
+/**
+ * Sessions avec sélecteur « Colonnes » (afficher / cacher chaque colonne) :
+ * Backoffice (11), RP Confirmation (13), RE Confirmation (14).
+ */
+export const canCustomizeFicheTableColumns = (user) =>
+  [11, 13, 14].includes(Number(user?.fonction));
+
+const FICHE_BADGES_VISIBLE_KEY = 'fiche_badges_columns_visible';
+const FICHE_TABLE_COLUMNS_KEY = 'fiche_table_columns_visible_v1';
+
+/** Préférence affichage badges (défaut : visibles). */
+export function getFicheBadgesVisiblePref() {
+  try {
+    const v = localStorage.getItem(FICHE_BADGES_VISIBLE_KEY);
+    if (v === '0') return false;
+    if (v === '1') return true;
+  } catch (_) {
+    /* ignore */
+  }
+  return true;
+}
+
+export function setFicheBadgesVisiblePref(visible) {
+  try {
+    localStorage.setItem(FICHE_BADGES_VISIBLE_KEY, visible ? '1' : '0');
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+/** Définitions colonnes tableau fiche (layout badges / standard). */
+export const FICHE_TABLE_COLUMN_DEFS = {
+  badge: [
+    { key: 'nom', label: 'Nom', locked: true },
+    { key: 'prenom', label: 'Prénom' },
+    { key: 'tel', label: 'Téléphone' },
+    { key: 'cp', label: 'CP' },
+    { key: 'date_rdv', label: 'Date RDV' },
+    { key: 'commercial', label: 'Commercial' },
+    { key: 'valide', label: 'Validé' },
+    { key: 'action', label: 'ACTION' },
+    { key: 'sig', label: 'SIG' },
+    { key: 'cs', label: 'CS' },
+    { key: 'r2', label: 'R2' },
+    { key: 'has', label: 'HAS' },
+    { key: 'rf', label: 'RF' },
+    { key: 'pdf', label: 'PDF' },
+    { key: 'prod', label: 'PROD' },
+    { key: 'centre', label: 'Centre' },
+    { key: 'date_insert', label: 'Date Insertion' },
+    { key: 'conf', label: 'Conf' },
+    { key: 'etat', label: 'État' },
+    { key: 'cq_etat', label: 'CQ État', group: 'cq' },
+    { key: 'cq_dossier', label: 'CQ Dossier', group: 'cq' },
+    { key: 'cq_obs', label: 'Observation', group: 'cq' },
+    { key: 'decalage', label: 'Décalage', group: 'decalage' },
+  ],
+  standard: [
+    { key: 'nom', label: 'Nom', locked: true },
+    { key: 'prenom', label: 'Prénom' },
+    { key: 'tel', label: 'Téléphone' },
+    { key: 'cp', label: 'CP' },
+    { key: 'date_insert', label: 'Date Insertion' },
+    { key: 'date_rdv', label: 'Date RDV' },
+    { key: 'etat', label: 'État' },
+    { key: 'cq_etat', label: 'CQ État', group: 'cq' },
+    { key: 'cq_dossier', label: 'CQ Dossier', group: 'cq' },
+    { key: 'cq_obs', label: 'Observation', group: 'cq' },
+    { key: 'conf', label: 'Confirmateur' },
+    { key: 'commercial', label: 'Commercial' },
+    { key: 'centre', label: 'Centre' },
+    { key: 'prod', label: 'Produit' },
+    { key: 'valide', label: 'Validé' },
+    { key: 'action', label: 'Actions' },
+    { key: 'decalage', label: 'État décalage' },
+  ],
+};
+
+function defaultColumnVisibilityMap() {
+  const map = {};
+  [...FICHE_TABLE_COLUMN_DEFS.badge, ...FICHE_TABLE_COLUMN_DEFS.standard].forEach((col) => {
+    map[col.key] = true;
+  });
+  return map;
+}
+
+/** Préférence colonnes visibles (défaut : toutes). */
+export function getFicheTableColumnsPref() {
+  const defaults = defaultColumnVisibilityMap();
+  try {
+    const raw = localStorage.getItem(FICHE_TABLE_COLUMNS_KEY);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return defaults;
+    return { ...defaults, ...parsed };
+  } catch (_) {
+    return defaults;
+  }
+}
+
+export function setFicheTableColumnsPref(visibilityMap) {
+  try {
+    localStorage.setItem(FICHE_TABLE_COLUMNS_KEY, JSON.stringify(visibilityMap || {}));
+  } catch (_) {
+    /* ignore */
+  }
+}
+
 /** Session commercial (fonction 5). */
 export const isCommercialSession = (user) => Number(user?.fonction) === 5;
 

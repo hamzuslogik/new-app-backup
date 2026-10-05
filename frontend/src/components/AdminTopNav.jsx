@@ -10,7 +10,7 @@ import useUserHomePage from '../hooks/useUserHomePage';
 import './AdminTopNav.css';
 
 const EXTRA_PAGES = [
-  { path: '/recherche-fiches', label: 'Recherche fiches', permission: 'dashboard_view' },
+  // Recherche fiches désactivée : utiliser les filtres du Dashboard
   { path: '/fiches', label: 'Fiches', permission: 'fiches_view' },
   { path: '/planning-commercial', label: 'Planning Commercial', permission: 'planning_commercial_view' },
   { path: '/planning-hebdo-ios', label: 'Planning Hebdo iOS', customCheck: (u) => Number(u?.fonction) === 1 },

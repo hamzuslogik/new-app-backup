@@ -10,7 +10,8 @@ import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import { getCentreTableAbbr } from '../utils/tableAbbreviations';
-import { getEtatTableAbbr, getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
+import { getEtatTableAbbr, getEtatDisplayWithSousEtat, isSignerSearchFilter } from '../utils/etatSignerComplet';
+import { cleanObservationCQ } from '../utils/cleanObservationCQ';
 import {
   getFicheTableIndicators,
   ficheHasDecalageRequest,
@@ -109,9 +110,15 @@ const DashboardAdmin = () => {
         fiche_search: true,
         ...urlParams
       };
-      // Convertir id_etat_final en nombre si présent
-      if (newFilters.id_etat_final) {
-        newFilters.id_etat_final = parseInt(newFilters.id_etat_final);
+      // Convertir id_etat_final en nombre si présent (conserver t_s = TOUT SIGNER)
+      if (newFilters.id_etat_final != null && newFilters.id_etat_final !== '') {
+        const rawEtat = String(newFilters.id_etat_final).trim();
+        if (rawEtat === 't_s') {
+          newFilters.id_etat_final = 't_s';
+        } else {
+          const n = parseInt(rawEtat, 10);
+          if (!Number.isNaN(n)) newFilters.id_etat_final = n;
+        }
       }
       setFilters(newFilters);
       // Ouvrir automatiquement les filtres si des paramètres sont présents
@@ -296,6 +303,8 @@ const DashboardAdmin = () => {
   const etatsPhase1 = etats.filter(e => String(e.groupe) === '1' || e.groupe === 1);
   const etatsPhase2 = etats.filter(e => String(e.groupe) === '2' || e.groupe === 2);
   const etatsPhase3 = etats.filter(e => String(e.groupe) === '3' || e.groupe === 3);
+  const showCqColumns =
+    !!filters.fiche_search && isSignerSearchFilter(filters.id_etat_final, etatsData || []);
 
   if (etatsError) {
     console.error('Erreur lors du chargement des états:', etatsError);
@@ -1120,6 +1129,13 @@ const DashboardAdmin = () => {
                     <th onClick={() => handleSort('État Final')} className="sortable-header">
                       {isConfirmateurOrRE ? 'État actuel' : 'État Final'} {getSortIcon('État Final')}
                     </th>
+                    {showCqColumns ? (
+                      <>
+                        <th className="fiche-col-cq">CQ État</th>
+                        <th className="fiche-col-cq">CQ Dossier</th>
+                        <th className="fiche-col-cq-obs">Observation</th>
+                      </>
+                    ) : null}
                     {showDecalageCol ? (
                       <th className="dashboard-decalage-col">Décalage</th>
                     ) : null}
@@ -1258,6 +1274,15 @@ const DashboardAdmin = () => {
                             )}
                           </span>
                         </td>
+                        {showCqColumns ? (
+                          <>
+                            <td data-label="CQ État:" className="fiche-col-cq">{fiche.cqe || ''}</td>
+                            <td data-label="CQ Dossier:" className="fiche-col-cq">{fiche.cqd || ''}</td>
+                            <td data-label="Observation:" className="fiche-col-cq-obs" title={cleanObservationCQ(fiche.observations_cq) || undefined}>
+                              {cleanObservationCQ(fiche.observations_cq) || ''}
+                            </td>
+                          </>
+                        ) : null}
                         {showDecalageCol ? (
                           <td data-label="Décalage:" className="dashboard-decalage-cell">
                             {decalageInfo ? (

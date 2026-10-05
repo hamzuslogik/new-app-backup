@@ -35,6 +35,22 @@ export function isSignerEtat(fiche, etats = []) {
   return etatTitle.includes('signer');
 }
 
+/**
+ * Filtre de recherche « Signer » (n'importe lequel) :
+ * TOUT SIGNER (t_s), IDs connus, groupe phase 3, ou titre contenant « signer ».
+ */
+export function isSignerSearchFilter(idEtatFinal, etats = []) {
+  if (idEtatFinal == null || idEtatFinal === '') return false;
+  const raw = String(idEtatFinal).trim();
+  if (raw === 't_s') return true;
+  const etatId = Number(raw);
+  if (Number.isFinite(etatId) && ETATS_SIGNER_IDS.includes(etatId)) return true;
+  const etat = (etats || []).find((e) => Number(e.id) === etatId);
+  if (!etat) return false;
+  if (String(etat.groupe) === '3' || etat.groupe === 3) return true;
+  return normalizeLabel(etat.titre).includes('signer');
+}
+
 /** Libellé colonne État : « SIGNER - COMPLETE » pour les états signer ayant un sous-état */
 export function getEtatDisplayWithSousEtat(fiche, etats = [], sousEtats = []) {
   const baseTitle = (getEtatTitle(fiche, etats) || '').trim();
