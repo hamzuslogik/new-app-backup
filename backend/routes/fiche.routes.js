@@ -1069,22 +1069,6 @@ router.get('/', authenticate, async (req, res) => {
       return Array.from(variants).filter(Boolean);
     };
 
-    /**
-     * Recherche nom/prénom rapide :
-     * - conserve le texte saisi (trim uniquement, %/_ échappés → littéraux)
-     * - préfixe `terme%` (utilisable par index) plutôt que `%terme%` + LOWER()
-     * - égalité exacte en plus du préfixe (casse selon collation CI de la colonne)
-     */
-    const escapeLikeLiteral = (raw) =>
-      String(raw ?? '').replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
-    const appendNamePrefixSearch = (columnSql, rawValue) => {
-      const term = String(rawValue ?? '').trim();
-      if (!term) return;
-      const lit = escapeLikeLiteral(term);
-      whereConditions.push(`(${columnSql} = ? OR ${columnSql} LIKE ? ESCAPE '\\\\')`);
-      params.push(term, `${lit}%`);
-    };
-
     const includeArchive =
       include_archive === '1' ||
       include_archive === 1 ||
@@ -1344,12 +1328,14 @@ router.get('/', authenticate, async (req, res) => {
     // NOTE: On n'exclut plus les états du groupe 0 - toutes les fiches sont visibles
     // (ko, hc, doublon, etc.)
 
-    // Filtres de recherche
+    // Filtres de recherche (nom/prénom : contient, insensible à la casse)
     if (nom) {
-      appendNamePrefixSearch('fiche.nom', nom);
+      whereConditions.push('LOWER(fiche.nom) LIKE ?');
+      params.push(`%${String(nom).trim().toLowerCase()}%`);
     }
     if (prenom) {
-      appendNamePrefixSearch('fiche.prenom', prenom);
+      whereConditions.push('LOWER(fiche.prenom) LIKE ?');
+      params.push(`%${String(prenom).trim().toLowerCase()}%`);
     }
     // Recherche par critère
     if (critere) {
@@ -1372,9 +1358,11 @@ router.get('/', authenticate, async (req, res) => {
         whereConditions.push('(LOWER(fiche.commentaire) LIKE ? OR LOWER(fiche.conf_commentaire_produit) LIKE ?)');
         params.push(`%${critere.toLowerCase()}%`, `%${critere.toLowerCase()}%`);
       } else if (champRecherche === 'nom') {
-        appendNamePrefixSearch('fiche.nom', critere);
+        whereConditions.push('LOWER(fiche.nom) LIKE ?');
+        params.push(`%${String(critere).trim().toLowerCase()}%`);
       } else if (champRecherche === 'prenom') {
-        appendNamePrefixSearch('fiche.prenom', critere);
+        whereConditions.push('LOWER(fiche.prenom) LIKE ?');
+        params.push(`%${String(critere).trim().toLowerCase()}%`);
       } else {
         // Autres champs : LIKE générique (ex. champs texte futurs)
         whereConditions.push(`fiche.${champRecherche} LIKE ?`);
