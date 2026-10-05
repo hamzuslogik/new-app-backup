@@ -1834,7 +1834,7 @@ const Dashboard = () => {
                 </Link>
               )}
 
-              {/* Signatures (aujourd'hui) */}
+              {/* Signatures (aujourd'hui) : CR Signer pending + approved → page Compte rendu filtrée */}
               {isConfirmateur ? (
                 <div className="stat-card stat-card-warning">
                   <div className="stat-card-icon">
@@ -1846,7 +1846,17 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <Link to="/signatures" className="stat-card stat-card-warning">
+                <Link
+                  to={(() => {
+                    const d = new Date();
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    return `/compte-rendu?signer=1&statut=all&date=${yyyy}-${mm}-${dd}`;
+                  })()}
+                  className="stat-card stat-card-warning"
+                  title="Comptes rendus Signer du jour (approuvés et non approuvés)"
+                >
                   <div className="stat-card-icon">
                     <FaSignature />
                   </div>

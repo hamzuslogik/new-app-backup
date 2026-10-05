@@ -335,9 +335,9 @@ router.get('/', authenticate, async (req, res) => {
       });
     }
 
-    const { statut, id_fiche, date, id_commercial, id_etat_final } = req.query;
+    const { statut, id_fiche, date, id_commercial, id_etat_final, signer } = req.query;
 
-    console.log('[COMPTE-RENDU] GET /compte-rendu - User:', user.id, 'Fonction:', user.fonction, 'Query:', { statut, id_fiche, date, id_commercial, id_etat_final });
+    console.log('[COMPTE-RENDU] GET /compte-rendu - User:', user.id, 'Fonction:', user.fonction, 'Query:', { statut, id_fiche, date, id_commercial, id_etat_final, signer });
 
     let whereConditions = [];
     let params = [];
@@ -370,11 +370,21 @@ router.get('/', authenticate, async (req, res) => {
       params.push(date);
     }
 
-    if (id_etat_final) {
-      const idEtat = parseInt(id_etat_final, 10);
-      if (!Number.isNaN(idEtat)) {
+    // Card Dashboard « Signatures » : uniquement les CR Signer (13, 44, 45)
+    const signerOnly = signer === '1' || signer === 'true' || signer === 'yes';
+    if (signerOnly) {
+      whereConditions.push('cr.id_etat_final IN (13, 44, 45)');
+    } else if (id_etat_final) {
+      const etatIds = String(id_etat_final)
+        .split(',')
+        .map((v) => parseInt(v, 10))
+        .filter((n) => Number.isFinite(n));
+      if (etatIds.length === 1) {
         whereConditions.push('cr.id_etat_final = ?');
-        params.push(idEtat);
+        params.push(etatIds[0]);
+      } else if (etatIds.length > 1) {
+        whereConditions.push(`cr.id_etat_final IN (${etatIds.map(() => '?').join(',')})`);
+        params.push(...etatIds);
       }
     }
 

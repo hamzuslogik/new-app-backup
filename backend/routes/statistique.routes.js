@@ -1258,11 +1258,14 @@ router.get('/dashboard', authenticate, async (req, res) => {
       WHERE f.id_etat_final = 7 AND (f.archive = 0 OR f.archive IS NULL)
     `, [todayStart, todayEnd]);
 
-    // 2. Nombre de signatures enregistrées aujourd'hui (table signature)
+    // 2. Signatures aujourd'hui = comptes rendus Signer (13/44/45) créés aujourd'hui,
+    //    cumul pending (pas encore approuvés) + approved (même si pas encore en table signature).
     const signaturesToday = await queryOne(`
       SELECT COUNT(*) as count
-      FROM signature
-      WHERE date_heure >= ? AND date_heure <= ?
+      FROM compte_rendu_pending
+      WHERE id_etat_final IN (13, 44, 45)
+        AND statut IN ('pending', 'approved')
+        AND date_creation >= ? AND date_creation <= ?
     `, [todayStart, todayEnd]);
 
     // 3. Nombre de RDV à venir (état CONFIRMER = 7) avec date_rdv_time >= aujourd'hui

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaEdit, FaClipboardList, FaCheck, FaTimes, FaClock, FaCheckCircle, FaTimesCircle, FaSearch, FaCalendarAlt } from 'react-icons/fa';
@@ -22,11 +23,23 @@ const CompteRendu = () => {
   useForceDesktopViewport('compterendu-page');
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const signerOnlyFromUrl =
+    searchParams.get('signer') === '1' ||
+    searchParams.get('signer') === 'true';
   const [activeTab, setActiveTab] = useState('comptes-rendus');
-  const [selectedStatutPending, setSelectedStatutPending] = useState(user.fonction === 5 ? 'pending' : 'all');
-  const [filterDate, setFilterDate] = useState(getTodayISO);
+  const [selectedStatutPending, setSelectedStatutPending] = useState(() => {
+    const s = searchParams.get('statut');
+    if (s === 'all' || s === 'pending' || s === 'approved' || s === 'rejected') return s;
+    return user.fonction === 5 ? 'pending' : 'all';
+  });
+  const [filterDate, setFilterDate] = useState(() => searchParams.get('date') || getTodayISO());
   const [filterCommercial, setFilterCommercial] = useState('');
-  const [filterEtat, setFilterEtat] = useState('');
+  const [filterEtat, setFilterEtat] = useState(() => {
+    if (signerOnlyFromUrl) return 'signer';
+    return searchParams.get('id_etat_final') || searchParams.get('etat') || '';
+  });
+  const [filterSignerOnly, setFilterSignerOnly] = useState(signerOnlyFromUrl);
   const [commentaireAdmin, setCommentaireAdmin] = useState('');
   const [selectedCompteRendu, setSelectedCompteRendu] = useState(null);
   const [editingCompteRendu, setEditingCompteRendu] = useState(null);
@@ -62,12 +75,16 @@ const CompteRendu = () => {
 
   // Récupérer les comptes rendus en attente
   const { data: comptesRendusPendingData, isLoading: isLoadingPending } = useQuery(
-    ['compte-rendu-pending', selectedStatutPending, filterDate, filterCommercial, filterEtat],
+    ['compte-rendu-pending', selectedStatutPending, filterDate, filterCommercial, filterEtat, filterSignerOnly],
     async () => {
       const params = { date: filterDate };
       if (selectedStatutPending !== 'all') params.statut = selectedStatutPending;
       if (filterCommercial) params.id_commercial = filterCommercial;
-      if (filterEtat) params.id_etat_final = filterEtat;
+      if (filterSignerOnly || filterEtat === 'signer') {
+        params.signer = '1';
+      } else if (filterEtat) {
+        params.id_etat_final = filterEtat;
+      }
       const res = await api.get('/compte-rendu', { params });
       return res.data.data || [];
     },
@@ -187,10 +204,8 @@ const CompteRendu = () => {
   const etatsCompteRenduFiltre = useMemo(() => getEtatsCompteRenduFilter(etats), [etats]);
 
   useEffect(() => {
-    if (
-      filterEtat &&
-      !etatsCompteRenduFiltre.some((e) => String(e.id) === String(filterEtat))
-    ) {
+    if (!filterEtat || filterEtat === 'signer') return;
+    if (!etatsCompteRenduFiltre.some((e) => String(e.id) === String(filterEtat))) {
       setFilterEtat('');
     }
   }, [etatsCompteRenduFiltre, filterEtat]);
@@ -382,11 +397,21 @@ const CompteRendu = () => {
                 <label htmlFor="filter-etat">État :</label>
                 <select
                   id="filter-etat"
-                  value={filterEtat}
-                  onChange={(e) => setFilterEtat(e.target.value)}
+                  value={filterSignerOnly || filterEtat === 'signer' ? 'signer' : filterEtat}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === 'signer') {
+                      setFilterEtat('signer');
+                      setFilterSignerOnly(true);
+                    } else {
+                      setFilterEtat(v);
+                      setFilterSignerOnly(false);
+                    }
+                  }}
                   className="filter-select filter-select-etat"
                 >
                   <option value="">Tous</option>
+                  <option value="signer">Signer (tous)</option>
                   {etatsCompteRenduFiltre.map((etat) => (
                     <option
                       key={etat.id}
