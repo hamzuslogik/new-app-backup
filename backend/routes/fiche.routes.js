@@ -4706,9 +4706,12 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           sous_etat_titre: histo.sous_etat_titre || null,
           cq_etat: cq_etat || null,
           cq_dossier: cq_dossier || null,
-          commentaire_qualite: fiche.commentaire_qualite || null,
-          observations_cq: fiche.observations_cq || null,
-          commentaire_commercial: fiche.commentaire_commercial || null,
+          // Ne pas injecter les commentaires de la fiche courante : chaque ligne
+          // d'historique doit afficher uniquement fiches_histo.conf_commentaire_produit
+          // (ou le commentaire CR matching pour from_compte_rendu, enrichi plus bas).
+          commentaire_qualite: null,
+          observations_cq: null,
+          commentaire_commercial: null,
           installeur_nom: installeur || null,
           commercial_pseudo: isSignerEtat ? commercialPseudoHisto : (commercial?.pseudo || null),
           commercial_2_pseudo: isSignerEtat ? commercial2PseudoHisto : null,

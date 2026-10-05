@@ -5051,6 +5051,46 @@ const FicheDetail = ({
                 const hasAnyConfirmateurAssigne = showConfirmateurs123
                   ? !!(etatData.confirmateur_pseudo || etatData.confirmateur_2_pseudo || etatData.confirmateur_3_pseudo || auteurChangementEtat)
                   : !!(auteurChangementEtat || etatData.confirmateur_pseudo);
+
+                /** Commentaire affiché : pour l'historique, uniquement fiches_histo.conf_commentaire_produit (ou CR matching). */
+                const pushCommentaireEtat = (items, {
+                  histoLabel = 'Commentaire',
+                  commercialLabel = 'Commentaire commercial',
+                  allowQualiteOnCurrent = false,
+                } = {}) => {
+                  const confC =
+                    etatData.conf_commentaire_produit != null && String(etatData.conf_commentaire_produit).trim() !== ''
+                      ? String(etatData.conf_commentaire_produit).trim()
+                      : '';
+                  const fromCr = etatData.from_compte_rendu === true || etatData.from_compte_rendu === 1;
+                  const crC =
+                    etatData.commentaire_commercial != null && String(etatData.commentaire_commercial).trim() !== ''
+                      ? String(etatData.commentaire_commercial).trim()
+                      : '';
+                  const qualC =
+                    etatData.commentaire_qualite != null && String(etatData.commentaire_qualite).trim() !== ''
+                      ? String(etatData.commentaire_qualite).trim()
+                      : '';
+
+                  if (!isCurrent) {
+                    if (confC) {
+                      items.push({ label: histoLabel, value: confC, fullWidth: true });
+                    } else if (fromCr && crC) {
+                      items.push({ label: commercialLabel, value: crC, fullWidth: true });
+                    }
+                    return;
+                  }
+
+                  if (fromCr && crC) {
+                    items.push({ label: commercialLabel, value: crC, fullWidth: true });
+                  } else if (confC) {
+                    items.push({ label: histoLabel, value: confC, fullWidth: true });
+                  } else if (allowQualiteOnCurrent && qualC) {
+                    items.push({ label: 'Commentaire', value: qualC, fullWidth: true });
+                  } else if (crC) {
+                    items.push({ label: commercialLabel, value: crC, fullWidth: true });
+                  }
+                };
                 
                 const items = [];
 
@@ -5086,12 +5126,7 @@ const FicheDetail = ({
                   if (etatData.sous_etat_titre) items.push({ label: 'Sous-état', value: etatData.sous_etat_titre });
                   if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
                   if (!isCurrent) {
-                    // Afficher le commentaire commercial en priorité s'il existe
-                    if (etatData.commentaire_commercial) {
-                      items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                    } else if (etatData.conf_commentaire_produit) {
-                      items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
-                    }
+                    pushCommentaireEtat(items);
                   }
                   if (etatData.histo_date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateTime(etatData.histo_date_rdv_time) });
                   if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
@@ -5099,24 +5134,14 @@ const FicheDetail = ({
                 // RAPPEL POUR BUREAU (19)
                 else if (etatId === 19) {
                   if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
-                  // Afficher le commentaire commercial en priorité s'il existe
-                  if (etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                  } else if (etatData.conf_commentaire_produit) {
-                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  }
+                  pushCommentaireEtat(items);
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateTime(etatData.date_rdv_time) });
                   if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 // ANNULER ET A REPROGRAMMER (8)
                 else if (etatId === 8) {
                   if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
-                  // Afficher le commentaire commercial en priorité s'il existe
-                  if (etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                  } else if (etatData.conf_commentaire_produit) {
-                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  }
+                  pushCommentaireEtat(items);
                   const rappelEtat8 = etatData.histo_date_rdv_time || etatData.date_rdv_time;
                   if (rappelEtat8) items.push({ label: 'A rappeler le', value: formatRdvDateTime(rappelEtat8) });
                   if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
@@ -5124,68 +5149,38 @@ const FicheDetail = ({
                 // CLIENT HONORE A SUIVRE (9)
                 else if (etatId === 9) {
                   if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurEtatListe });
-                  // Afficher le commentaire commercial en priorité s'il existe
-                  if (etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                  } else if (etatData.conf_commentaire_produit) {
-                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  }
+                  pushCommentaireEtat(items);
                   if (etatData.date_rdv_time) items.push({ label: 'A rappeler le', value: formatRdvDateOnly(etatData.date_rdv_time) });
                   if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 // RDV ANNULER (11)
                 else if (etatId === 11) {
                   if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
-                  // Afficher le commentaire commercial en priorité s'il existe
-                  if (etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                  } else if (etatData.conf_commentaire_produit) {
-                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  }
+                  pushCommentaireEtat(items);
                   if (etatData.conf_rdv_avec) items.push({ label: 'Appel avec qui', value: etatData.conf_rdv_avec });
                 }
                 // RDV ANNULER 2 FOIS (26)
                 else if (etatId === 26) {
                   if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
-                  // Afficher le commentaire commercial en priorité s'il existe
-                  if (etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                  } else if (etatData.conf_commentaire_produit) {
-                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  }
+                  pushCommentaireEtat(items);
                   if (etatData.conf_rdv_avec) items.push({ label: 'Appel avec qui', value: etatData.conf_rdv_avec });
                 }
                 // REFUSER (12)
                 else if (etatId === 12) {
                   if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
-                  // Afficher le commentaire commercial en priorité s'il existe
-                  if (etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                  } else if (etatData.conf_commentaire_produit) {
-                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  }
+                  pushCommentaireEtat(items);
                   if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 // HHC FINANCEMENT A VERIFIER (34)
                 else if (etatId === 34) {
                   if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
-                  // Afficher le commentaire commercial en priorité s'il existe
-                  if (etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                  } else if (etatData.conf_commentaire_produit) {
-                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  }
+                  pushCommentaireEtat(items);
                   if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 // HCC TECHNIQUE (35)
                 else if (etatId === 35) {
                   if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
-                  // Afficher le commentaire commercial en priorité s'il existe
-                  if (etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                  } else if (etatData.conf_commentaire_produit) {
-                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  }
+                  pushCommentaireEtat(items);
                   if (etatData.commercial_pseudo) items.push({ label: 'Commercial', value: etatData.commercial_pseudo });
                   if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
@@ -5249,13 +5244,7 @@ const FicheDetail = ({
                       items.push({ label: 'Commercial', value: String(etatData.cr_commercial_pseudo).trim() });
                     }
                   }
-                  // Signer/historique: priorité au commentaire enregistré dans fiches_histo (conf_commentaire_produit)
-                  if (etatData.conf_commentaire_produit) {
-                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  } else if (etatData.commentaire_commercial) {
-                    // Fallback si aucun commentaire historisé n'existe pour la ligne
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                  }
+                  pushCommentaireEtat(items);
                   if (etatData.date_sign_time) {
                     items.push({ label: 'Signé le', value: formatDateNoSeconds(etatData.date_sign_time) });
                   }
@@ -5304,11 +5293,10 @@ const FicheDetail = ({
                   } else if (hasAnyConfirmateurAssigne || etatData.histo_confirmateur_pseudo) {
                     items.push({ label: labelAuteurEtat, value: valeurConfirmateurEtatListe });
                   }
-                  if (etatData.from_compte_rendu && etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial (compte rendu)', value: etatData.commentaire_commercial, fullWidth: true });
-                  } else if (!etatData.from_compte_rendu && etatData.conf_commentaire_produit) {
-                    items.push({ label: 'Commentaire confirmateur', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  }
+                  pushCommentaireEtat(items, {
+                    histoLabel: 'Commentaire confirmateur',
+                    commercialLabel: 'Commentaire commercial (compte rendu)',
+                  });
                   if (etatData.date_rdv_time) {
                     items.push({
                       label: 'Date RDV',
@@ -5368,16 +5356,7 @@ const FicheDetail = ({
                 // Par défaut
                 else {
                   if (etatData.confirmateur_pseudo || etatData.histo_confirmateur_pseudo) items.push({ label: labelAuteurEtat, value: valeurConfirmateurAffichee });
-                  // Afficher le commentaire commercial s'il existe (après création d'un compte rendu approuvé)
-                  if (etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire commercial', value: etatData.commentaire_commercial, fullWidth: true });
-                  }
-                  // Pour les états non confirmés, afficher commentaire_qualite s'il existe, sinon conf_commentaire_produit
-                  if (etatData.commentaire_qualite) {
-                    items.push({ label: 'Commentaire', value: etatData.commentaire_qualite, fullWidth: true });
-                  } else if (etatData.conf_commentaire_produit && !etatData.commentaire_commercial) {
-                    items.push({ label: 'Commentaire', value: etatData.conf_commentaire_produit, fullWidth: true });
-                  }
+                  pushCommentaireEtat(items, { allowQualiteOnCurrent: true });
                   if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                 }
                 
