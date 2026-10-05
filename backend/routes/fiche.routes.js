@@ -4656,23 +4656,56 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           // Valeur date_rdv_time PROPRE à la ligne fiches_histo (sans repli sur la fiche courante),
           // sérialisée en chaîne locale pour éviter le décalage UTC côté front.
           histo_date_rdv_time: toLocalDatetimeString(histo.date_rdv_time),
-          conf_rdv_avec: fiche.conf_rdv_avec || null,
-          conf_appel_tunisie_avec: fiche.conf_appel_tunisie_avec || null,
-          conf_deja_etude: histo.conf_deja_etude ?? null,
-          conf_deja_fait_etude: histo.conf_deja_fait_etude ?? histo.conf_deja_etude ?? null,
-          conf_details_etude: histo.conf_details_etude ?? null,
-          conf_profession_monsieur: fiche.conf_profession_monsieur ?? fiche.profession_mr ?? null,
-          conf_type_contrat_mr: fiche.conf_type_contrat_mr ?? fiche.type_contrat_mr ?? null,
-          conf_profession_madame: fiche.conf_profession_madame ?? fiche.profession_madame ?? null,
-          conf_type_contrat_madame: fiche.conf_type_contrat_madame ?? fiche.type_contrat_madame ?? null,
-          conf_revenu: fiche.conf_revenu || null,
-          conf_credit: fiche.conf_credit || null,
-          conf_mode_chauffage: fiche.conf_mode_chauffage ?? fiche.mode_chauffage ?? null,
-          conf_complement_chauffage: fiche.conf_complement_chauffage || null,
-          conf_consommation_electricite: fiche.conf_consommation_electricite || null,
-          conf_consommation_chauffage: fiche.conf_consommation_chauffage || null,
-          conf_rdv_annule_precedent: fiche.conf_rdv_annule_precedent || null,
-          conf_presence_couple: fiche.conf_presence_couple || null,
+          // Champs conf_* : priorité à la ligne fiches_histo (snapshot confirmation).
+          // Repli fiche uniquement pour les anciennes lignes CONFIRMER sans colonnes historisées.
+          ...(() => {
+            const filled = (v) => v != null && String(v).trim() !== '';
+            const pick = (key, ...fallbacks) => {
+              if (filled(histo[key])) return histo[key];
+              if (!isConfirmerEtat) return histo[key] ?? null;
+              for (const fb of fallbacks) {
+                if (filled(fb)) return fb;
+              }
+              return histo[key] ?? null;
+            };
+            return {
+              conf_rdv_avec: pick('conf_rdv_avec', fiche.conf_rdv_avec),
+              conf_appel_tunisie_avec: pick('conf_appel_tunisie_avec', fiche.conf_appel_tunisie_avec, fiche.entretien),
+              conf_deja_etude: pick('conf_deja_etude', fiche.conf_deja_etude, fiche.conf_deja_fait_etude, fiche.etude),
+              conf_deja_fait_etude: pick(
+                'conf_deja_fait_etude',
+                histo.conf_deja_etude,
+                fiche.conf_deja_fait_etude,
+                fiche.conf_deja_etude,
+                fiche.etude
+              ),
+              conf_details_etude: pick('conf_details_etude', fiche.conf_details_etude, fiche.details_etude),
+              conf_profession_monsieur: pick('conf_profession_monsieur', fiche.conf_profession_monsieur, fiche.profession_mr),
+              conf_type_contrat_mr: pick('conf_type_contrat_mr', fiche.conf_type_contrat_mr, fiche.type_contrat_mr),
+              conf_profession_madame: pick('conf_profession_madame', fiche.conf_profession_madame, fiche.profession_madame),
+              conf_type_contrat_madame: pick('conf_type_contrat_madame', fiche.conf_type_contrat_madame, fiche.type_contrat_madame),
+              conf_revenu: pick('conf_revenu', fiche.conf_revenu, fiche.revenu_foyer),
+              conf_credit: pick('conf_credit', fiche.conf_credit, fiche.credit_foyer),
+              conf_mode_chauffage: pick('conf_mode_chauffage', fiche.conf_mode_chauffage, fiche.mode_chauffage),
+              conf_complement_chauffage: pick('conf_complement_chauffage', fiche.conf_complement_chauffage),
+              conf_consommation_electricite: pick(
+                'conf_consommation_electricite',
+                fiche.conf_consommation_electricite,
+                fiche.consommation_electricite
+              ),
+              conf_consommation_chauffage: pick(
+                'conf_consommation_chauffage',
+                fiche.conf_consommation_chauffage,
+                fiche.consommation_chauffage
+              ),
+              conf_rdv_annule_precedent: pick('conf_rdv_annule_precedent', fiche.conf_rdv_annule_precedent),
+              conf_presence_couple: pick('conf_presence_couple', fiche.conf_presence_couple),
+              conf_orientation_toiture: pick('conf_orientation_toiture', fiche.conf_orientation_toiture, fiche.orientation_toiture),
+              conf_zones_ombres: pick('conf_zones_ombres', fiche.conf_zones_ombres, fiche.zones_ombres),
+              conf_site_classe: pick('conf_site_classe', fiche.conf_site_classe, fiche.site_classe),
+              conf_produit: pick('conf_produit', fiche.conf_produit, fiche.produit),
+            };
+          })(),
           // Pour l'historique, priorité aux valeurs historisées de la ligne (sinon repli fiche courante)
           // Toujours sérialiser en chaîne locale (même bug UTC que sur la fiche).
           date_rdv_time: toLocalDatetimeString(histo.date_rdv_time ?? fiche.date_rdv_time),
@@ -4694,14 +4727,12 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
             Object.prototype.hasOwnProperty.call(histo, 'complement_chauffage')
               ? histo.complement_chauffage
               : (fiche.complement_chauffage || null),
-          produit: fiche.produit || null,
+          produit: (isConfirmerEtat && histo.conf_produit != null && String(histo.conf_produit).trim() !== '')
+            ? histo.conf_produit
+            : (fiche.produit || null),
           surface_chauffee: fiche.surface_chauffee || null,
           consommation_chauffage: fiche.consommation_chauffage || null,
           annee_systeme_chauffage: fiche.annee_systeme_chauffage || null,
-          conf_orientation_toiture: fiche.conf_orientation_toiture || null,
-          conf_zones_ombres: fiche.conf_zones_ombres || null,
-          conf_site_classe: fiche.conf_site_classe || null,
-          conf_consommation_electricite: fiche.conf_consommation_electricite || null,
           nb_pans: fiche.nb_pans || null,
           sous_etat_titre: histo.sous_etat_titre || null,
           cq_etat: cq_etat || null,

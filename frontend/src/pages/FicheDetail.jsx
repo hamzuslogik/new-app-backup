@@ -692,9 +692,26 @@ function getLastConfirmationCommentaire(ficheData) {
   return String(ficheData.commentaire || '').trim();
 }
 
+/** Dernière ligne d'historique CONFIRMER (état 7), pour préremplir une reconfirmation. */
+function getLastConfirmationHisto(ficheData) {
+  const hist = Array.isArray(ficheData?.historique) ? ficheData.historique : [];
+  for (let i = hist.length - 1; i >= 0; i -= 1) {
+    if (Number(hist[i]?.id_etat) === 7) return hist[i];
+  }
+  return null;
+}
+
+function pickConfPrefillValue(...candidates) {
+  for (const c of candidates) {
+    if (c != null && String(c).trim() !== '') return c;
+  }
+  return '';
+}
+
 /**
- * Formulaire « Informations de confirmation » (état 7) prérempli depuis la fiche (tous les champs conf_* + produit / RDV).
- * Même logique que la création RDV : conf_appel_tunisie_avec avec repli sur entretien si besoin.
+ * Formulaire « Informations de confirmation » (état 7) prérempli depuis la fiche
+ * (+ dernière confirmation historisée si la fiche a déjà été confirmée).
+ * Sessions : admin, backoffice, RE/RP confirmation, confirmateur.
  */
 function buildConfFormStateFromFiche(ficheData, user) {
   const now = new Date();
@@ -705,10 +722,13 @@ function buildConfFormStateFromFiche(ficheData, user) {
     return { ...EMPTY_CONF_FORM_BASE, conf_rdv_date: defaultDate, conf_rdv_time: defaultTime };
   }
 
+  const lastConf = getLastConfirmationHisto(ficheData);
+
   let rdvDate = defaultDate;
   let rdvTime = defaultTime;
-  if (ficheData.date_rdv_time) {
-    const parts = String(ficheData.date_rdv_time).split(/[\sT]/);
+  const rdvSource = pickConfPrefillValue(ficheData.date_rdv_time, lastConf?.date_rdv_time, lastConf?.histo_date_rdv_time);
+  if (rdvSource) {
+    const parts = String(rdvSource).split(/[\sT]/);
     if (parts[0]) rdvDate = parts[0];
     if (parts[1]) rdvTime = parts[1].substring(0, 5);
   }
@@ -720,13 +740,33 @@ function buildConfFormStateFromFiche(ficheData, user) {
   let idConf2 = '';
   let idConf3 = '';
   // Session confirmateur (6) : conf1 = soi-même uniquement (prérempli) ; 2/3 manuels via +.
-  // Autres sessions : préremplir depuis la fiche / histo.
+  // Autres sessions (admin, BO, RE, RP) : préremplir depuis la fiche / histo.
   if (Number(user?.fonction) === 6) {
     idConf1 = user?.id ? String(user.id) : '';
+    if (!isNouvelleConfirmationConf1Seul(ficheData)) {
+      const a = ficheData.id_confirmateur ? String(ficheData.id_confirmateur) : (lastConf?.id_confirmateur ? String(lastConf.id_confirmateur) : '');
+      const b = ficheData.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : (lastConf?.id_confirmateur_2 ? String(lastConf.id_confirmateur_2) : '');
+      const c = ficheData.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : (lastConf?.id_confirmateur_3 ? String(lastConf.id_confirmateur_3) : '');
+      const prev = [a, b, c].filter((id) => id && id !== idConf1);
+      idConf2 = prev[0] || '';
+      idConf3 = prev[1] || '';
+    }
   } else {
-    idConf1 = ficheData.id_confirmateur ? String(ficheData.id_confirmateur) : (histoConf ? (histoConf[0] || '') : '');
-    idConf2 = ficheData.id_confirmateur_2 ? String(ficheData.id_confirmateur_2) : (histoConf ? (histoConf[1] || '') : '');
-    idConf3 = ficheData.id_confirmateur_3 ? String(ficheData.id_confirmateur_3) : (histoConf ? (histoConf[2] || '') : '');
+    idConf1 = pickConfPrefillValue(
+      ficheData.id_confirmateur,
+      lastConf?.id_confirmateur,
+      histoConf ? histoConf[0] : ''
+    );
+    idConf2 = pickConfPrefillValue(
+      ficheData.id_confirmateur_2,
+      lastConf?.id_confirmateur_2,
+      histoConf ? histoConf[1] : ''
+    );
+    idConf3 = pickConfPrefillValue(
+      ficheData.id_confirmateur_3,
+      lastConf?.id_confirmateur_3,
+      histoConf ? histoConf[2] : ''
+    );
     if (isNouvelleConfirmationConf1Seul(ficheData)) {
       idConf2 = '';
       idConf3 = '';
@@ -734,93 +774,173 @@ function buildConfFormStateFromFiche(ficheData, user) {
   }
 
   const confAppelTunisie = (() => {
-    const c = ficheData.conf_appel_tunisie_avec;
-    if (c != null && String(c).trim() !== '') return normalizeMrMmeSelect(c);
-    const e = String(ficheData.entretien || '').trim();
-    if (!e) return '';
-    return normalizeMrMmeSelect(e);
+    const raw = pickConfPrefillValue(
+      ficheData.conf_appel_tunisie_avec,
+      lastConf?.conf_appel_tunisie_avec,
+      ficheData.entretien
+    );
+    return raw ? normalizeMrMmeSelect(raw) : '';
   })();
 
-  const produit =
-    ficheData.produit != null && String(ficheData.produit).trim() !== ''
-      ? String(ficheData.produit)
-      : ficheData.conf_produit != null && String(ficheData.conf_produit).trim() !== ''
-        ? String(ficheData.conf_produit)
-        : '';
+  const produit = String(
+    pickConfPrefillValue(
+      ficheData.produit,
+      ficheData.conf_produit,
+      lastConf?.conf_produit,
+      lastConf?.produit
+    )
+  );
 
   const dejaEtude = normalizeOuiNonSelect(
-    ficheData.conf_deja_etude || ficheData.conf_deja_fait_etude || ficheData.etude || ''
+    pickConfPrefillValue(
+      ficheData.conf_deja_etude,
+      ficheData.conf_deja_fait_etude,
+      lastConf?.conf_deja_etude,
+      lastConf?.conf_deja_fait_etude,
+      ficheData.etude
+    )
   );
-  const presenceCoupleRaw = ficheData.conf_presence_couple || '';
+  const presenceCoupleRaw = pickConfPrefillValue(
+    ficheData.conf_presence_couple,
+    lastConf?.conf_presence_couple
+  );
   const presenceCoupleNorm = getRdvSeulRawLabel({ conf_presence_couple: presenceCoupleRaw }) || presenceCoupleRaw;
+
+  const strOrEmpty = (v) => (v != null && String(v).trim() !== '' ? String(v) : '');
 
   return {
     produit,
-    id_confirmateur: idConf1,
-    id_confirmateur_2: idConf2,
-    id_confirmateur_3: idConf3,
+    id_confirmateur: idConf1 ? String(idConf1) : '',
+    id_confirmateur_2: idConf2 ? String(idConf2) : '',
+    id_confirmateur_3: idConf3 ? String(idConf3) : '',
     conf_rdv_date: rdvDate,
     conf_rdv_time: rdvTime,
-    conf_rdv_avec: normalizeMrMmeSelect(ficheData.conf_rdv_avec || ''),
+    conf_rdv_avec: normalizeMrMmeSelect(
+      pickConfPrefillValue(ficheData.conf_rdv_avec, lastConf?.conf_rdv_avec)
+    ),
     conf_appel_tunisie_avec: confAppelTunisie,
     conf_deja_etude: dejaEtude,
     conf_deja_fait_etude: dejaEtude,
-    conf_details_etude: ficheData.conf_details_etude || ficheData.details_etude || '',
-    conf_profession_monsieur: ficheData.conf_profession_monsieur != null ? String(ficheData.conf_profession_monsieur) : '',
-    conf_type_contrat_mr: ficheData.conf_type_contrat_mr != null ? String(ficheData.conf_type_contrat_mr) : '',
-    conf_profession_madame: ficheData.conf_profession_madame != null ? String(ficheData.conf_profession_madame) : '',
-    conf_type_contrat_madame: ficheData.conf_type_contrat_madame != null ? String(ficheData.conf_type_contrat_madame) : '',
-    conf_revenu: ficheData.conf_revenu || '',
-    conf_credit: ficheData.conf_credit || '',
-    conf_mode_chauffage:
-      ficheData.conf_mode_chauffage != null && ficheData.conf_mode_chauffage !== ''
-        ? String(ficheData.conf_mode_chauffage)
-        : ficheData.mode_chauffage
-          ? String(ficheData.mode_chauffage)
-          : '',
-    conf_complement_chauffage: ficheData.conf_complement_chauffage || '',
-    conf_consommation_electricite:
-      ficheData.conf_consommation_electricite != null && String(ficheData.conf_consommation_electricite).trim() !== ''
-        ? String(ficheData.conf_consommation_electricite)
-        : ficheData.consommation_electricite != null
-          ? String(ficheData.consommation_electricite)
-          : '',
-    conf_consommation_chauffage:
-      ficheData.conf_consommation_chauffage != null && String(ficheData.conf_consommation_chauffage).trim() !== ''
-        ? String(ficheData.conf_consommation_chauffage)
-        : ficheData.consommation_chauffage != null
-          ? String(ficheData.consommation_chauffage)
-          : '',
-    conf_rdv_annule_precedent: normalizeOuiNonSelect(ficheData.conf_rdv_annule_precedent || ''),
+    conf_details_etude: pickConfPrefillValue(
+      ficheData.conf_details_etude,
+      lastConf?.conf_details_etude,
+      ficheData.details_etude
+    ),
+    conf_profession_monsieur: strOrEmpty(
+      pickConfPrefillValue(
+        ficheData.conf_profession_monsieur,
+        lastConf?.conf_profession_monsieur,
+        ficheData.profession_mr
+      )
+    ),
+    conf_type_contrat_mr: strOrEmpty(
+      pickConfPrefillValue(
+        ficheData.conf_type_contrat_mr,
+        lastConf?.conf_type_contrat_mr,
+        ficheData.type_contrat_mr
+      )
+    ),
+    conf_profession_madame: strOrEmpty(
+      pickConfPrefillValue(
+        ficheData.conf_profession_madame,
+        lastConf?.conf_profession_madame,
+        ficheData.profession_madame
+      )
+    ),
+    conf_type_contrat_madame: strOrEmpty(
+      pickConfPrefillValue(
+        ficheData.conf_type_contrat_madame,
+        lastConf?.conf_type_contrat_madame,
+        ficheData.type_contrat_madame
+      )
+    ),
+    conf_revenu: pickConfPrefillValue(ficheData.conf_revenu, lastConf?.conf_revenu, ficheData.revenu_foyer),
+    conf_credit: pickConfPrefillValue(ficheData.conf_credit, lastConf?.conf_credit, ficheData.credit_foyer),
+    conf_mode_chauffage: strOrEmpty(
+      pickConfPrefillValue(
+        ficheData.conf_mode_chauffage,
+        lastConf?.conf_mode_chauffage,
+        ficheData.mode_chauffage
+      )
+    ),
+    conf_complement_chauffage: pickConfPrefillValue(
+      ficheData.conf_complement_chauffage,
+      lastConf?.conf_complement_chauffage
+    ),
+    conf_consommation_electricite: strOrEmpty(
+      pickConfPrefillValue(
+        ficheData.conf_consommation_electricite,
+        lastConf?.conf_consommation_electricite,
+        ficheData.consommation_electricite
+      )
+    ),
+    conf_consommation_chauffage: strOrEmpty(
+      pickConfPrefillValue(
+        ficheData.conf_consommation_chauffage,
+        lastConf?.conf_consommation_chauffage,
+        ficheData.consommation_chauffage
+      )
+    ),
+    conf_rdv_annule_precedent: normalizeOuiNonSelect(
+      pickConfPrefillValue(ficheData.conf_rdv_annule_precedent, lastConf?.conf_rdv_annule_precedent)
+    ),
     conf_presence_couple: presenceCoupleNorm || '',
-    conf_orientation_toiture: (ficheData.conf_orientation_toiture || ficheData.orientation_toiture || '').toString(),
-    conf_zones_ombres: (ficheData.conf_zones_ombres || ficheData.zones_ombres || '').toString(),
-    conf_site_classe: (ficheData.conf_site_classe || ficheData.site_classe || '').toString(),
-    nb_pans: ficheData.nb_pans != null && ficheData.nb_pans !== '' ? String(ficheData.nb_pans) : '',
-    annee_systeme_chauffage: ficheData.annee_systeme_chauffage != null ? String(ficheData.annee_systeme_chauffage) : '',
-    surface_chauffee: ficheData.surface_chauffee != null && ficheData.surface_chauffee !== '' ? String(ficheData.surface_chauffee) : '',
-    consommation_chauffage: ficheData.consommation_chauffage || '',
-    surface_habitable:
-      ficheData.surface_habitable != null && ficheData.surface_habitable !== ''
-        ? String(ficheData.surface_habitable)
-        : '',
+    conf_orientation_toiture: strOrEmpty(
+      pickConfPrefillValue(
+        ficheData.conf_orientation_toiture,
+        lastConf?.conf_orientation_toiture,
+        ficheData.orientation_toiture
+      )
+    ),
+    conf_zones_ombres: strOrEmpty(
+      pickConfPrefillValue(ficheData.conf_zones_ombres, lastConf?.conf_zones_ombres, ficheData.zones_ombres)
+    ),
+    conf_site_classe: strOrEmpty(
+      pickConfPrefillValue(ficheData.conf_site_classe, lastConf?.conf_site_classe, ficheData.site_classe)
+    ),
+    nb_pans: strOrEmpty(pickConfPrefillValue(ficheData.nb_pans, lastConf?.nb_pans)),
+    annee_systeme_chauffage: strOrEmpty(
+      pickConfPrefillValue(ficheData.annee_systeme_chauffage, lastConf?.annee_systeme_chauffage)
+    ),
+    surface_chauffee: strOrEmpty(pickConfPrefillValue(ficheData.surface_chauffee, lastConf?.surface_chauffee)),
+    consommation_chauffage: pickConfPrefillValue(
+      ficheData.consommation_chauffage,
+      lastConf?.consommation_chauffage
+    ),
+    surface_habitable: strOrEmpty(pickConfPrefillValue(ficheData.surface_habitable, lastConf?.surface_habitable)),
     conf_commentaire_produit: getLastConfirmationCommentaire(ficheData),
-    id_commercial_2:
-      ficheData.id_commercial_2 != null && Number(ficheData.id_commercial_2) > 0
-        ? String(ficheData.id_commercial_2)
-        : '',
+    id_commercial_2: strOrEmpty(
+      pickConfPrefillValue(
+        ficheData.id_commercial_2 != null && Number(ficheData.id_commercial_2) > 0
+          ? ficheData.id_commercial_2
+          : '',
+        lastConf?.id_commercial_2 != null && Number(lastConf.id_commercial_2) > 0
+          ? lastConf.id_commercial_2
+          : ''
+      )
+    ),
     is_r2:
       ficheData.is_r2 === 1 || ficheData.is_r2 === '1' || ficheData.is_r2 === true
         ? 'OUI'
         : ficheData.is_r2 === 0 || ficheData.is_r2 === '0' || ficheData.is_r2 === false
           ? 'NON'
+          : lastConf?.is_r2 === 1 || lastConf?.is_r2 === '1' || lastConf?.is_r2 === true
+            ? 'OUI'
+            : lastConf?.is_r2 === 0 || lastConf?.is_r2 === '0' || lastConf?.is_r2 === false
+              ? 'NON'
+              : '',
+    date_r1: mysqlToDatetimeLocal(ficheData.date_r1 || lastConf?.date_r1),
+    id_commercial_r1: strOrEmpty(
+      pickConfPrefillValue(
+        ficheData.id_commercial_r1 != null && Number(ficheData.id_commercial_r1) > 0
+          ? ficheData.id_commercial_r1
           : '',
-    date_r1: mysqlToDatetimeLocal(ficheData.date_r1),
-    id_commercial_r1:
-      ficheData.id_commercial_r1 != null && Number(ficheData.id_commercial_r1) > 0
-        ? String(ficheData.id_commercial_r1)
-        : '',
-    commentaire_r1: ficheData.commentaire_r1 || '',
+        lastConf?.id_commercial_r1 != null && Number(lastConf.id_commercial_r1) > 0
+          ? lastConf.id_commercial_r1
+          : ''
+      )
+    ),
+    commentaire_r1: pickConfPrefillValue(ficheData.commentaire_r1, lastConf?.commentaire_r1),
   };
 }
 
@@ -1723,9 +1843,10 @@ const FicheDetail = ({
 
   useEffect(() => {
     if (selectedEtat !== 7 || !confFormHydratePendingRef.current || !ficheData?.id) return;
-    setConfFormData(buildConfFormStateFromFiche(ficheData, user));
-    setShowConfConfirmateur2(false);
-    setShowConfConfirmateur3(false);
+    const nextConf = buildConfFormStateFromFiche(ficheData, user);
+    setConfFormData(nextConf);
+    setShowConfConfirmateur2(!!nextConf.id_confirmateur_2);
+    setShowConfConfirmateur3(!!nextConf.id_confirmateur_3);
     confFormHydratePendingRef.current = false;
   }, [selectedEtat, ficheData, user]);
 
@@ -2691,13 +2812,14 @@ const FicheDetail = ({
     setShowRdvModal(false);
     setActiveTab('fiches');
     setSelectedEtat(7);
-    setConfFormData({
+    const nextConf = {
       ...buildConfFormStateFromFiche(ficheData, user),
       conf_rdv_date: dateStr,
       conf_rdv_time: timeStr
-    });
-    setShowConfConfirmateur2(false);
-    setShowConfConfirmateur3(false);
+    };
+    setConfFormData(nextConf);
+    setShowConfConfirmateur2(!!nextConf.id_confirmateur_2);
+    setShowConfConfirmateur3(!!nextConf.id_confirmateur_3);
     confFormHydratePendingRef.current = false;
 
     setTimeout(() => {
@@ -3242,10 +3364,12 @@ const FicheDetail = ({
       }));
     }
     // Si l'état est 7 (confirmer), initialiser les valeurs du formulaire depuis la fiche (tous les conf_*)
+    // + dernière confirmation historisée si la fiche a déjà été confirmée (admin, BO, RE, RP, confirmateur).
     if (newEtatId === 7) {
-      setConfFormData(buildConfFormStateFromFiche(ficheData, user));
-      setShowConfConfirmateur2(false);
-      setShowConfConfirmateur3(false);
+      const nextConf = buildConfFormStateFromFiche(ficheData, user);
+      setConfFormData(nextConf);
+      setShowConfConfirmateur2(!!nextConf.id_confirmateur_2);
+      setShowConfConfirmateur3(!!nextConf.id_confirmateur_3);
       setShowConfirmConfFields(true);
       confFormHydratePendingRef.current = !ficheData?.id;
     } else {
@@ -8039,9 +8163,10 @@ const FicheDetail = ({
                       onClick={() => {
                         setShowConfirmConfFields(true);
                         if (ficheData) {
-                          setConfFormData(buildConfFormStateFromFiche(ficheData, user));
-                          setShowConfConfirmateur2(false);
-                          setShowConfConfirmateur3(false);
+                          const nextConf = buildConfFormStateFromFiche(ficheData, user);
+                          setConfFormData(nextConf);
+                          setShowConfConfirmateur2(!!nextConf.id_confirmateur_2);
+                          setShowConfConfirmateur3(!!nextConf.id_confirmateur_3);
                         }
                       }}
                       title="Afficher les champs conf_"
