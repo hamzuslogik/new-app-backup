@@ -42,6 +42,7 @@ export default function FicheTableColumnsPicker({
   const defs = (FICHE_TABLE_COLUMN_DEFS[layout] || FICHE_TABLE_COLUMN_DEFS.badge).filter((col) => {
     if (col.group === 'cq' && !availableGroups.cq) return false;
     if (col.group === 'decalage' && !availableGroups.decalage) return false;
+    if (col.group === 'badges' && !availableGroups.badges) return false;
     return true;
   });
 

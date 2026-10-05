@@ -328,7 +328,10 @@ const Dashboard = () => {
   const canCustomizeColumns = canCustomizeFicheTableColumns(user);
   const [showFicheBadges, setShowFicheBadges] = useState(() => getFicheBadgesVisiblePref());
   const [columnVisibility, setColumnVisibility] = useState(() => getFicheTableColumnsPref());
-  const useBadgeColumnsLayout = isAdminFicheLayout || (canToggleBadges && showFicheBadges);
+  /** Layout admin complet (ordre colonnes + ACTION au milieu) : session admin uniquement */
+  const useBadgeColumnsLayout = isAdminFicheLayout;
+  /** Sessions non-admin : ajouter SIG/CS/R2/HAS/RF sans changer l’ordre du tableau */
+  const showBadgeColumns = canToggleBadges && showFicheBadges;
   const isColVisible = useCallback(
     (key) => (canCustomizeColumns ? isFicheColumnVisible(columnVisibility, key) : true),
     [canCustomizeColumns, columnVisibility]
@@ -2341,6 +2344,7 @@ const Dashboard = () => {
                 availableGroups={{
                   cq: showCqColumns,
                   decalage: useBadgeColumnsLayout ? showDecalageColAdmin : true,
+                  badges: showBadgeColumns,
                 }}
                 visibility={columnVisibility}
                 onChange={setColumnVisibility}
@@ -2497,6 +2501,12 @@ const Dashboard = () => {
                           <th onClick={() => handleSort('Validé')} className="sortable-header">
                             Validé {getSortIcon('Validé')}
                           </th>
+                        ) : null}
+                        {showBadgeColumns ? (
+                          <FicheAdminBadgeHeaders
+                            badgesOnly
+                            isColVisible={isColVisible}
+                          />
                         ) : null}
                         {isColVisible('action') ? <th>Actions</th> : null}
                         {isColVisible('decalage') ? (
@@ -2691,6 +2701,13 @@ const Dashboard = () => {
                                   />
                                 ) : null}
                               </td>
+                            ) : null}
+                            {showBadgeColumns ? (
+                              <FicheAdminIndicatorCells
+                                badgesOnly
+                                indicators={indicators}
+                                isColVisible={isColVisible}
+                              />
                             ) : null}
                             {isColVisible('action') ? (
                               <td data-label="">

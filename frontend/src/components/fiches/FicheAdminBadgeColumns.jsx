@@ -21,10 +21,12 @@ export function FicheAdminBadgeHeaders({
   valideSortLabel = 'Validé',
   produitSortLabel = 'Produit',
   isColVisible = () => true,
+  /** true = uniquement SIG/CS/R2/HAS/RF (sans Validé/ACTION/PDF/PROD) */
+  badgesOnly = false,
 }) {
   return (
     <>
-      {isColVisible('valide') ? (
+      {!badgesOnly && isColVisible('valide') ? (
         <th
           onClick={onSortValide}
           className={`fiche-col-badge fiche-col-valide${onSortValide ? ' sortable-header' : ''}`}
@@ -33,7 +35,7 @@ export function FicheAdminBadgeHeaders({
           <FaCheck aria-hidden /> {getSortIcon ? getSortIcon(valideSortLabel) : null}
         </th>
       ) : null}
-      {isColVisible('action') ? (
+      {!badgesOnly && isColVisible('action') ? (
         <th className="actions-header"><span>ACTION</span></th>
       ) : null}
       {isColVisible('sig') ? <th className="fiche-col-badge fiche-col-sig">SIG</th> : null}
@@ -41,8 +43,8 @@ export function FicheAdminBadgeHeaders({
       {isColVisible('r2') ? <th className="fiche-col-badge fiche-col-r2">R2</th> : null}
       {isColVisible('has') ? <th className="fiche-col-badge fiche-col-has">HAS</th> : null}
       {isColVisible('rf') ? <th className="fiche-col-badge fiche-col-rf">RF</th> : null}
-      {isColVisible('pdf') ? <th className="fiche-col-badge fiche-col-pdf">PDF</th> : null}
-      {isColVisible('prod') ? (
+      {!badgesOnly && isColVisible('pdf') ? <th className="fiche-col-badge fiche-col-pdf">PDF</th> : null}
+      {!badgesOnly && isColVisible('prod') ? (
         <th
           onClick={onSortProduit}
           className={`fiche-col-badge fiche-col-prod${onSortProduit ? ' sortable-header' : ''}`}
@@ -146,6 +148,8 @@ export function FicheAdminIndicatorCells({
   onPdf,
   showPdf = true,
   isColVisible = () => true,
+  /** true = uniquement SIG/CS/R2/HAS/RF (sans PDF/PROD) */
+  badgesOnly = false,
 }) {
   return (
     <>
@@ -191,7 +195,7 @@ export function FicheAdminIndicatorCells({
           </div>
         </td>
       ) : null}
-      {isColVisible('pdf') ? (
+      {!badgesOnly && isColVisible('pdf') ? (
         <td data-label="PDF:" className="fiche-col-badge fiche-col-pdf">
           {showPdf && onPdf ? (
             <button
@@ -208,7 +212,7 @@ export function FicheAdminIndicatorCells({
           ) : null}
         </td>
       ) : null}
-      {isColVisible('prod') ? (
+      {!badgesOnly && isColVisible('prod') ? (
         <td data-label="PROD:" className="fiche-col-badge fiche-col-prod">
           {produitName ? (
             <span
