@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { getFirstOfMonthLocal, getTodayLocal } from '../utils/dateUtils';
+import {
+  getFirstOfMonthLocal,
+  getTodayLocal,
+  toDateTimeLocalValue,
+  splitDateTimeLocalValue,
+  formatDateTimeFr,
+} from '../utils/dateUtils';
 import { FaUserTie, FaFileAlt, FaFilter, FaChartBar } from 'react-icons/fa';
 import './SuiviAgents.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
@@ -16,7 +22,9 @@ const SuiviAgents = () => {
     'agents-sous-responsabilite-suivi-agents',
     async () => {
       const res = await api.get('/management/utilisateurs');
-      const agents = res.data.data?.filter(u => u.chef_equipe === user?.id && u.fonction === 3) || [];
+      const agents = res.data.data?.filter(
+        (u) => u.chef_equipe === user?.id && u.fonction === 3 && u.etat > 0
+      ) || [];
       return agents;
     },
     { enabled: !!user }
@@ -47,6 +55,8 @@ const SuiviAgents = () => {
   const [filters, setFilters] = useState({
     date_debut: getFirstOfMonthLocal(),
     date_fin: getTodayLocal(),
+    time_debut: '00:00',
+    time_fin: '23:59',
     id_superviseur: isREQualif ? (user?.id || '') : ''
   });
 
@@ -104,12 +114,14 @@ const SuiviAgents = () => {
 
   // Récupérer les statistiques des agents pour le superviseur sélectionné
   const { data: statsData, isLoading: loadingStats } = useQuery(
-    ['superviseur-stats', filters.id_superviseur, filters.date_debut, filters.date_fin],
+    ['superviseur-stats', filters.id_superviseur, filters.date_debut, filters.date_fin, filters.time_debut, filters.time_fin],
     async () => {
       if (!filters.id_superviseur) return null;
       const params = {};
       if (filters.date_debut) params.date_debut = filters.date_debut;
       if (filters.date_fin) params.date_fin = filters.date_fin;
+      if (filters.time_debut) params.time_debut = filters.time_debut;
+      if (filters.time_fin) params.time_fin = filters.time_fin;
       
       const res = await api.get(`/statistiques/superviseur/${filters.id_superviseur}`, { params });
       return res.data.data;
@@ -119,6 +131,15 @@ const SuiviAgents = () => {
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleDateTimeFilterChange = (bound, value) => {
+    const { date, time } = splitDateTimeLocalValue(value);
+    if (bound === 'debut') {
+      setFilters((prev) => ({ ...prev, date_debut: date, time_debut: time }));
+    } else {
+      setFilters((prev) => ({ ...prev, date_fin: date, time_fin: time }));
+    }
   };
 
   const superviseurs = superviseursData || [];
@@ -157,19 +178,19 @@ const SuiviAgents = () => {
             </select>
           </div>
           <div className="filter-group">
-            <label>Date début</label>
+            <label>Date début (heure incluse)</label>
             <input
-              type="date"
-              value={filters.date_debut}
-              onChange={(e) => handleFilterChange('date_debut', e.target.value)}
+              type="datetime-local"
+              value={toDateTimeLocalValue(filters.date_debut, filters.time_debut)}
+              onChange={(e) => handleDateTimeFilterChange('debut', e.target.value)}
             />
           </div>
           <div className="filter-group">
-            <label>Date fin</label>
+            <label>Date fin (heure incluse)</label>
             <input
-              type="date"
-              value={filters.date_fin}
-              onChange={(e) => handleFilterChange('date_fin', e.target.value)}
+              type="datetime-local"
+              value={toDateTimeLocalValue(filters.date_fin, filters.time_fin)}
+              onChange={(e) => handleDateTimeFilterChange('fin', e.target.value)}
             />
           </div>
         </div>
@@ -189,7 +210,10 @@ const SuiviAgents = () => {
                 <h2>Superviseur : {stats.superviseur.pseudo}</h2>
                 {stats.period && (
                   <p className="period-info">
-                    Période : {stats.period.date_debut} au {stats.period.date_fin}
+                    Période :{' '}
+                    {stats.period.start_datetime && stats.period.end_datetime
+                      ? `${formatDateTimeFr(stats.period.start_datetime)} → ${formatDateTimeFr(stats.period.end_datetime)}`
+                      : `${stats.period.date_debut} ${String(filters.time_debut || '').slice(0, 5)} → ${stats.period.date_fin} ${String(filters.time_fin || '').slice(0, 5)}`}
                   </p>
                 )}
               </div>

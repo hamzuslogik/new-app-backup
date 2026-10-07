@@ -1342,20 +1342,25 @@ router.get('/dashboard', authenticate, async (req, res) => {
 router.get('/agents-qualif', authenticate, async (req, res) => {
   try {
     const { 
-      date_debut, 
-      date_fin,
       id_agent,
       id_centre,
       id_rp // Nouveau paramètre pour filtrer par RP (pour les administrateurs)
     } = req.query;
 
-    // Valeurs par défaut : mois en cours
-    const today = new Date();
-    const startDateStr = date_debut || getFirstOfMonthLocal();
-    const endDateStr = date_fin || getTodayLocal();
-
-    const startDate = `${startDateStr} 00:00:00`;
-    const endDate = `${endDateStr} 23:59:59`;
+    // Période avec heure (time_debut / time_fin), défaut = aujourd'hui 00:00 → 23:59
+    const {
+      start: startDateStr,
+      end: endDateStr,
+      timeDebut,
+      timeFin,
+      startDateTime: startDate,
+      endDateTime: endDate,
+    } = resolveProductionQualifDateRange({
+      date_debut: req.query.date_debut || getFirstOfMonthLocal(),
+      date_fin: req.query.date_fin || getTodayLocal(),
+      time_debut: req.query.time_debut,
+      time_fin: req.query.time_fin,
+    });
 
     // Si l'utilisateur est un RE Qualification (a des agents sous sa responsabilité)
     // Filtrer uniquement ses agents
@@ -1604,7 +1609,11 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
         etats: etatsGroupe0,
         period: {
           date_debut: startDateStr,
-          date_fin: endDateStr
+          date_fin: endDateStr,
+          time_debut: timeDebut,
+          time_fin: timeFin,
+          start_datetime: startDate,
+          end_datetime: endDate,
         }
       }
     });
@@ -3816,10 +3825,6 @@ router.get('/kpis-porte-ouverte', authenticate, async (req, res) => {
 router.get('/superviseur/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      date_debut, 
-      date_fin
-    } = req.query;
 
     // Vérifier que l'utilisateur est bien un superviseur
     const superviseur = await queryOne(
@@ -3867,13 +3872,20 @@ router.get('/superviseur/:id', authenticate, async (req, res) => {
       }
     }
 
-    // Valeurs par défaut : mois en cours
-    const today = new Date();
-    const startDateStr = date_debut || getFirstOfMonthLocal();
-    const endDateStr = date_fin || getTodayLocal();
-
-    const startDate = `${startDateStr} 00:00:00`;
-    const endDate = `${endDateStr} 23:59:59`;
+    // Période avec heure (défaut : 1er du mois → aujourd'hui)
+    const {
+      start: startDateStr,
+      end: endDateStr,
+      timeDebut,
+      timeFin,
+      startDateTime: startDate,
+      endDateTime: endDate,
+    } = resolveProductionQualifDateRange({
+      date_debut: req.query.date_debut || getFirstOfMonthLocal(),
+      date_fin: req.query.date_fin || getTodayLocal(),
+      time_debut: req.query.time_debut,
+      time_fin: req.query.time_fin,
+    });
 
     // Récupérer tous les agents sous la supervision de cet utilisateur avec leurs statistiques en une seule requête optimisée
     const agents = await query(
@@ -3912,7 +3924,11 @@ router.get('/superviseur/:id', authenticate, async (req, res) => {
           agents: [],
           period: {
             date_debut: startDateStr,
-            date_fin: endDateStr
+            date_fin: endDateStr,
+            time_debut: timeDebut,
+            time_fin: timeFin,
+            start_datetime: startDate,
+            end_datetime: endDate,
           }
         }
       });
@@ -4029,7 +4045,11 @@ router.get('/superviseur/:id', authenticate, async (req, res) => {
         agents: agentsStats,
         period: {
           date_debut: startDateStr,
-          date_fin: endDateStr
+          date_fin: endDateStr,
+          time_debut: timeDebut,
+          time_fin: timeFin,
+          start_datetime: startDate,
+          end_datetime: endDate,
         }
       }
     });

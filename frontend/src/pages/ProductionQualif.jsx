@@ -3,13 +3,14 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
-import { FaChartBar, FaFilter, FaPrint, FaList, FaSearch, FaFileAlt, FaFileExcel, FaFileCsv, FaFilePdf, FaChevronDown, FaTimes, FaSave } from 'react-icons/fa';
+import { FaChartBar, FaFilter, FaPrint, FaList, FaSearch, FaFileAlt, FaFileExcel, FaFileCsv, FaFilePdf, FaChevronDown, FaTimes, FaSave, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { getTodayLocal, toDateTimeLocalValue, splitDateTimeLocalValue, formatDateTimeFr } from '../utils/dateUtils';
+import { toggleSortConfig, sortRowsByConfig } from '../utils/tableSort';
 import './ProductionQualif.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -65,6 +66,8 @@ const ProductionQualif = () => {
     id_superviseur: '',
     id_etat_final: [] // Tableau pour multi-select
   });
+
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   // État pour gérer l'édition du commentaire qualité
   const [editingComment, setEditingComment] = useState({ hash: null, value: '' });
@@ -284,6 +287,19 @@ const ProductionQualif = () => {
     } else {
       setFilters((prev) => ({ ...prev, date_fin: date, time_fin: time }));
     }
+  };
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => toggleSortConfig(prev, key));
+  };
+
+  const renderSortIcon = (key) => {
+    if (!key || sortConfig.key !== key) {
+      return <FaSort className="sort-icon" />;
+    }
+    return sortConfig.direction === 'asc'
+      ? <FaSortUp className="sort-icon sort-active" />
+      : <FaSortDown className="sort-icon sort-active" />;
   };
 
   // Fermer le dropdown multi-select quand on clique en dehors
@@ -529,6 +545,36 @@ const ProductionQualif = () => {
   const etats = etatsData || [];
   const stats = statsData || { superviseurs: [], etats: [], period: {} };
   const fiches = filteredFiches || [];
+
+  const sortedFiches = useMemo(
+    () =>
+      sortRowsByConfig(fiches, sortConfig, (row, key) => {
+        if (key === 'etat') {
+          const { label } = getFicheEtatDisplay(row);
+          return label;
+        }
+        return row[key];
+      }),
+    [fiches, sortConfig]
+  );
+
+  const sortedSuperviseurs = useMemo(
+    () =>
+      sortRowsByConfig(stats.superviseurs || [], sortConfig, (row, key) => {
+        if (key === 'superviseur') {
+          const s = row.superviseur || {};
+          return s.nom && s.prenom ? `${s.nom} ${s.prenom}` : (s.pseudo || '');
+        }
+        if (key === 'total') return Number(row.total || 0);
+        if (key === 'validated') return Number(row.stats?.validated?.count || 0);
+        if (String(key).startsWith('etat_')) {
+          const etatId = String(key).replace('etat_', '');
+          return Number(row.stats?.[etatId]?.count || 0);
+        }
+        return '';
+      }),
+    [stats.superviseurs, sortConfig]
+  );
 
   return (
     <div className="production-qualif">
@@ -826,19 +872,37 @@ const ProductionQualif = () => {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th className="col-date fiche-col-date">Date création</th>
-                    <th className="col-agent">Agent</th>
-                    <th className="col-nom">Nom</th>
-                    <th className="col-prenom">Prénom</th>
-                    <th className="col-tel">Téléphone</th>
-                    <th className="col-cp">CP</th>
-                    <th className="col-etat">État</th>
-                    {canSeeCommentaireQualite && <th className="col-comment">Commentaire Qualité</th>}
+                    <th className="col-date fiche-col-date sortable-th" onClick={() => handleSort('date_insert_time')}>
+                      Date création {renderSortIcon('date_insert_time')}
+                    </th>
+                    <th className="col-agent sortable-th" onClick={() => handleSort('agent_pseudo')}>
+                      Agent {renderSortIcon('agent_pseudo')}
+                    </th>
+                    <th className="col-nom sortable-th" onClick={() => handleSort('nom')}>
+                      Nom {renderSortIcon('nom')}
+                    </th>
+                    <th className="col-prenom sortable-th" onClick={() => handleSort('prenom')}>
+                      Prénom {renderSortIcon('prenom')}
+                    </th>
+                    <th className="col-tel sortable-th" onClick={() => handleSort('tel')}>
+                      Téléphone {renderSortIcon('tel')}
+                    </th>
+                    <th className="col-cp sortable-th" onClick={() => handleSort('cp')}>
+                      CP {renderSortIcon('cp')}
+                    </th>
+                    <th className="col-etat sortable-th" onClick={() => handleSort('etat')}>
+                      État {renderSortIcon('etat')}
+                    </th>
+                    {canSeeCommentaireQualite && (
+                      <th className="col-comment sortable-th" onClick={() => handleSort('commentaire_qualite')}>
+                        Commentaire Qualité {renderSortIcon('commentaire_qualite')}
+                      </th>
+                    )}
                     <th className="col-actions noprint">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {fiches.map((fiche) => {
+                  {sortedFiches.map((fiche) => {
                     const { label: displayEtat, color: displayColor } = getFicheEtatDisplay(fiche);
                     return (
                       <tr
@@ -975,18 +1039,42 @@ const ProductionQualif = () => {
               <table className="production-table">
                 <thead style={{ backgroundColor: '#9cbfc8', color: '#ffffff' }}>
                   <tr>
-                    <th style={{ color: '#ffffff' }}>Superviseur</th>
+                    <th
+                      className="sortable-th"
+                      style={{ color: '#ffffff' }}
+                      onClick={() => handleSort('superviseur')}
+                    >
+                      Superviseur {renderSortIcon('superviseur')}
+                    </th>
                     {stats.etats && stats.etats.map(etat => (
-                      <th key={etat.id} title={etat.titre} style={{ color: '#ffffff' }}>
-                        {etat.abbreviation || etat.titre}
+                      <th
+                        key={etat.id}
+                        title={etat.titre}
+                        className="sortable-th"
+                        style={{ color: '#ffffff' }}
+                        onClick={() => handleSort(`etat_${etat.id}`)}
+                      >
+                        {etat.abbreviation || etat.titre} {renderSortIcon(`etat_${etat.id}`)}
                       </th>
                     ))}
-                    <th style={{ color: '#ffffff' }}>Total</th>
-                    <th style={{ color: '#ffffff' }}>Validé</th>
+                    <th
+                      className="sortable-th"
+                      style={{ color: '#ffffff' }}
+                      onClick={() => handleSort('total')}
+                    >
+                      Total {renderSortIcon('total')}
+                    </th>
+                    <th
+                      className="sortable-th"
+                      style={{ color: '#ffffff' }}
+                      onClick={() => handleSort('validated')}
+                    >
+                      Validé {renderSortIcon('validated')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.superviseurs.map((superviseurStat, index) => (
+                  {sortedSuperviseurs.map((superviseurStat, index) => (
                     <tr key={superviseurStat.superviseur.id || index}>
                       <td className="superviseur-cell">
                         <strong>

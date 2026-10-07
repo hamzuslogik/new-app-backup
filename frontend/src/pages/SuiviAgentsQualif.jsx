@@ -2,11 +2,13 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaUserTie, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf, FaChevronDown, FaTimes, FaSave } from 'react-icons/fa';
+import { FaUserTie, FaFilter, FaSearch, FaFileExcel, FaFileCsv, FaFilePdf, FaChevronDown, FaTimes, FaSave, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
+import { getTodayLocal, toDateTimeLocalValue, splitDateTimeLocalValue, formatDateTimeFr } from '../utils/dateUtils';
+import { toggleSortConfig, sortRowsByConfig } from '../utils/tableSort';
 import './SuiviAgentsQualif.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -126,7 +128,9 @@ const SuiviAgentsQualif = () => {
     'agents-sous-responsabilite',
     async () => {
       const res = await api.get('/management/utilisateurs');
-      const agents = res.data.data?.filter(u => u.chef_equipe === user?.id && u.fonction === 3) || [];
+      const agents = res.data.data?.filter(
+        (u) => u.chef_equipe === user?.id && u.fonction === 3 && u.etat > 0
+      ) || [];
       return agents;
     },
     { enabled: !!user }
@@ -158,19 +162,18 @@ const SuiviAgentsQualif = () => {
     }
   }, [isREQualif]);
 
-  // États pour les filtres
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  };
-
+  // États pour les filtres (date + heure)
   const [filters, setFilters] = useState({
-    date_debut: getTodayDate(), // Aujourd'hui par défaut pour RE Qualification
-    date_fin: getTodayDate(), // Aujourd'hui par défaut
+    date_debut: getTodayLocal(),
+    date_fin: getTodayLocal(),
+    time_debut: '00:00',
+    time_fin: '23:59',
     id_agent: '',
     id_rp: '', // Nouveau filtre par RP
     id_etat_final: [] // Tableau pour multi-select
   });
+
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   // Récupérer les superviseurs assignés au RP Qualification (pour filtrer leurs agents)
   const { data: superviseursAssignesRP } = useQuery(
@@ -273,6 +276,8 @@ const SuiviAgentsQualif = () => {
       const params = {};
       if (filters.date_debut) params.date_debut = filters.date_debut;
       if (filters.date_fin) params.date_fin = filters.date_fin;
+      if (filters.time_debut) params.time_debut = filters.time_debut;
+      if (filters.time_fin) params.time_fin = filters.time_fin;
       if (filters.id_agent) params.id_agent = filters.id_agent;
       if (isAdmin && filters.id_rp) params.id_rp = filters.id_rp;
       
@@ -292,6 +297,8 @@ const SuiviAgentsQualif = () => {
       };
       if (filters.date_debut) params.date_debut = filters.date_debut;
       if (filters.date_fin) params.date_fin = filters.date_fin;
+      if (filters.time_debut) params.time_debut = filters.time_debut;
+      if (filters.time_fin) params.time_fin = filters.time_fin;
       if (filters.id_agent) params.id_agent = filters.id_agent;
       // Envoyer tous les états au backend pour un filtrage optimisé
       if (filters.id_etat_final && Array.isArray(filters.id_etat_final) && filters.id_etat_final.length > 0) {
@@ -354,6 +361,28 @@ const SuiviAgentsQualif = () => {
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleDateTimeFilterChange = (bound, value) => {
+    const { date, time } = splitDateTimeLocalValue(value);
+    if (bound === 'debut') {
+      setFilters((prev) => ({ ...prev, date_debut: date, time_debut: time }));
+    } else {
+      setFilters((prev) => ({ ...prev, date_fin: date, time_fin: time }));
+    }
+  };
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => toggleSortConfig(prev, key));
+  };
+
+  const renderSortIcon = (key) => {
+    if (!key || sortConfig.key !== key) {
+      return <FaSort className="sort-icon" />;
+    }
+    return sortConfig.direction === 'asc'
+      ? <FaSortUp className="sort-icon sort-active" />
+      : <FaSortDown className="sort-icon sort-active" />;
   };
 
   // Mutation pour mettre à jour le commentaire qualité
@@ -585,6 +614,56 @@ const SuiviAgentsQualif = () => {
   const stats = statsData || { agents: [], etats: [], period: {} };
   const fiches = filteredFiches || [];
 
+  const sortedFiches = useMemo(
+    () =>
+      sortRowsByConfig(fiches, sortConfig, (row, key) => {
+        if (key === 'etat') {
+          if (row.ko === 1 || row.ko === '1') return 'KO';
+          return row.etat_titre || '';
+        }
+        return row[key];
+      }),
+    [fiches, sortConfig]
+  );
+
+  const sortedAgentStats = useMemo(
+    () =>
+      sortRowsByConfig(stats.agents || [], sortConfig, (row, key) => {
+        if (key === 'pseudo') return row.agent?.pseudo || '';
+        if (key === 'nom_prenom') return formatPersonName(row.agent?.nom, row.agent?.prenom);
+        if (key === 'superviseur') {
+          return (
+            row.agent?.superviseur_pseudo ||
+            formatPersonName(row.agent?.superviseur_nom, row.agent?.superviseur_prenom)
+          );
+        }
+        if (key === 'validated') return Number(row.validated || 0);
+        if (key === 'total') return Number(row.total || 0);
+        if (key === 'conformite') {
+          const { ko, hc } = getKoHcCounts(row, stats.etats);
+          const den = Number(row.validated || 0) + ko + hc;
+          return den > 0 ? Number(row.validated || 0) / den : 0;
+        }
+        if (String(key).startsWith('etat_')) {
+          return getEtatCount(row, String(key).replace('etat_', ''));
+        }
+        if (String(key).startsWith('pct_ko_')) {
+          const etatId = String(key).replace('pct_ko_', '');
+          return Number(row.total || 0) > 0
+            ? getEtatCount(row, etatId) / Number(row.total)
+            : 0;
+        }
+        if (String(key).startsWith('pct_hc_')) {
+          const etatId = String(key).replace('pct_hc_', '');
+          return Number(row.total || 0) > 0
+            ? getEtatCount(row, etatId) / Number(row.total)
+            : 0;
+        }
+        return '';
+      }),
+    [stats.agents, stats.etats, sortConfig]
+  );
+
   return (
     <div className="suivi-agents-qualif">
       <SystemMessageBanner />
@@ -630,19 +709,19 @@ const SuiviAgentsQualif = () => {
       {showFilters && (
         <div className="suivi-filters">
           <div className="filter-group">
-            <label>Date début</label>
+            <label>Date début (heure incluse)</label>
             <input
-              type="date"
-              value={filters.date_debut}
-              onChange={(e) => handleFilterChange('date_debut', e.target.value)}
+              type="datetime-local"
+              value={toDateTimeLocalValue(filters.date_debut, filters.time_debut)}
+              onChange={(e) => handleDateTimeFilterChange('debut', e.target.value)}
             />
           </div>
           <div className="filter-group">
-            <label>Date fin</label>
+            <label>Date fin (heure incluse)</label>
             <input
-              type="date"
-              value={filters.date_fin}
-              onChange={(e) => handleFilterChange('date_fin', e.target.value)}
+              type="datetime-local"
+              value={toDateTimeLocalValue(filters.date_fin, filters.time_fin)}
+              onChange={(e) => handleDateTimeFilterChange('fin', e.target.value)}
             />
           </div>
           {isAdmin && (
@@ -834,19 +913,23 @@ const SuiviAgentsQualif = () => {
               <table className="fiches-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Date création</th>
-                    <th>Agent</th>
-                    <th>Nom</th>
-                    <th>Prénom</th>
-                    <th>Téléphone</th>
-                    <th>CP</th>
-                    <th>État</th>
-                    {canSeeCommentaireQualite && <th>Commentaire Qualité</th>}
+                    <th className="sortable-th" onClick={() => handleSort('id')}>ID {renderSortIcon('id')}</th>
+                    <th className="sortable-th" onClick={() => handleSort('date_insert_time')}>Date création {renderSortIcon('date_insert_time')}</th>
+                    <th className="sortable-th" onClick={() => handleSort('agent_pseudo')}>Agent {renderSortIcon('agent_pseudo')}</th>
+                    <th className="sortable-th" onClick={() => handleSort('nom')}>Nom {renderSortIcon('nom')}</th>
+                    <th className="sortable-th" onClick={() => handleSort('prenom')}>Prénom {renderSortIcon('prenom')}</th>
+                    <th className="sortable-th" onClick={() => handleSort('tel')}>Téléphone {renderSortIcon('tel')}</th>
+                    <th className="sortable-th" onClick={() => handleSort('cp')}>CP {renderSortIcon('cp')}</th>
+                    <th className="sortable-th" onClick={() => handleSort('etat')}>État {renderSortIcon('etat')}</th>
+                    {canSeeCommentaireQualite && (
+                      <th className="sortable-th" onClick={() => handleSort('commentaire_qualite')}>
+                        Commentaire Qualité {renderSortIcon('commentaire_qualite')}
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
-                  {fiches.map(fiche => {
+                  {sortedFiches.map(fiche => {
                     const rowColor = (fiche.ko === 1 || fiche.ko === '1')
                       ? '#dc3545'
                       : (fiche.etat_groupe === '0' || fiche.etat_groupe === 0)
@@ -864,7 +947,7 @@ const SuiviAgentsQualif = () => {
                       style={{ backgroundColor: rowColor }}
                     >
                       <td>{fiche.id}</td>
-                      <td className="fiche-col-date">{fiche.date_insert_time ? new Date(fiche.date_insert_time).toLocaleDateString('fr-FR') : ''}</td>
+                      <td className="fiche-col-date">{formatDateTimeFr(fiche.date_insert_time)}</td>
                       <td>{fiche.agent_pseudo || ''}</td>
                       <td>{fiche.nom || ''}</td>
                       <td>{fiche.prenom || ''}</td>
@@ -953,80 +1036,95 @@ const SuiviAgentsQualif = () => {
           <>
             {stats.period && (
               <div className="period-info">
-                Période : {stats.period.date_debut} au {stats.period.date_fin}
+                Période :{' '}
+                {stats.period.start_datetime && stats.period.end_datetime
+                  ? `${formatDateTimeFr(stats.period.start_datetime)} → ${formatDateTimeFr(stats.period.end_datetime)}`
+                  : `${stats.period.date_debut} ${String(filters.time_debut || '').slice(0, 5)} → ${stats.period.date_fin} ${String(filters.time_fin || '').slice(0, 5)}`}
               </div>
             )}
             <div className="table-container">
               <table className="suivi-table">
                 <thead>
                   <tr>
-                    <th className="agent-col-header">Agent</th>
-                    <th className="name-col-header">Nom & prénom</th>
-                    <th className="superviseur-col-header">Superviseur</th>
+                    <th className="agent-col-header sortable-th" onClick={() => handleSort('pseudo')}>
+                      Agent {renderSortIcon('pseudo')}
+                    </th>
+                    <th className="name-col-header sortable-th" onClick={() => handleSort('nom_prenom')}>
+                      Nom & prénom {renderSortIcon('nom_prenom')}
+                    </th>
+                    <th className="superviseur-col-header sortable-th" onClick={() => handleSort('superviseur')}>
+                      Superviseur {renderSortIcon('superviseur')}
+                    </th>
                     {stats.etats && stats.etats.length > 0 && stats.etats.map(etat => (
                       <React.Fragment key={etat.id}>
                         <th
-                          className="etat-col-header"
+                          className="etat-col-header sortable-th"
                           title={etat.titre}
                           style={getEtatHeaderStyle(etat)}
+                          onClick={() => handleSort(`etat_${etat.id}`)}
                         >
-                          {etat.abbreviation || etat.titre}
+                          {etat.abbreviation || etat.titre} {renderSortIcon(`etat_${etat.id}`)}
                         </th>
                         {isKoEtat(etat) && (
                           <th
-                            className="pct-col-header"
+                            className="pct-col-header sortable-th"
                             style={getEtatHeaderStyle(etat)}
+                            onClick={() => handleSort(`pct_ko_${etat.id}`)}
                           >
-                            % KO
+                            % KO {renderSortIcon(`pct_ko_${etat.id}`)}
                           </th>
                         )}
                         {isHcEtat(etat) && (
                           <th
-                            className="pct-col-header"
+                            className="pct-col-header sortable-th"
                             style={getEtatHeaderStyle(etat)}
+                            onClick={() => handleSort(`pct_hc_${etat.id}`)}
                           >
-                            % HC
+                            % HC {renderSortIcon(`pct_hc_${etat.id}`)}
                           </th>
                         )}
                       </React.Fragment>
                     ))}
                     <th
-                      className="validated-col-header"
+                      className="validated-col-header sortable-th"
                       style={{
                         backgroundColor: VALIDATED_COLOR,
                         color: '#ffffff',
                         fontWeight: 700,
                         textAlign: 'center'
                       }}
+                      onClick={() => handleSort('validated')}
                     >
-                      Validé
+                      Validé {renderSortIcon('validated')}
                     </th>
                     <th
-                      className="conformite-col-header"
+                      className="conformite-col-header sortable-th"
                       style={{
                         backgroundColor: VALIDATED_COLOR,
                         color: '#ffffff',
                         fontWeight: 700,
                         textAlign: 'center'
                       }}
+                      onClick={() => handleSort('conformite')}
                     >
-                      % conformité
+                      % conformité {renderSortIcon('conformite')}
                     </th>
                     <th
-                      className="total-col-header"
+                      className="total-col-header sortable-th"
                       style={{
                         backgroundColor: TOTAL_COLOR,
                         color: '#ffffff',
                         fontWeight: 700,
                         textAlign: 'center'
                       }}
+                      onClick={() => handleSort('total')}
                     >
-                      Total
+                      Total {renderSortIcon('total')}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.agents.map((agentStat, index) => (
+                  {sortedAgentStats.map((agentStat, index) => (
                     <tr key={agentStat.agent.id || index}>
                       <td className="agent-col-cell">
                         <div className="agent-cell">

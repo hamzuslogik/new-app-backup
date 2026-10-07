@@ -1192,3 +1192,20 @@
   }
 }
 
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sortable-th .sort-icon {
+  margin-left: 4px;
+  opacity: 0.55;
+  font-size: 0.85em;
+  vertical-align: middle;
+}
+
+.sortable-th .sort-icon.sort-active {
+  opacity: 1;
+}
+
