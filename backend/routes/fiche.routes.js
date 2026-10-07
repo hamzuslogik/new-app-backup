@@ -229,60 +229,6 @@ function formatLocalYmd(d = new Date()) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** YYYY-MM-DD local depuis une DATETIME MySQL / Date / ISO. */
-function toLocalYmdValue(value) {
-  if (value == null || value === '') return null;
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return formatLocalYmd(value);
-  }
-  const s = String(value).trim();
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  const d = parseMysqlLocalDateTime(s);
-  return d ? formatLocalYmd(d) : null;
-}
-
-/**
- * Contrôle qualité : si le jour d'audit ≠ jour de date_appel_time,
- * aligner date_insert_time sur date_appel_time.
- */
-async function syncDateInsertTimeIfAuditDayDiffersFromAppel(id_fiche, date_audit) {
-  if (!id_fiche) return;
-  try {
-    const fiche = await queryOne(
-      'SELECT date_appel_time, date_insert_time FROM fiches WHERE id = ?',
-      [id_fiche]
-    );
-    if (!fiche?.date_appel_time) return;
-
-    const auditDay = toLocalYmdValue(date_audit || toMysqlLocalDateTime());
-    const appelDay = toLocalYmdValue(fiche.date_appel_time);
-    if (!auditDay || !appelDay || auditDay === appelDay) return;
-
-    const appelDt = (() => {
-      const s = String(fiche.date_appel_time).trim().replace('T', ' ');
-      if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(s)) return s.slice(0, 19);
-      if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/.test(s)) return `${s}:00`;
-      const d = parseMysqlLocalDateTime(fiche.date_appel_time);
-      return d ? toMysqlLocalDateTime(d) : null;
-    })();
-    if (!appelDt) return;
-
-    // Déjà aligné
-    if (toLocalYmdValue(fiche.date_insert_time) === appelDay
-      && String(fiche.date_insert_time || '').trim().replace('T', ' ').slice(0, 19) === appelDt) {
-      return;
-    }
-
-    await query(
-      'UPDATE fiches SET date_insert_time = ?, date_modif_time = ? WHERE id = ?',
-      [appelDt, toMysqlLocalDateTime(), id_fiche]
-    );
-  } catch (err) {
-    console.error('Erreur sync date_insert_time (CQ audit ≠ jour appel):', err.message);
-  }
-}
-
 function isRdvDateBeforeToday(value, now = new Date()) {
   const s = String(value || '').trim();
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -510,8 +456,6 @@ async function insertControleQualiteAudit(params) {
   } catch (err) {
     console.error('Erreur insertion table controle_qualite (audit non enregistré):', err.message);
   }
-  // Si audit un autre jour que date_appel_time → date_insert_time = date_appel_time
-  await syncDateInsertTimeIfAuditDayDiffersFromAppel(id_fiche, now);
 }
 
 /**
