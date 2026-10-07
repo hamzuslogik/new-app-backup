@@ -5730,6 +5730,24 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
         ficheData.date_appel_time = Number.isNaN(parsed.getTime()) ? now : toMysqlLocalDateTime(parsed);
       }
     }
+
+    // date_appel (bigint Unix) : normaliser ISO / DATETIME / nombre — ne jamais stocker une chaîne ISO
+    {
+      const nowTs = Math.floor(Date.now() / 1000);
+      const toUnix = (v) => {
+        if (v == null || v === '') return null;
+        if (typeof v === 'number' && Number.isFinite(v) && v > 1e9) return Math.floor(v);
+        const asNum = Number(v);
+        if (Number.isFinite(asNum) && asNum > 1e9) return Math.floor(asNum);
+        const s = String(v).trim().replace(' ', 'T');
+        const parsed = new Date(s);
+        if (!Number.isNaN(parsed.getTime())) return Math.floor(parsed.getTime() / 1000);
+        return null;
+      };
+      let ts = toUnix(ficheData.date_appel);
+      if (ts == null) ts = toUnix(ficheData.date_appel_time);
+      ficheData.date_appel = ts != null ? ts : nowTs;
+    }
     
     // Utiliser id_agent envoyé dans la requête si présent, sinon utiliser l'utilisateur connecté
     if (!ficheData.id_agent) {

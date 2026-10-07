@@ -950,12 +950,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $professionMadame = ($professionMadameRaw !== '') ? sanitizeInput($_POST['profession_madame']) : null;
         $detailsEtudeRaw = isset($_POST['details_etude']) ? trim($_POST['details_etude']) : '';
 
+        // fiches.date_appel = bigint (timestamp Unix) ; fiches.date_appel_time = DATETIME
+        $dateAppelTs = !empty($_POST['date_appel']) ? strtotime($_POST['date_appel']) : time();
+        if ($dateAppelTs === false) {
+            $dateAppelTs = time();
+        }
+
         $optionalFields = array(
-            'date_appel' => !empty($_POST['date_appel']) ? date('c', strtotime($_POST['date_appel'])) : null,
-            // DATETIME MySQL pour date_appel_time (création Vicidial)
-            'date_appel_time' => !empty($_POST['date_appel'])
-                ? date('Y-m-d H:i:s', strtotime($_POST['date_appel']))
-                : date('Y-m-d H:i:s'),
+            'date_appel' => $dateAppelTs,
+            'date_appel_time' => date('Y-m-d H:i:s', $dateAppelTs),
             'situation_conjugale' => !empty($_POST['situation_conjugale']) ? sanitizeInput($_POST['situation_conjugale']) : null,
             'age_mr' => !empty($_POST['age_mr']) ? sanitizeInput($_POST['age_mr']) : null,
             'age_madame' => !empty($_POST['age_madame']) ? sanitizeInput($_POST['age_madame']) : null,
