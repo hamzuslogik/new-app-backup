@@ -435,7 +435,19 @@
 }
 
 .production-qualif table.fiches-table.fiches-table--wrap col.colw-comment {
-  width: 36%;
+  width: 16%;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap th.col-comment,
+.production-qualif table.fiches-table.fiches-table--wrap td.col-comment {
+  max-width: 220px;
+  width: 220px;
+}
+
+.production-qualif table.fiches-table.fiches-table--wrap td.col-comment .comment-quick-edit-container,
+.production-qualif table.fiches-table.fiches-table--wrap td.col-comment .comment-readonly,
+.production-qualif table.fiches-table.fiches-table--wrap td.col-comment .comment-textarea-quick {
+  max-width: 220px;
 }
 
 .production-qualif table.fiches-table.fiches-table--wrap col.colw-actions {
