@@ -151,7 +151,7 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
       ${whereClause}
       AND (f.archive = 0 OR f.archive IS NULL)
       AND f.active = 1
-      ORDER BY f.date_rdv_time DESC, f.date_modif_time DESC
+      ORDER BY f.date_rdv_time ASC, f.date_modif_time ASC
       LIMIT 500`,
       queryParams
     );

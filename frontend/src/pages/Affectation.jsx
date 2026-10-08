@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaUserCheck, FaCheck, FaSearch } from 'react-icons/fa';
+import { FaUserCheck, FaCheck, FaSearch, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { getEtatDisplayWithSousEtat, getEtatTableAbbr } from '../utils/etatSignerComplet';
 import { abbreviateCentreName } from '../utils/tableAbbreviations';
@@ -86,6 +86,11 @@ const Affectation = () => {
     departement: '', // Code département (2 premiers chiffres du code postal)
     id_commercial: '' // Filtre par commercial
   });
+  /** Par défaut : date RDV de la première à la dernière heure */
+  const [sortConfig, setSortConfig] = useState({
+    key: 'date_rdv_time',
+    direction: 'asc',
+  });
 
   // Récupérer les données de référence
   const { data: centresData } = useQuery('centres', async () => {
@@ -166,13 +171,87 @@ const Affectation = () => {
     });
   };
 
+  const handleSort = (key) => {
+    if (!key) return;
+    setSortConfig((prev) => {
+      if (prev.key === key && prev.direction === 'asc') {
+        return { key, direction: 'desc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const renderSortIcon = (key) => {
+    if (!key || sortConfig.key !== key) {
+      return <FaSort className="sort-icon" />;
+    }
+    return sortConfig.direction === 'asc'
+      ? <FaSortUp className="sort-icon sort-active" />
+      : <FaSortDown className="sort-icon sort-active" />;
+  };
+
+  const getSortValue = (fiche, key) => {
+    if (key === 'commercial') return formatCommercials(fiche).toLowerCase();
+    if (key === 'confirmateur') return formatConfirmateurs(fiche).toLowerCase();
+    if (key === 'centre') return String(fiche.centre_nom || '').toLowerCase();
+    if (key === 'etat') {
+      return String(getEtatDisplayWithSousEtat(fiche, etatsData || []) || '').toLowerCase();
+    }
+    if (key === 'produit') {
+      return String(getProduitName(fiche.produit) || fiche.produit_nom || '').toLowerCase();
+    }
+    if (key === 'valider') return Number(fiche.valider) || 0;
+    if (key === 'tel') return String(fiche.tel || fiche.gsm1 || '').toLowerCase();
+    if (key === 'cp') return String(fiche.cp || fiche.code_postal || '').toLowerCase();
+    if (key === 'nom') return String(fiche.nom || '').toLowerCase();
+    if (key === 'prenom') return String(fiche.prenom || '').toLowerCase();
+    if (key === 'date_rdv_time' || key === 'date_insert_time') {
+      const t = new Date(fiche[key] || 0).getTime();
+      return Number.isFinite(t) ? t : 0;
+    }
+    const value = fiche[key];
+    if (value == null) return '';
+    return String(value).toLowerCase();
+  };
+
+  const sortedFiches = useMemo(() => {
+    const list = Array.isArray(fichesData) ? [...fichesData] : [];
+    if (!sortConfig.key) return list;
+    list.sort((a, b) => {
+      const aValue = getSortValue(a, sortConfig.key);
+      const bValue = getSortValue(b, sortConfig.key);
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      const cmp = String(aValue ?? '').localeCompare(String(bValue ?? ''), 'fr', {
+        numeric: true,
+        sensitivity: 'base',
+      });
+      return sortConfig.direction === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [fichesData, sortConfig, etatsData]);
+
   const handleSelectAll = () => {
-    if (selectedFiches.length === fichesData?.length) {
+    if (selectedFiches.length === sortedFiches.length && sortedFiches.length > 0) {
       setSelectedFiches([]);
     } else {
-      setSelectedFiches(fichesData?.map(f => f.id) || []);
+      setSelectedFiches(sortedFiches.map((f) => f.id));
     }
   };
+
+  const renderSortableTh = (label, key, className = '') => (
+    <th
+      className={`sortable-header${className ? ` ${className}` : ''}`}
+      onClick={() => handleSort(key)}
+      title={`Trier par ${label}`}
+    >
+      <span className="header-label-wrap">
+        {label}
+        {renderSortIcon(key)}
+      </span>
+    </th>
+  );
 
   const handleAffecter = () => {
     if (selectedFiches.length === 0) {
@@ -402,10 +481,10 @@ const Affectation = () => {
           <div className="select-all">
             <input
               type="checkbox"
-              checked={selectedFiches.length === fichesData?.length && fichesData?.length > 0}
+              checked={selectedFiches.length === sortedFiches.length && sortedFiches.length > 0}
               onChange={handleSelectAll}
             />
-            <span>Tout sélectionner ({fichesData?.length || 0} fiches)</span>
+            <span>Tout sélectionner ({sortedFiches.length} fiches)</span>
           </div>
           <div className="selected-count">
             {selectedFiches.length} fiche(s) sélectionnée(s)
@@ -414,7 +493,7 @@ const Affectation = () => {
 
         {isLoading ? (
           <div className="loading">Chargement des fiches...</div>
-        ) : fichesData?.length === 0 ? (
+        ) : sortedFiches.length === 0 ? (
           <div className="no-data">
             Aucune fiche confirmée trouvée
           </div>
@@ -424,31 +503,39 @@ const Affectation = () => {
               <thead>
                 <tr>
                   <th className="affectation-select-col"></th>
-                  <th className="fiche-col-nom">Nom</th>
-                  <th className="fiche-col-prenom">Prénom</th>
-                  <th>Téléphone</th>
-                  <th>CP</th>
+                  {renderSortableTh('Nom', 'nom', 'fiche-col-nom')}
+                  {renderSortableTh('Prénom', 'prenom', 'fiche-col-prenom')}
+                  {renderSortableTh('Téléphone', 'tel')}
+                  {renderSortableTh('CP', 'cp')}
                   {isAdminFicheLayout ? (
                     <>
-                      <th className="fiche-col-date">Date RDV</th>
-                      <th>Commercial</th>
-                      <FicheAdminBadgeHeaders />
-                      <th>Centre</th>
-                      <th className="fiche-col-date">Date Insertion</th>
-                      <th>Conf</th>
-                      <th>État Final</th>
+                      {renderSortableTh('Date RDV', 'date_rdv_time', 'fiche-col-date')}
+                      {renderSortableTh('Commercial', 'commercial')}
+                      <FicheAdminBadgeHeaders
+                        onSortValide={() => handleSort('valider')}
+                        onSortProduit={() => handleSort('produit')}
+                        getSortIcon={(label) =>
+                          renderSortIcon(
+                            label === 'Validé' ? 'valider' : label === 'Produit' ? 'produit' : label
+                          )
+                        }
+                      />
+                      {renderSortableTh('Centre', 'centre')}
+                      {renderSortableTh('Date Insertion', 'date_insert_time', 'fiche-col-date')}
+                      {renderSortableTh('Conf', 'confirmateur')}
+                      {renderSortableTh('État Final', 'etat')}
                       {showDecalageColAdmin ? <th className="dashboard-decalage-col">Décalage</th> : null}
                     </>
                   ) : (
                     <>
-                      <th className="fiche-col-date">Date Insertion</th>
-                      <th className="fiche-col-date">Date RDV</th>
-                      <th>État Final</th>
-                      <th>Confirmateur</th>
-                      <th>Commercial</th>
-                      <th>Centre</th>
-                      <th>Produit</th>
-                      <th>Validé</th>
+                      {renderSortableTh('Date Insertion', 'date_insert_time', 'fiche-col-date')}
+                      {renderSortableTh('Date RDV', 'date_rdv_time', 'fiche-col-date')}
+                      {renderSortableTh('État Final', 'etat')}
+                      {renderSortableTh('Confirmateur', 'confirmateur')}
+                      {renderSortableTh('Commercial', 'commercial')}
+                      {renderSortableTh('Centre', 'centre')}
+                      {renderSortableTh('Produit', 'produit')}
+                      {renderSortableTh('Validé', 'valider')}
                       <th className="affectation-actions-col">Actions</th>
                       <th className="dashboard-decalage-col">État décalage</th>
                     </>
@@ -456,7 +543,7 @@ const Affectation = () => {
                 </tr>
               </thead>
               <tbody>
-                {fichesData?.map((fiche) => {
+                {sortedFiches.map((fiche) => {
                   const indicators = checkIndicators(fiche.id_etat_histo, fiche);
                   const etatColor = getEtatColor(fiche);
                   const produitColor = getProduitColor(fiche.produit);

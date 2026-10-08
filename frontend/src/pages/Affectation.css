@@ -514,3 +514,29 @@
   }
 }
 
+/* Tri colonnes */
+.affectation-page .fiches-table th.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.affectation-page .fiches-table th.sortable-header:hover {
+  filter: brightness(1.08);
+}
+
+.affectation-page .fiches-table th.sortable-header .header-label-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.affectation-page .fiches-table th.sortable-header .sort-icon {
+  opacity: 0.55;
+  font-size: 11px;
+}
+
+.affectation-page .fiches-table th.sortable-header .sort-icon.sort-active {
+  opacity: 1;
+}
+
