@@ -57,6 +57,39 @@ function resolveSignatureDateHeureFromCompteRendu(compteRendu, modifications, fi
   return null;
 }
 
+/**
+ * Date de rappel à écrire dans fiches.date_rdv_time / fiches_histo.date_rdv_time à l'approbation.
+ * - modifications.date_rdv_time (Honoré à suivre, Rappel bureau, Annuler repro commercial, …)
+ * - sinon conf_rdv_date + conf_rdv_time (Annuler à reprogrammer)
+ * - sinon Honoré à suivre (9) sans date : J+2 jours ouvrés à 09:00
+ */
+function resolveDateRappelFromCompteRendu(compteRendu, modifications) {
+  const mods = modifications && typeof modifications === 'object' ? modifications : {};
+  const fromDateRdv = normalizeMysqlDateTime(mods.date_rdv_time);
+  if (fromDateRdv) return fromDateRdv;
+
+  if (mods.conf_rdv_date != null && String(mods.conf_rdv_date).trim() !== '') {
+    const datePart = String(mods.conf_rdv_date).trim().slice(0, 10);
+    let timePart = mods.conf_rdv_time != null && String(mods.conf_rdv_time).trim() !== ''
+      ? String(mods.conf_rdv_time).trim()
+      : '09:00';
+    if (/^\d{2}:\d{2}:\d{2}/.test(timePart)) timePart = timePart.slice(0, 5);
+    else if (!/^\d{2}:\d{2}$/.test(timePart)) timePart = '09:00';
+    return normalizeMysqlDateTime(`${datePart} ${timePart}:00`);
+  }
+
+  const idEtat = Number(compteRendu?.id_etat_final || mods.id_etat_final || 0);
+  if (idEtat === 9) {
+    const dateRappel = addWorkingDays(new Date(), 2);
+    const y = dateRappel.getFullYear();
+    const m = String(dateRappel.getMonth() + 1).padStart(2, '0');
+    const d = String(dateRappel.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d} 09:00:00`;
+  }
+
+  return null;
+}
+
 /** Colonnes réelles de la table fiches (cache session requête). */
 let ficheTableColumnsCache = null;
 async function getFicheTableColumns() {
@@ -939,6 +972,16 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     const fields = [];
     const values = [];
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const setFicheField = (col, value) => {
+      const frag = `\`${col}\` = ?`;
+      const idx = fields.indexOf(frag);
+      if (idx >= 0) {
+        values[idx] = value;
+      } else {
+        fields.push(frag);
+        values.push(value);
+      }
+    };
 
     // Fonction locale pour enregistrer les modifications dans modifica
     const logModification = async (idFiche, userId, field, oldValue, newValue, dateModif) => {
@@ -1019,13 +1062,14 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
 
     // Ajouter les modifications JSON et enregistrer dans modifica
     for (const [key, value] of Object.entries(modifications)) {
-      // Les champs conf_rdv_date/conf_rdv_time n'existent pas en DB.
-      // Ils sont traités plus bas pour alimenter date_rdv_time.
+      // conf_rdv_date/conf_rdv_time et date_rdv_time (date rappel) : traités plus bas
+      // via resolveDateRappelFromCompteRendu → fiches.date_rdv_time + fiches_histo.
       // id_commercial / id_commercial_2 : jamais persistés sur la fiche à l'approbation
       // (historisés puis désaffectés juste après).
       if (
         key === 'conf_rdv_date' ||
         key === 'conf_rdv_time' ||
+        key === 'date_rdv_time' ||
         key === 'pseudo' ||
         key === 'valeur_mensualite' ||
         key === 'produit' ||
@@ -1048,33 +1092,31 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
         await logModification(compteRendu.id_fiche, user.id, key, oldValue, newValue, now);
       }
       
-      fields.push(`\`${key}\` = ?`);
-      values.push(value);
+      setFicheField(key, value);
     }
 
-    // Annuler à reprogrammer: convertir conf_rdv_date + conf_rdv_time vers date_rdv_time
-    if (modifications.conf_rdv_date) {
-      const rdvTime = modifications.conf_rdv_time || '09:00';
-      const newDateRdvTime = `${modifications.conf_rdv_date} ${rdvTime}:00`;
+    // Date de rappel → fiches.date_rdv_time (si présente dans le CR, ou J+2 pour état 9)
+    const dateRappelResolved = resolveDateRappelFromCompteRendu(compteRendu, modifications);
+    if (dateRappelResolved) {
       const oldDateRdvTime = ancienneFiche.date_rdv_time;
-      if (oldDateRdvTime !== newDateRdvTime) {
-        await logModification(compteRendu.id_fiche, user.id, 'date_rdv_time', oldDateRdvTime, newDateRdvTime, now);
+      if (normalizeMysqlDateTime(oldDateRdvTime) !== dateRappelResolved) {
+        await logModification(
+          compteRendu.id_fiche,
+          user.id,
+          'date_rdv_time',
+          oldDateRdvTime,
+          dateRappelResolved,
+          now
+        );
       }
-      if (!fields.includes('`date_rdv_time` = ?')) {
-        fields.push('`date_rdv_time` = ?');
-        values.push(newDateRdvTime);
-      }
+      setFicheField('date_rdv_time', dateRappelResolved);
     }
 
     // Ajouter l'état final si présent dans le compte rendu
     if (compteRendu.id_etat_final && compteRendu.id_etat_final !== ancienEtat) {
-      if (!fields.includes('`id_etat_final` = ?')) {
-        // Enregistrer le changement d'état dans modifica
-        await logModification(compteRendu.id_fiche, user.id, 'id_etat_final', ancienEtat, compteRendu.id_etat_final, now);
-        
-        fields.push('`id_etat_final` = ?');
-        values.push(compteRendu.id_etat_final);
-      }
+      // Enregistrer le changement d'état dans modifica
+      await logModification(compteRendu.id_fiche, user.id, 'id_etat_final', ancienEtat, compteRendu.id_etat_final, now);
+      setFicheField('id_etat_final', compteRendu.id_etat_final);
     }
 
     // Synchroniser le sous-état : appliquer celui du CR ou effacer si l'état cible n'en a pas
@@ -1092,23 +1134,7 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
         now
       );
     }
-    if (!fields.includes('`id_sous_etat` = ?')) {
-      fields.push('`id_sous_etat` = ?');
-      values.push(sousEtatFinal);
-    }
-
-    // Déballé veut réfléchir (honoré à suivre) : définir automatiquement date_rdv_time = date rappel à J+2 jours ouvrés (lundi-vendredi)
-    const idEtatFinal = compteRendu.id_etat_final || modifications.id_etat_final || ancienEtat;
-    if (idEtatFinal === 9 && !modifications.date_rdv_time) {
-      const dateRappel = addWorkingDays(new Date(), 2);
-      const dateRappelStr = dateRappel.toISOString().slice(0, 10) + ' 09:00:00';
-      const oldDateRdv = ancienneFiche.date_rdv_time;
-      await logModification(compteRendu.id_fiche, user.id, 'date_rdv_time', oldDateRdv, dateRappelStr, now);
-      if (!fields.includes('`date_rdv_time` = ?')) {
-        fields.push('`date_rdv_time` = ?');
-        values.push(dateRappelStr);
-      }
-    }
+    setFicheField('id_sous_etat', sousEtatFinal);
 
     // Ajouter les informations de vente (Phase 3) et enregistrer dans modifica
     const ficheTableColumns = await getFicheTableColumns();
@@ -1362,6 +1388,23 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
         }
       }
       await persistHistoPseudo(histoInsertId);
+
+      // Date de rappel → fiches_histo.date_rdv_time (affichage « A rappeler le »)
+      if (histoInsertId && dateRappelResolved) {
+        try {
+          await query(
+            `UPDATE fiches_histo SET date_rdv_time = ? WHERE id = ?`,
+            [dateRappelResolved, histoInsertId]
+          );
+        } catch (dateRappelHistoErr) {
+          if (!dateRappelHistoErr || dateRappelHistoErr.code !== 'ER_BAD_FIELD_ERROR') {
+            console.error(
+              '[compte-rendu][approve] Impossible d\'historiser date_rdv_time:',
+              dateRappelHistoErr?.message
+            );
+          }
+        }
+      }
 
       // Historiser les champs R2 / R1 si présents dans les modifications du CR
       if (histoInsertId) {

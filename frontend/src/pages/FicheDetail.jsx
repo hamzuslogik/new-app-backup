@@ -1255,6 +1255,11 @@ const FicheDetail = ({
   }, [isPartenaireModalLimitedTabs, activeTab]);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [bulkEditingEtude, setBulkEditingEtude] = useState(false);
+  const [bulkEditValues, setBulkEditValues] = useState({});
+  const [bulkEditInitial, setBulkEditInitial] = useState({});
+  const [bulkEditSaving, setBulkEditSaving] = useState(false);
+  const etudeBulkFieldsRef = useRef({});
   const [planningWeek, setPlanningWeek] = useState(null);
   const [planningYear, setPlanningYear] = useState(null);
   const [planningDep, setPlanningDep] = useState(null);
@@ -2711,6 +2716,7 @@ const FicheDetail = ({
     if (Number(user?.fonction) === 5 && COMMERCIAL_SESSION_READONLY_FIELDS.has(field)) {
       return;
     }
+    if (bulkEditingEtude) return;
     setEditingField(field);
     setEditValue(currentValue || '');
   };
@@ -2726,6 +2732,51 @@ const FicheDetail = ({
   const handleCancelEdit = () => {
     setEditingField(null);
     setEditValue('');
+  };
+
+  const handleStartBulkEditEtude = () => {
+    if (bulkEditingEtude) {
+      setBulkEditingEtude(false);
+      setBulkEditValues({});
+      setBulkEditInitial({});
+      return;
+    }
+    handleCancelEdit();
+    const initials = { ...etudeBulkFieldsRef.current };
+    setBulkEditInitial(initials);
+    setBulkEditValues(initials);
+    setBulkEditingEtude(true);
+  };
+
+  const handleSaveBulkEditEtude = async () => {
+    if (bulkEditSaving) return;
+    const changed = Object.keys(bulkEditValues).filter(
+      (field) => String(bulkEditValues[field] ?? '') !== String(bulkEditInitial[field] ?? '')
+    );
+    if (changed.length === 0) {
+      setBulkEditingEtude(false);
+      setBulkEditValues({});
+      setBulkEditInitial({});
+      return;
+    }
+    setBulkEditSaving(true);
+    try {
+      for (const field of changed) {
+        await api.patch(`/fiches/${hash}/field`, { field, value: bulkEditValues[field] });
+      }
+      queryClient.invalidateQueries(['fiche', hash]);
+      queryClient.invalidateQueries(['planning-commercial']);
+      queryClient.invalidateQueries(['fiches']);
+      queryClient.invalidateQueries(['modifica', hash]);
+      setBulkEditingEtude(false);
+      setBulkEditValues({});
+      setBulkEditInitial({});
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement groupé:', error);
+      alert('Erreur lors de l\'enregistrement: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setBulkEditSaving(false);
+    }
   };
 
   const handleSelectPlanningSlot = async (date, hour, rdvId = null, availabilityData = null) => {
@@ -4093,18 +4144,21 @@ const FicheDetail = ({
     }
   };
 
-  const renderField = (label, field, value, type = 'text', options = null, readOnly = false, valueForEdit = undefined) => {
+  const renderField = (label, field, value, type = 'text', options = null, readOnly = false, valueForEdit = undefined, bulkEditable = false) => {
     const isEditing = editingField === field;
-    
-    
+    const rawEditValue = valueForEdit !== undefined ? valueForEdit : value;
+    const normalizedEditValue = rawEditValue === '-' || rawEditValue == null ? '' : rawEditValue;
+
+    if (bulkEditable) {
+      etudeBulkFieldsRef.current[field] = normalizedEditValue;
+    }
+
     // Permissions d'édition :
     // - Admins (1, 2, 7) : peuvent tout modifier
     // - Agents (3) : peuvent modifier les fiches de leur centre
     // - Commerciaux (5) : peuvent modifier leurs propres fiches (avec permission fiches_edit)
     // - Confirmateurs (6) : peuvent modifier les fiches qui leur sont assignées
     if (!ficheData || !user) {
-      // Si les données ne sont pas chargées, afficher quand même le champ mais sans possibilité d'édition
-      const canEdit = false;
       return (
         <tr>
           <td className="field-label">{label}</td>
@@ -4152,48 +4206,74 @@ const FicheDetail = ({
       (isAdmin || isQualiteQualif || isAgent || isCommercialEditor || isConfirmateur || (!isCommercialSession && canEditModificationRapide));
 
     // Si un commercial était déjà en édition sur un champ bloqué, forcer l'affichage lecture seule
-    const showEditControls = isEditing && canEditField && !isCommercialFieldBlocked;
+    const showBulkEditControls =
+      bulkEditingEtude && bulkEditable && canEditField && !isCommercialFieldBlocked;
+    const showEditControls = !bulkEditingEtude && isEditing && canEditField && !isCommercialFieldBlocked;
+    const bulkValue = Object.prototype.hasOwnProperty.call(bulkEditValues, field)
+      ? (bulkEditValues[field] ?? '')
+      : normalizedEditValue;
+
+    const renderInputControl = (currentValue, onValueChange, { autoFocus = false, onEnterSave = null } = {}) => {
+      if (type === 'select' && options) {
+        return (
+          <select
+            value={currentValue}
+            onChange={(e) => onValueChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && onEnterSave) { e.preventDefault(); onEnterSave(); } }}
+            className="form-control"
+            autoFocus={autoFocus}
+          >
+            <option value="">Sélectionner</option>
+            {options.map(opt => (
+              <option key={opt.id || opt.value} value={opt.id || opt.value}>
+                {opt.nom || opt.titre || opt.label}
+              </option>
+            ))}
+          </select>
+        );
+      }
+      if (type === 'textarea') {
+        return (
+          <textarea
+            value={currentValue}
+            onChange={(e) => onValueChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && e.ctrlKey && onEnterSave) { e.preventDefault(); onEnterSave(); } }}
+            className="form-control"
+            autoFocus={autoFocus}
+            rows={4}
+            title="Ctrl+Entrée pour enregistrer"
+          />
+        );
+      }
+      return (
+        <input
+          type={type}
+          value={currentValue}
+          onChange={(e) => onValueChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && onEnterSave) { e.preventDefault(); onEnterSave(); } }}
+          className="form-control"
+          autoFocus={autoFocus}
+        />
+      );
+    };
 
     return (
       <tr>
         <td className="field-label">{label}</td>
         <td className="field-value">
-          {showEditControls ? (
+          {showBulkEditControls ? (
+            <div className="edit-controls edit-controls-bulk">
+              {renderInputControl(
+                bulkValue,
+                (next) => setBulkEditValues((prev) => ({ ...prev, [field]: next }))
+              )}
+            </div>
+          ) : showEditControls ? (
             <div className="edit-controls">
-              {type === 'select' && options ? (
-                <select
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveField(field); } }}
-                  className="form-control"
-                  autoFocus
-                >
-                  <option value="">Sélectionner</option>
-                  {options.map(opt => (
-                    <option key={opt.id || opt.value} value={opt.id || opt.value}>
-                      {opt.nom || opt.titre || opt.label}
-                    </option>
-                  ))}
-                </select>
-              ) : type === 'textarea' ? (
-                <textarea
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); handleSaveField(field); } }}
-                  className="form-control"
-                  autoFocus
-                  rows={4}
-                  title="Ctrl+Entrée pour enregistrer"
-                />
-              ) : (
-                <input
-                  type={type}
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveField(field); } }}
-                  className="form-control"
-                  autoFocus
-                />
+              {renderInputControl(
+                editValue,
+                setEditValue,
+                { autoFocus: true, onEnterSave: () => handleSaveField(field) }
               )}
               <button
                 className="btn-save"
@@ -4216,10 +4296,10 @@ const FicheDetail = ({
           )}
         </td>
         <td className="field-actions">
-          {canEditField && !isEditing && !isCommercialFieldBlocked && (
+          {canEditField && !isEditing && !isCommercialFieldBlocked && !bulkEditingEtude && (
             <button
               className="btn-edit"
-              onClick={() => handleEditField(field, valueForEdit !== undefined ? valueForEdit : value)}
+              onClick={() => handleEditField(field, normalizedEditValue)}
               title="Modifier"
             >
               <FaEdit />
@@ -4255,6 +4335,20 @@ const FicheDetail = ({
 
   const userFonctionTop = user ? Number(user.fonction) : null;
   const canEditModificationRapideTop = userFonctionTop === 14 || userFonctionTop === 13 || userFonctionTop === 11 || (typeof hasPermission === 'function' && hasPermission('fiche_quick_edit'));
+  const canBulkEditEtude =
+    !!ficheData &&
+    userFonctionTop != null &&
+    (
+      userFonctionTop === 1 ||
+      userFonctionTop === 7 ||
+      userFonctionTop === 2 ||
+      userFonctionTop === 8 ||
+      userFonctionTop === 12 ||
+      (userFonctionTop === 3 && user?.centre === ficheData.id_centre) ||
+      canCommercialEditFiche ||
+      userFonctionTop === 6 ||
+      canEditModificationRapideTop
+    );
   const getEtatColor = () => {
     if (fiche.etat_final_color) {
       return fiche.etat_final_color;
@@ -4475,15 +4569,42 @@ const FicheDetail = ({
 
         {/* Section étude : titre = VALIDE par pseudo agent qualité (id_qualite) */}
         <div className="fiche-section">
-          <h2 className="section-title">
-            {fiche.id_qualite && (fiche.qualite_pseudo || '').trim()
-              ? `VALIDE par ${String(fiche.qualite_pseudo).trim()}`
-              : fiche.id_qualite
-                ? "VALIDE par —"
-                : "Détails de l'étude"}
+          <h2 className="section-title section-title-with-actions">
+            <span className="section-title-text">
+              {fiche.id_qualite && (fiche.qualite_pseudo || '').trim()
+                ? `VALIDE par ${String(fiche.qualite_pseudo).trim()}`
+                : fiche.id_qualite
+                  ? "VALIDE par —"
+                  : "Détails de l'étude"}
+            </span>
+            {canBulkEditEtude && (
+              <span className="section-title-actions">
+                <button
+                  type="button"
+                  className="btn-section-edit"
+                  onClick={handleStartBulkEditEtude}
+                  disabled={bulkEditSaving}
+                  title={bulkEditingEtude ? 'Annuler la modification' : 'Modifier tous les champs'}
+                >
+                  <FaEdit /> Modifier
+                </button>
+                {bulkEditingEtude && (
+                  <button
+                    type="button"
+                    className="btn-section-save"
+                    onClick={handleSaveBulkEditEtude}
+                    disabled={bulkEditSaving}
+                    title="Enregistrer les modifications"
+                  >
+                    <FaCheck /> {bulkEditSaving ? 'Enregistrement…' : 'Enregistrer'}
+                  </button>
+                )}
+              </span>
+            )}
           </h2>
           <table className="fiche-details-table">
             <tbody>
+              {(() => { etudeBulkFieldsRef.current = {}; return null; })()}
               {renderField(
                 'Étude à faire pour',
                 'conf_produit',
@@ -4500,26 +4621,31 @@ const FicheDetail = ({
                   fiche.conf_produit != null && String(fiche.conf_produit).trim() !== ''
                     ? fiche.conf_produit
                     : (fiche.produit ?? '')
-                )
+                ),
+                true
               )}
               {hasConfValue(fiche.conf_commentaire_produit)
-                ? renderField('Commentaire', 'conf_commentaire_produit', fiche.conf_commentaire_produit || '-', 'textarea')
-                : renderField('Commentaire', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea')}
+                ? renderField('Commentaire', 'conf_commentaire_produit', fiche.conf_commentaire_produit || '-', 'textarea', null, false, undefined, true)
+                : renderField('Commentaire', 'commentaire_qualite', fiche.commentaire_qualite || '-', 'textarea', null, false, undefined, true)}
               {hasConfValue(fiche.conf_deja_etude) || hasConfValue(fiche.conf_deja_fait_etude)
                 ? renderField('A déjà fait une étude', 'conf_deja_fait_etude', fiche.conf_deja_fait_etude || fiche.conf_deja_etude || 'NON', 'select', [
                     { value: 'OUI', label: 'Oui' },
                     { value: 'NON', label: 'Non' }
-                  ])
+                  ], false, undefined, true)
                 : renderField('A déjà fait une étude', 'etude', fiche.etude || 'NON', 'select', [
                     { value: 'OUI', label: 'Oui' },
                     { value: 'NON', label: 'Non' }
-                  ])}
+                  ], false, undefined, true)}
               {/* Visible pour toutes les sessions (modal / page détail fiche) */}
               {renderField(
                 'Détails étude',
                 'details_etude',
                 resolveDetailsEtudeForFiche(fiche) || '-',
-                'textarea'
+                'textarea',
+                null,
+                false,
+                undefined,
+                true
               )}
               {renderField(
                 'Mode de chauffage',
@@ -4528,43 +4654,47 @@ const FicheDetail = ({
                 'text',
                 null,
                 false,
-                modeChauffageAffiche(fiche.conf_mode_chauffage, fiche.mode_chauffage) || ''
+                modeChauffageAffiche(fiche.conf_mode_chauffage, fiche.mode_chauffage) || '',
+                true
               )}
-              {renderField('Année de système de chauffage', 'annee_systeme_chauffage', fiche.annee_systeme_chauffage || '-', 'number')}
+              {renderField('Année de système de chauffage', 'annee_systeme_chauffage', fiche.annee_systeme_chauffage || '-', 'number', null, false, undefined, true)}
               {renderField('Consommation chauffage', 'consommation_chauffage',
-                (fiche.conf_consommations != null && fiche.conf_consommations !== '') ? String(fiche.conf_consommations) : (fiche.consommation_chauffage || '-'))}
-              {renderField('Surface chauffée en M²', 'surface_chauffee', fiche.surface_chauffee || '-', 'number')}
+                (fiche.conf_consommations != null && fiche.conf_consommations !== '') ? String(fiche.conf_consommations) : (fiche.consommation_chauffage || '-'),
+                'text', null, false, undefined, true)}
+              {renderField('Surface chauffée en M²', 'surface_chauffee', fiche.surface_chauffee || '-', 'number', null, false, undefined, true)}
               {fiche.surface_chauffee && (fiche.conf_consommations != null && fiche.conf_consommations !== '' ? fiche.conf_consommations : fiche.consommation_chauffage) && parseFloat(fiche.surface_chauffee) > 0 && parseFloat(String(fiche.conf_consommations != null && fiche.conf_consommations !== '' ? fiche.conf_consommations : fiche.consommation_chauffage).replace(/[^\d.,]/g, '').replace(',', '.')) > 0 ? (
                 renderField('Consommation en M²', 'conso',
                   (parseFloat(String(fiche.conf_consommations != null && fiche.conf_consommations !== '' ? fiche.conf_consommations : fiche.consommation_chauffage).replace(/[^\d.,]/g, '').replace(',', '.')) / parseFloat(fiche.surface_chauffee)).toFixed(2) + ' €/m²',
-                  'text')
+                  'text', null, true)
               ) : (
-                renderField('Consommation en M²', 'conso', '-', 'text')
+                renderField('Consommation en M²', 'conso', '-', 'text', null, true)
               )}
               {renderField('Propriétaire de la maison', 'proprietaire_maison', fiche.proprietaire_maison || '-', 'select', [
                 { value: 'MR', label: 'Mr' },
                 { value: 'MME', label: 'Mme' },
                 { value: 'LES DEUX', label: 'LES DEUX' }
-              ])}
+              ], false, undefined, true)}
               {renderField('Orientation de la toiture', 'orientation_toiture',
-                (fiche.conf_orientation_toiture != null && String(fiche.conf_orientation_toiture).trim() !== '') ? fiche.conf_orientation_toiture : (fiche.orientation_toiture || '-'), 'text')}
+                (fiche.conf_orientation_toiture != null && String(fiche.conf_orientation_toiture).trim() !== '') ? fiche.conf_orientation_toiture : (fiche.orientation_toiture || '-'), 'text', null, false, undefined, true)}
               {renderField('Zones d\'ombres', 'zones_ombres',
-                (fiche.conf_zones_ombres != null && String(fiche.conf_zones_ombres).trim() !== '') ? fiche.conf_zones_ombres : (fiche.zones_ombres || '-')
+                (fiche.conf_zones_ombres != null && String(fiche.conf_zones_ombres).trim() !== '') ? fiche.conf_zones_ombres : (fiche.zones_ombres || '-'),
+                'text', null, false, undefined, true
               )}
               {hasConfValue(fiche.conf_site_classe)
-                ? renderField('Proche d\'un site classé', 'conf_site_classe', fiche.conf_site_classe || '-', 'text')
-                : renderField('Proche d\'un site classé', 'site_classe', fiche.site_classe || '-', 'text')}
-              {renderField('Âge du MR', 'age_mr', fiche.age_mr || '-', 'number')}
-              {renderField('Âge du Madame', 'age_madame', fiche.age_madame || '-', 'number')}
+                ? renderField('Proche d\'un site classé', 'conf_site_classe', fiche.conf_site_classe || '-', 'text', null, false, undefined, true)
+                : renderField('Proche d\'un site classé', 'site_classe', fiche.site_classe || '-', 'text', null, false, undefined, true)}
+              {renderField('Âge du MR', 'age_mr', fiche.age_mr || '-', 'number', null, false, undefined, true)}
+              {renderField('Âge du Madame', 'age_madame', fiche.age_madame || '-', 'number', null, false, undefined, true)}
               {renderField('Consommation électricité', 'consommation_electricite',
-                (fiche.conf_consommation_electricite != null && String(fiche.conf_consommation_electricite).trim() !== '') ? fiche.conf_consommation_electricite : (fiche.consommation_electricite || '-')
+                (fiche.conf_consommation_electricite != null && String(fiche.conf_consommation_electricite).trim() !== '') ? fiche.conf_consommation_electricite : (fiche.consommation_electricite || '-'),
+                'text', null, false, undefined, true
               )}
               {hasConfValue(fiche.conf_revenu)
-                ? renderField('Revenu du foyer', 'conf_revenu', fiche.conf_revenu || '-', 'number')
-                : renderField('Revenu du foyer', 'revenu_foyer', fiche.revenu_foyer || '-', 'number')}
+                ? renderField('Revenu du foyer', 'conf_revenu', fiche.conf_revenu || '-', 'number', null, false, undefined, true)
+                : renderField('Revenu du foyer', 'revenu_foyer', fiche.revenu_foyer || '-', 'number', null, false, undefined, true)}
               {hasConfValue(fiche.conf_credit)
-                ? renderField('Crédit du foyer', 'conf_credit', fiche.conf_credit || '-', 'number')
-                : renderField('Crédit du foyer', 'credit_foyer', fiche.credit_foyer || '-', 'number')}
+                ? renderField('Crédit du foyer', 'conf_credit', fiche.conf_credit || '-', 'number', null, false, undefined, true)
+                : renderField('Crédit du foyer', 'credit_foyer', fiche.credit_foyer || '-', 'number', null, false, undefined, true)}
               {renderField('Situation Conjugale', 'situation_conjugale', fiche.situation_conjugale || '-', 'select', [
                 { value: 'COUPLE', label: 'Couple' },
                 { value: 'CELIBATAIRE', label: 'Célibataire' },
@@ -4573,8 +4703,8 @@ const FicheDetail = ({
                 { value: 'VEUF/VEUVE', label: 'Veuf/Veuve' },
                 { value: 'DIVORCE', label: 'Divorcé' },
                 { value: 'PAXE', label: 'Pacsé' }
-              ])}
-              {renderField('Nombre d\'enfants en Charges', 'nb_enfants', fiche.nb_enfants || '-', 'number')}
+              ], false, undefined, true)}
+              {renderField('Nombre d\'enfants en Charges', 'nb_enfants', fiche.nb_enfants || '-', 'number', null, false, undefined, true)}
               {(() => {
                 const rawMr = (fiche.conf_profession_monsieur != null && String(fiche.conf_profession_monsieur).trim() !== '')
                   ? fiche.conf_profession_monsieur
@@ -4582,13 +4712,17 @@ const FicheDetail = ({
                 const labelMr = rawMr != null && String(rawMr).trim() !== ''
                   ? (professions?.find(p => p.id == rawMr || (p.nom && String(p.nom).toLowerCase() === String(rawMr).toLowerCase()))?.nom || String(rawMr))
                   : '';
-                return renderField('Profession Du MR', 'profession_mr', labelMr || '-', 'text', null, false, labelMr);
+                return renderField('Profession Du MR', 'profession_mr', labelMr || '-', 'text', null, false, labelMr, true);
               })()}
               {renderField('Type de Contrat MR', 'type_contrat_mr',
                 (fiche.conf_type_contrat_mr != null && fiche.conf_type_contrat_mr !== '')
                   ? (typeContrat?.find(t => String(t.id) === String(fiche.conf_type_contrat_mr))?.nom || fiche.conf_type_contrat_mr || '-')
                   : (typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_mr))?.nom || fiche.type_contrat_mr || '-'),
-                'select', typeContrat)}
+                'select', typeContrat, false,
+                (fiche.conf_type_contrat_mr != null && fiche.conf_type_contrat_mr !== '')
+                  ? fiche.conf_type_contrat_mr
+                  : (fiche.type_contrat_mr ?? ''),
+                true)}
               {(() => {
                 const rawMme = (fiche.conf_profession_madame != null && String(fiche.conf_profession_madame).trim() !== '')
                   ? fiche.conf_profession_madame
@@ -4596,13 +4730,18 @@ const FicheDetail = ({
                 const labelMme = rawMme != null && String(rawMme).trim() !== ''
                   ? (professions?.find(p => p.id == rawMme || (p.nom && String(p.nom).toLowerCase() === String(rawMme).toLowerCase()))?.nom || String(rawMme))
                   : '';
-                return renderField('Profession Du Madame', 'profession_madame', labelMme || '-', 'text', null, false, labelMme);
+                return renderField('Profession Du Madame', 'profession_madame', labelMme || '-', 'text', null, false, labelMme, true);
               })()}
               {renderField('Type de Contrat MME', 'type_contrat_madame',
                 (fiche.conf_type_contrat_madame != null && fiche.conf_type_contrat_madame !== '')
                   ? (typeContrat?.find(t => String(t.id) === String(fiche.conf_type_contrat_madame))?.nom || fiche.conf_type_contrat_madame || '-')
                   : (typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_madame))?.nom || fiche.type_contrat_madame || '-'),
-                'select', typeContrat)}
+                'select', typeContrat, false,
+                (fiche.conf_type_contrat_madame != null && fiche.conf_type_contrat_madame !== '')
+                  ? fiche.conf_type_contrat_madame
+                  : (fiche.type_contrat_madame ?? ''),
+                true)}
+              {/* Exclus du mode édition groupée : date/heure d'appel, agent, centre */}
               {!isCommercial && renderField('Date & Heure d\'appel', 'date_appel_time', 
                 (() => {
                   const dAppel = parseFicheDateAppel(fiche);
@@ -4625,11 +4764,12 @@ const FicheDetail = ({
                   { value: 'MME', label: 'Mme' }
                 ],
                 false,
-                fiche.conf_appel_tunisie_avec || ''
+                fiche.conf_appel_tunisie_avec || '',
+                true
               )}
               {/* Champ Agent : visible uniquement pour Admin (1, 7), Qualité Qualification (2, 8, 12),
                   Qualité Confirmation (4), Backoffice (11), RP Confirmation (13) et RE Confirmation (14).
-                  Affiché au-dessus de Centre, en lecture seule. */}
+                  Affiché au-dessus de Centre, en lecture seule. Exclu du mode édition groupée. */}
               {[1, 2, 4, 7, 8, 11, 12, 13, 14].includes(Number(user?.fonction)) &&
                 renderField(
                   'Agent',
@@ -4655,7 +4795,7 @@ const FicheDetail = ({
                   { value: 'RAS PRESENCE CLIENT(S)', label: 'RAS PRESENCE CLIENT(S)' },
                   { value: 'MME SEULE SANS MR', label: 'MME SEULE SANS MR' },
                   { value: 'MR SEUL SANS MME', label: 'MR SEUL SANS MME' }
-                ])}
+                ], false, undefined, true)}
             </tbody>
           </table>
         </div>

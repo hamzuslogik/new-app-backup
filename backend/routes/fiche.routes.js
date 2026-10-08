@@ -7073,6 +7073,17 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         }
       }
 
+      // Date de rappel : toujours conserver dans les modifications pour les états concernés
+      // afin qu'elle soit reportée dans fiches.date_rdv_time / fiches_histo à l'approbation.
+      const etatCr = id_etat_final != null ? Number(id_etat_final) : null;
+      if (
+        [8, 9, 19].includes(etatCr) &&
+        ficheData.date_rdv_time != null &&
+        String(ficheData.date_rdv_time).trim() !== ''
+      ) {
+        modifications.date_rdv_time = ficheData.date_rdv_time;
+      }
+
       if (ficheData.compte_rendu_option) {
         modifications.compte_rendu_option = String(ficheData.compte_rendu_option);
       }

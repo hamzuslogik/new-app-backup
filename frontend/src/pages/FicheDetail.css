@@ -428,6 +428,75 @@
   font-weight: bold;
 }
 
+.section-title.section-title-with-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+  flex-wrap: wrap;
+}
+
+.section-title-with-actions .section-title-text {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+.section-title-with-actions .section-title-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.btn-section-edit,
+.btn-section-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.btn-section-edit {
+  background: #9cbfc8;
+  color: #1a2529;
+}
+
+.btn-section-edit:hover:not(:disabled) {
+  background: #b8d4db;
+}
+
+.btn-section-save {
+  background: #2ecc71;
+  color: #ffffff;
+}
+
+.btn-section-save:hover:not(:disabled) {
+  background: #27ae60;
+}
+
+.btn-section-edit:disabled,
+.btn-section-save:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.edit-controls-bulk {
+  width: 100%;
+}
+
+.edit-controls-bulk .form-control {
+  width: 100%;
+}
+
 /* Forcer le titre "Historique des états" en blanc */
 .section-title.historique-title-bar,
 .section-title.historique-title-bar span,
