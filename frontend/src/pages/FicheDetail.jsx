@@ -10769,6 +10769,7 @@ const PlanningTab = ({
             canEdit={canEdit}
             currentFicheHash={ficheHash}
             sessionCanOpenSlotDashboard={sessionCanOpenSlotDashboard}
+            user={user}
           />
         ) : (
           <div className="error">Aucun planning disponible pour le département {planningDep}</div>
@@ -11121,7 +11122,8 @@ const PlanningViewForModal = ({
   onUpdateAvailability,
   canEdit = false,
   currentFicheHash, // Le hash est passé mais on ne peut plus comparer par ID car il est masqué
-  sessionCanOpenSlotDashboard = false
+  sessionCanOpenSlotDashboard = false,
+  user = null,
 }) => {
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');

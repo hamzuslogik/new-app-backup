@@ -336,22 +336,72 @@
   border-top: 2px solid #9cbfc8;
 }
 
+/* Mode TAUX : en-tête sans couleur de fond ; texte sombre pour la lisibilité */
+.statistiques-page .stats-table.stats-table--taux thead,
+.stats-table.stats-table--taux thead {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.statistiques-page .stats-table.stats-table--taux thead th.stats-taux-header,
+.statistiques-page .stats-table.stats-table--taux thead th.stats-taux-header *,
+.stats-table.stats-table--taux thead th.stats-taux-header,
+.stats-table.stats-table--taux thead th.stats-taux-header * {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #1a2529 !important;
+  -webkit-text-fill-color: #1a2529 !important;
+  font-weight: 700;
+}
+
 .stat-neutre {
   background-color: #7d7e7d !important;
-  color: #fff !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   font-weight: 800;
 }
 
-.stat-positive {
+/* Résultats TAUX uniquement (tbody) : fond coloré + texte contrasté */
+.stats-table tbody td.stat-positive,
+.statistiques-page .stats-table tbody td.stat-positive {
   background-color: #33d235 !important;
-  color: #000 !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
   font-weight: 800;
 }
 
-.stat-negative {
+.stats-table tbody td.stat-positive *,
+.statistiques-page .stats-table tbody td.stat-positive * {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+.stats-table tbody td.stat-negative,
+.statistiques-page .stats-table tbody td.stat-negative {
   background-color: #e74c3c !important;
-  color: #fff !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   font-weight: 800;
+}
+
+.stats-table tbody td.stat-negative *,
+.statistiques-page .stats-table tbody td.stat-negative * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.stats-table tbody td.stat-neutre,
+.statistiques-page .stats-table tbody td.stat-neutre {
+  background-color: #7d7e7d !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 800;
+}
+
+.stats-table tbody td.stat-neutre *,
+.statistiques-page .stats-table tbody td.stat-neutre * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 .stat-total {

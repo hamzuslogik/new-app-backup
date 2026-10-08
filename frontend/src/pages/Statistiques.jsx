@@ -547,17 +547,17 @@ const Statistiques = () => {
       const totalPos = data.reduce((sum, item) => sum + item.totals.positive, 0);
       const totalNeg = data.reduce((sum, item) => sum + item.totals.negative, 0);
       return (
-        <table className="stats-table">
+        <table className="stats-table stats-table--taux">
           <thead>
             <tr>
-              <th>N°</th>
-              <th>{statsData.name_stat}</th>
+              <th className="stats-taux-header">N°</th>
+              <th className="stats-taux-header">{statsData.name_stat}</th>
               {visibleTauxCols.map((col) => (
-                <th key={col.id} className={`stat-${col.id === 'positive' ? 'positive' : col.id === 'negative' ? 'negative' : 'neutre'}`}>
+                <th key={col.id} className="stats-taux-header">
                   {col.label}
                 </th>
               ))}
-              <th>TAUX %</th>
+              <th className="stats-taux-header">TAUX %</th>
             </tr>
           </thead>
           <tbody>
