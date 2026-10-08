@@ -567,15 +567,41 @@ const Statistiques = () => {
                 <td {...getDrillCellProps({ row: item, etatIds: visibleEtatIds, cellKind: 'name' }, etats)}>
                   {item.name}
                 </td>
-                {visibleTauxCols.map((col) => (
+                {visibleTauxCols.map((col) => {
+                  const tauxTone =
+                    col.id === 'positive'
+                      ? 'stat-positive'
+                      : col.id === 'negative'
+                        ? 'stat-negative'
+                        : 'stat-neutre';
+                  const tauxBg =
+                    col.id === 'positive'
+                      ? '#33d235'
+                      : col.id === 'negative'
+                        ? '#e74c3c'
+                        : '#9e9e9e';
+                  const tauxFg = col.id === 'positive' ? '#000000' : '#ffffff';
+                  return (
                   <td
                     key={col.id}
-                    className={col.id === 'positive' ? 'stat-positive' : col.id === 'negative' ? 'stat-negative' : 'stat-neutre'}
-                    {...getDrillCellProps({ row: item, tauxColumn: col.id, cellKind: 'taux' }, etats)}
+                    {...mergeTdProps(
+                      {
+                        className: tauxTone,
+                        style: {
+                          backgroundColor: tauxBg,
+                          color: tauxFg,
+                          WebkitTextFillColor: tauxFg,
+                          fontWeight: 800,
+                        },
+                      },
+                      { row: item, tauxColumn: col.id, cellKind: 'taux' },
+                      etats
+                    )}
                   >
                     {col.getValue(item)}
                   </td>
-                ))}
+                  );
+                })}
                 <td className="stat-taux">{calcTaux(item.totals.positive, item.totals.negative)}</td>
               </tr>
             ))}
@@ -584,15 +610,41 @@ const Statistiques = () => {
               <td {...getDrillCellProps({ isTotalRow: true, etatIds: visibleEtatIds, cellKind: 'name' }, etats)}>
                 <strong>TOTAL</strong>
               </td>
-              {visibleTauxCols.map((col) => (
+              {visibleTauxCols.map((col) => {
+                const tauxTone =
+                  col.id === 'positive'
+                    ? 'stat-positive'
+                    : col.id === 'negative'
+                      ? 'stat-negative'
+                      : 'stat-neutre';
+                const tauxBg =
+                  col.id === 'positive'
+                    ? '#33d235'
+                    : col.id === 'negative'
+                      ? '#e74c3c'
+                      : '#9e9e9e';
+                const tauxFg = col.id === 'positive' ? '#000000' : '#ffffff';
+                return (
                 <td
                   key={col.id}
-                  className={col.id === 'positive' ? 'stat-positive' : col.id === 'negative' ? 'stat-negative' : 'stat-neutre'}
-                  {...getDrillCellProps({ isTotalRow: true, tauxColumn: col.id, cellKind: 'taux' }, etats)}
+                  {...mergeTdProps(
+                    {
+                      className: tauxTone,
+                      style: {
+                        backgroundColor: tauxBg,
+                        color: tauxFg,
+                        WebkitTextFillColor: tauxFg,
+                        fontWeight: 800,
+                      },
+                    },
+                    { isTotalRow: true, tauxColumn: col.id, cellKind: 'taux' },
+                    etats
+                  )}
                 >
                   <strong>{data.reduce((sum, item) => sum + (Number(col.getValue(item)) || 0), 0)}</strong>
                 </td>
-              ))}
+                );
+              })}
               <td className="stat-taux"><strong>{calcTaux(totalPos, totalNeg)}</strong></td>
             </tr>
           </tbody>
