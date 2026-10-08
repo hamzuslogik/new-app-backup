@@ -4569,7 +4569,7 @@ const FicheDetail = ({
 
         {/* Section étude : titre = VALIDE par pseudo agent qualité (id_qualite) */}
         <div className="fiche-section">
-          <h2 className="section-title section-title-with-actions">
+          <h2 className={`section-title section-title-with-actions${canBulkEditEtude ? ' has-section-actions' : ''}`}>
             <span className="section-title-text">
               {fiche.id_qualite && (fiche.qualite_pseudo || '').trim()
                 ? `VALIDE par ${String(fiche.qualite_pseudo).trim()}`

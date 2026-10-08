@@ -6060,6 +6060,9 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
     // Ne plus modifier fiches.date_appel_time (contrôle qualité) — horodatage dans fiches_histo
     // Effacer le sous-état : les états groupe 0 n'en portent pas via etat-rapide
     // Désaffecter commercial 1/2 s'ils sont renseignés
+    const hadCommercialAvantEtatRapide =
+      (fiche.id_commercial != null && Number(fiche.id_commercial) > 0) ||
+      (fiche.id_commercial_2 != null && Number(fiche.id_commercial_2) > 0);
     await query(
       `UPDATE fiches
        SET id_etat_final = ?, id_sous_etat = NULL,
@@ -6068,6 +6071,13 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
        WHERE id = ?`,
       [newEtatId, now, id]
     );
+    if (hadCommercialAvantEtatRapide) {
+      try {
+        await syncAffectationRecord(id, 0, now);
+      } catch (affSyncErr) {
+        console.error('Erreur sync affectations (etat-rapide désaffectation):', affSyncErr);
+      }
+    }
 
     // Enregistrer dans l'historique (avec id_confirmateur : connecté ou choisi par RE/RP/admin/backoffice) + conf_* si état 7
     if (parseEtatId(oldEtatId) !== parseEtatId(newEtatId)) {

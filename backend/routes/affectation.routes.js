@@ -341,13 +341,21 @@ router.post('/desaffecter', authenticate, async (req, res) => {
 
         const ancienCommercial = fiche.id_commercial || 0;
         const ancienCommercial2 = fiche.id_commercial_2;
+        const avaitCommercial =
+          Number(ancienCommercial) > 0 ||
+          (ancienCommercial2 != null && Number(ancienCommercial2) > 0);
 
         await query(
           'UPDATE fiches SET id_commercial = 0, id_commercial_2 = NULL, date_modif_time = ? WHERE id = ?',
           [dateModifTime, parseInt(ficheId)]
         );
 
-        await syncAffectationRecord(ficheId, 0, dateModifTime);
+        // Sync table affectations uniquement s'il y avait un commercial sur la fiche
+        // (évite d'effacer un snapshot STAT laissé après approbation CR).
+        // Chemins UI : détail fiche onglet Affectation, page Affectation, Affectation par département
+        if (avaitCommercial) {
+          await syncAffectationRecord(ficheId, 0, dateModifTime, null);
+        }
 
         triggerRdvDesaffecteAfterDesaffectation(
           parseInt(ficheId, 10),
@@ -359,14 +367,16 @@ router.post('/desaffecter', authenticate, async (req, res) => {
         });
 
         // Enregistrer dans modifica
-        try {
-          await query(
-            `INSERT INTO modifica (id_fiche, id_user, type, ancien_valeur, nouvelle_valeur, date_modif_time) 
-             VALUES (?, ?, 'Affectation', ?, '0', ?)`,
-            [parseInt(ficheId), userId, String(ancienCommercial), dateModifTime]
-          );
-        } catch (modifError) {
-          console.error('Erreur lors de l\'enregistrement dans modifica:', modifError);
+        if (avaitCommercial) {
+          try {
+            await query(
+              `INSERT INTO modifica (id_fiche, id_user, type, ancien_valeur, nouvelle_valeur, date_modif_time) 
+               VALUES (?, ?, 'Affectation', ?, '0', ?)`,
+              [parseInt(ficheId), userId, String(ancienCommercial), dateModifTime]
+            );
+          } catch (modifError) {
+            console.error('Erreur lors de l\'enregistrement dans modifica:', modifError);
+          }
         }
 
         results.push({

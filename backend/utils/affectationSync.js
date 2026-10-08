@@ -2,9 +2,10 @@ const { query, queryOne } = require('../config/database');
 
 /**
  * Met à jour ou crée une ligne dans affectations pour une fiche.
- * À la désaffectation (commercialId null/0) : on conserve le dernier
- * id_commercial + date_rdv_time pour l'historique / STAT affiliation
- * (seule la fiche est vidée côté id_commercial).
+ * - Affectation (commercialId > 0) : écrit id_commercial + date_rdv_time
+ * - Désaffectation (commercialId null/0) : met id_commercial = 0 et date_rdv_time = NULL
+ *   (la fiche est la source du statut « actuellement affecté » ;
+ *    le snapshot STAT après visite est écrit séparément à l'approbation CR)
  *
  * @param {number} ficheId
  * @param {number|null} commercialId - null ou 0 = désaffecté
@@ -18,20 +19,26 @@ async function syncAffectationRecord(ficheId, commercialId, dateModifTime, dateR
   const idCommercial =
     commercialId != null && Number(commercialId) > 0 ? parseInt(commercialId, 10) : 0;
 
-  const existing = await queryOne(
-    'SELECT id, id_commercial, date_rdv_time FROM affectations WHERE id_fiche = ?',
-    [idFiche]
-  );
+  const existing = await queryOne('SELECT id FROM affectations WHERE id_fiche = ?', [idFiche]);
 
   if (idCommercial <= 0) {
-    // Désaffectation : garder le snapshot d'affiliation pour STAT / historique
+    // Désaffectation : aligner la table affectations (id_commercial = 0, plus de date RDV)
     if (existing) {
       await query(
         `UPDATE affectations
-         SET date_modif = UNIX_TIMESTAMP(),
+         SET id_commercial = 0,
+             date_rdv_time = NULL,
+             date_modif = UNIX_TIMESTAMP(),
              date_modif_time = ?
          WHERE id = ?`,
         [dateModifTime, existing.id]
+      );
+    } else {
+      // Créer une ligne explicite de désaffectation (traçabilité)
+      await query(
+        `INSERT INTO affectations (id_fiche, id_commercial, date_rdv_time, date_modif, date_modif_time)
+         VALUES (?, 0, NULL, UNIX_TIMESTAMP(), ?)`,
+        [idFiche, dateModifTime]
       );
     }
     return;
