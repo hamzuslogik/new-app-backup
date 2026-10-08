@@ -1,54 +1,77 @@
 -- =====================================================
--- TEST (5 fiches) : backfill id_commercial sur fiches_histo
--- état SIGNER (id_etat = 13)
--- Pour TOUTE la liste → backfill_id_commercial_signer_fiches_histo_FULL.sql
+-- FULL : backfill id_commercial sur fiches_histo (SIGNER = 13)
 -- =====================================================
+-- Cibles :
+--   fiches_histo WHERE id_etat = 13
+--   AND (id_commercial IS NULL OR id_commercial = 0)
+--
 -- Source YJ : yj_histo_fiche.nom_commercial
 --
--- Flux :
---   1) match YJ (id_fiche + date ±5s + SIGNER)
---   2) chercher utilisateurs.pseudo = nom_commercial
---   3) si absent → INSERT utilisateurs (fonction 5)
---        - login = nom_commercial si libre
---        - sinon login alternatif (nom_commercial_mig, _mig2, …)
---   4) UPDATE fiches_histo.id_commercial uniquement
---        (date_modif* préservées)
+-- Utilisateurs — règle UNIQUE basée sur LOGIN :
+--   - existe si TRIM(UPPER(login)) = TRIM(UPPER(nom_commercial))
+--   - si OUI  → réutiliser cet id (pas d'INSERT)
+--   - si NON  → INSERT (login = nom_commercial, pseudo = nom_commercial,
+--                       fonction = 5, etat = 0 INACTIF)
 --
--- Écritures :
---   - utilisateurs : uniquement les commerciaux manquants (INSERT)
---   - fiches_histo : uniquement id_commercial (UPDATE)
+-- Puis UPDATE fiches_histo.id_commercial uniquement
+-- (date_modif* préservées ; table fiches non touchée)
+--
+-- Périmètre date :
+--   fiches_histo.date_creation <= 2026-09-30 23:59:59
+--
+-- Sécurité :
+--   SET @EXECUTE = 0  → diagnostic seulement
+--   SET @EXECUTE = 1  → INSERT + UPDATE réels
 -- =====================================================
 
 USE `crm`;
 
 SET SQL_SAFE_UPDATES = 0;
-SET @TEST_LIMIT = 5;
+
+-- >>> PASSER À 1 APRÈS AVOIR LU LES COMPTEURS <<<
+SET @EXECUTE = 0;
+
+-- Borne haute inclusive du diagnostic / traitement
+SET @DATE_MAX = '2026-09-30 23:59:59';
+
 SET @FONCTION_COMMERCIAL = 5;
 SET @ETAT_INACTIF = 0;
 
+SELECT
+  @EXECUTE AS mode_execute,
+  CASE WHEN @EXECUTE = 1 THEN 'ÉCRITURE ACTIVÉE' ELSE 'DIAGNOSTIC SEULEMENT' END AS mode_libelle,
+  @DATE_MAX AS date_max_incluse,
+  @ETAT_INACTIF AS etat_utilisateurs_crees;
+
 -- =====================================================
--- ÉTAPE 0 : cibles TEST (5 premières lignes du CSV)
+-- ÉTAPE 0 : cibles fiches_histo
 -- =====================================================
-DROP TEMPORARY TABLE IF EXISTS tmp_fh_signer_test;
-CREATE TEMPORARY TABLE tmp_fh_signer_test (
+DROP TEMPORARY TABLE IF EXISTS tmp_fh_signer_cibles;
+CREATE TEMPORARY TABLE tmp_fh_signer_cibles (
   fh_id INT NOT NULL PRIMARY KEY,
   id_fiche INT NOT NULL,
   date_creation DATETIME NOT NULL,
-  id_commercial_csv VARCHAR(32) NULL
-);
+  KEY idx_id_fiche_date (id_fiche, date_creation)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO tmp_fh_signer_test (fh_id, id_fiche, date_creation, id_commercial_csv) VALUES
-  (40,  14,  '2016-06-23 09:40:00', NULL),
-  (142, 63,  '2016-06-24 09:30:00', '0'),
-  (497, 246, '2016-08-03 11:30:00', '0'),
-  (507, 250, '2016-09-25 20:09:00', '0'),
-  (556, 269, '2016-07-22 13:13:00', '0');
+INSERT INTO tmp_fh_signer_cibles (fh_id, id_fiche, date_creation)
+SELECT fh.`id`, fh.`id_fiche`, fh.`date_creation`
+FROM `fiches_histo` fh
+WHERE fh.`id_etat` = 13
+  AND (fh.`id_commercial` IS NULL OR fh.`id_commercial` = 0)
+  AND fh.`id_fiche` IS NOT NULL
+  AND fh.`id_fiche` > 0
+  AND fh.`date_creation` IS NOT NULL
+  AND fh.`date_creation` > '1000-01-01'
+  AND fh.`date_creation` <= @DATE_MAX;
 
-SELECT '=== CIBLES TEST (CSV) ===' AS info;
-SELECT * FROM tmp_fh_signer_test ORDER BY fh_id;
+SELECT '=== CIBLES (jusqu''au 30/09/2026 inclus) ===' AS info;
+SELECT COUNT(*) AS nb_lignes_histo_signer_sans_commercial FROM tmp_fh_signer_cibles;
+SELECT COUNT(DISTINCT id_fiche) AS nb_fiches_distinctes FROM tmp_fh_signer_cibles;
+SELECT MIN(date_creation) AS date_min, MAX(date_creation) AS date_max FROM tmp_fh_signer_cibles;
 
 -- =====================================================
--- ÉTAPE 1 : détecter table YJ + colonnes
+-- ÉTAPE 1 : détection YJ
 -- =====================================================
 SET @yj_source_table = (
   SELECT t.table_name
@@ -129,6 +152,17 @@ SET @yj_nom_commercial_expr = IF(
   'NULL'
 );
 
+-- Résolution par LOGIN (= nom_commercial)
+SET @yj_resolved_id_commercial_expr = IF(
+  @nom_commercial_col IS NOT NULL,
+  CONCAT(
+    '(SELECT u.`id` FROM `utilisateurs` u ',
+    'WHERE TRIM(UPPER(IFNULL(u.`login`, ''''))) = TRIM(UPPER(', @yj_nom_commercial_expr, ')) ',
+    'LIMIT 1)'
+  ),
+  'NULL'
+);
+
 SET @yj_etat_match = CONCAT(
   '(',
   IF(@id_etat_col IS NOT NULL,
@@ -162,14 +196,13 @@ SELECT
     WHEN @yj_source_table IS NULL THEN 'Table YJ introuvable'
     WHEN @id_fiche_col IS NULL THEN 'Colonne id_fiche YJ introuvable'
     WHEN @nom_commercial_col IS NULL THEN 'Colonne nom_commercial absente dans YJ'
-    ELSE 'OK'
+    ELSE 'OK (match utilisateurs sur login)'
   END AS motif;
 
 -- =====================================================
--- ÉTAPE 2 : noms commerciaux distincts pour les 5 cibles
+-- ÉTAPE 2 : noms commerciaux distincts depuis YJ
 -- =====================================================
 DROP TEMPORARY TABLE IF EXISTS tmp_noms_commerciaux;
--- VARCHAR(191) : limite index utf8mb4 (767 bytes) ; pas de PK trop longue
 CREATE TEMPORARY TABLE tmp_noms_commerciaux (
   nom_commercial VARCHAR(191) NOT NULL,
   PRIMARY KEY (nom_commercial)
@@ -180,7 +213,7 @@ SET @sql_fill_noms = IF(
   CONCAT(
     'INSERT IGNORE INTO tmp_noms_commerciaux (nom_commercial) ',
     'SELECT DISTINCT LEFT(', @yj_nom_commercial_expr, ', 191) ',
-    'FROM tmp_fh_signer_test t ',
+    'FROM tmp_fh_signer_cibles t ',
     'INNER JOIN `', REPLACE(@yj_source_table, '`', ''), '` yj ',
     '  ON ', @yj_id_fiche_expr, ' = t.id_fiche ',
     ' AND ABS(TIMESTAMPDIFF(SECOND, t.date_creation, ', @yj_date_expr, ')) <= 5 ',
@@ -195,157 +228,166 @@ PREPARE stmt_fill_noms FROM @sql_fill_noms;
 EXECUTE stmt_fill_noms;
 DEALLOCATE PREPARE stmt_fill_noms;
 
-SELECT '=== NOMS COMMERCIAUX (depuis YJ, 5 cibles) ===' AS info;
+SELECT '=== NOMS COMMERCIAUX (distincts) — match sur LOGIN ===' AS info;
+SELECT COUNT(*) AS nb_noms_distincts FROM tmp_noms_commerciaux;
+
 SELECT
-  n.nom_commercial,
-  u.id AS id_utilisateur_existant,
-  u.login AS login_existant,
-  u.pseudo AS pseudo_existant,
-  CASE
-    WHEN u.id IS NOT NULL THEN 'EXISTE (réutiliser)'
-    ELSE 'À CRÉER'
-  END AS action_prevue
+  SUM(CASE WHEN u.id IS NOT NULL THEN 1 ELSE 0 END) AS nb_login_existe_reutiliser,
+  SUM(CASE WHEN u.id IS NULL THEN 1 ELSE 0 END) AS nb_login_absent_a_creer
 FROM tmp_noms_commerciaux n
 LEFT JOIN `utilisateurs` u
-  ON TRIM(UPPER(u.`pseudo`)) = TRIM(UPPER(n.nom_commercial))
+  ON TRIM(UPPER(IFNULL(u.`login`, ''))) = TRIM(UPPER(n.nom_commercial));
+
+-- Utilisateurs DÉJÀ présents (match login) + fonction
+SELECT '=== UTILISATEURS EXISTANTS (login trouvé) + FONCTION ===' AS info;
+SELECT
+  n.nom_commercial AS login_cible,
+  u.id AS id_utilisateur,
+  u.login,
+  u.pseudo,
+  u.etat,
+  u.fonction AS id_fonction,
+  f.titre AS fonction_titre,
+  'EXISTE → réutiliser' AS action_prevue
+FROM tmp_noms_commerciaux n
+INNER JOIN `utilisateurs` u
+  ON TRIM(UPPER(IFNULL(u.`login`, ''))) = TRIM(UPPER(n.nom_commercial))
+LEFT JOIN `fonctions` f ON f.`id` = u.`fonction`
+ORDER BY f.titre, u.login;
+
+-- Logins absents → à créer
+SELECT '=== LOGINS ABSENTS → À CRÉER (etat=0, fonction=5) ===' AS info;
+SELECT
+  n.nom_commercial AS login_cible,
+  'ABSENT → À CRÉER' AS action_prevue
+FROM tmp_noms_commerciaux n
+WHERE NOT EXISTS (
+  SELECT 1 FROM `utilisateurs` u
+  WHERE TRIM(UPPER(IFNULL(u.`login`, ''))) = TRIM(UPPER(n.nom_commercial))
+)
 ORDER BY n.nom_commercial;
 
 -- =====================================================
--- ÉTAPE 3 : créer les utilisateurs manquants
+-- ÉTAPE 3 : liste à créer = login absent uniquement
 -- =====================================================
--- pseudo = nom_commercial (pour le matching ultérieur)
--- login  = nom_commercial si libre, sinon alternatif unique
--- =====================================================
-SELECT '=== INSERT utilisateurs manquants ===' AS info;
-
 DROP TEMPORARY TABLE IF EXISTS tmp_users_a_creer;
 CREATE TEMPORARY TABLE tmp_users_a_creer (
   nom_commercial VARCHAR(191) NOT NULL,
-  login_propose VARCHAR(191) NOT NULL,
   PRIMARY KEY (nom_commercial)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO tmp_users_a_creer (nom_commercial, login_propose)
-SELECT
-  n.nom_commercial,
-  LEFT(CASE
-    -- login libre = nom_commercial
-    WHEN NOT EXISTS (
-      SELECT 1 FROM `utilisateurs` u
-      WHERE TRIM(UPPER(IFNULL(u.`login`, ''))) = TRIM(UPPER(n.nom_commercial))
-    ) THEN n.nom_commercial
-    -- sinon _mig
-    WHEN NOT EXISTS (
-      SELECT 1 FROM `utilisateurs` u
-      WHERE TRIM(UPPER(IFNULL(u.`login`, ''))) = TRIM(UPPER(CONCAT(n.nom_commercial, '_mig')))
-    ) THEN CONCAT(n.nom_commercial, '_mig')
-    -- sinon _mig2
-    WHEN NOT EXISTS (
-      SELECT 1 FROM `utilisateurs` u
-      WHERE TRIM(UPPER(IFNULL(u.`login`, ''))) = TRIM(UPPER(CONCAT(n.nom_commercial, '_mig2')))
-    ) THEN CONCAT(n.nom_commercial, '_mig2')
-    -- sinon _mig3
-    WHEN NOT EXISTS (
-      SELECT 1 FROM `utilisateurs` u
-      WHERE TRIM(UPPER(IFNULL(u.`login`, ''))) = TRIM(UPPER(CONCAT(n.nom_commercial, '_mig3')))
-    ) THEN CONCAT(n.nom_commercial, '_mig3')
-    -- dernier recours : suffixe timestamp
-    ELSE CONCAT(n.nom_commercial, '_mig', UNIX_TIMESTAMP())
-  END, 191) AS login_propose
+INSERT INTO tmp_users_a_creer (nom_commercial)
+SELECT n.nom_commercial
 FROM tmp_noms_commerciaux n
 WHERE NOT EXISTS (
   SELECT 1 FROM `utilisateurs` u
-  WHERE TRIM(UPPER(u.`pseudo`)) = TRIM(UPPER(n.nom_commercial))
+  WHERE TRIM(UPPER(IFNULL(u.`login`, ''))) = TRIM(UPPER(n.nom_commercial))
 );
 
+SELECT '=== À CRÉER (login inexistant) ===' AS info;
+SELECT COUNT(*) AS nb_a_inserer FROM tmp_users_a_creer;
 SELECT
+  c.nom_commercial AS login,
   c.nom_commercial AS pseudo,
-  c.login_propose AS login,
-  CASE
-    WHEN c.login_propose = c.nom_commercial THEN 'login = nom_commercial'
-    ELSE 'login alternatif (conflit login existant)'
-  END AS choix_login
+  @FONCTION_COMMERCIAL AS fonction,
+  @ETAT_INACTIF AS etat
 FROM tmp_users_a_creer c
-ORDER BY c.nom_commercial;
+ORDER BY c.nom_commercial
+LIMIT 100;
 
-INSERT INTO `utilisateurs` (`pseudo`, `login`, `fonction`, `etat`)
-SELECT
-  c.nom_commercial,
-  c.login_propose,
-  @FONCTION_COMMERCIAL,
-  @ETAT_INACTIF
-FROM tmp_users_a_creer c
-WHERE NOT EXISTS (
-  SELECT 1 FROM `utilisateurs` u
-  WHERE TRIM(UPPER(u.`pseudo`)) = TRIM(UPPER(c.nom_commercial))
-);
-
-SELECT ROW_COUNT() AS nb_utilisateurs_crees;
-
-SELECT
-  u.id,
-  u.pseudo,
-  u.login,
-  u.fonction,
-  u.etat
-FROM `utilisateurs` u
-INNER JOIN tmp_noms_commerciaux n
-  ON TRIM(UPPER(u.`pseudo`)) = TRIM(UPPER(n.nom_commercial))
-ORDER BY u.id;
-
--- =====================================================
--- ÉTAPE 4 : DIAGNOSTIC avant UPDATE fiches_histo
--- =====================================================
-SELECT '=== DIAGNOSTIC AVANT UPDATE fiches_histo ===' AS info;
-
-SET @yj_resolved_id_commercial_expr = IF(
-  @nom_commercial_col IS NOT NULL,
+SET @sql_insert_users = IF(
+  @EXECUTE = 1 AND @can_run = 1,
   CONCAT(
-    '(SELECT u.`id` FROM `utilisateurs` u ',
-    'WHERE TRIM(UPPER(u.`pseudo`)) = TRIM(UPPER(', @yj_nom_commercial_expr, ')) ',
-    'LIMIT 1)'
+    'INSERT INTO `utilisateurs` (`pseudo`, `login`, `fonction`, `etat`) ',
+    'SELECT c.nom_commercial, c.nom_commercial, ', @FONCTION_COMMERCIAL, ', ', @ETAT_INACTIF, ' ',
+    'FROM tmp_users_a_creer c ',
+    'WHERE NOT EXISTS (',
+    '  SELECT 1 FROM `utilisateurs` u ',
+    '  WHERE TRIM(UPPER(IFNULL(u.`login`, ''''))) = TRIM(UPPER(c.nom_commercial))',
+    ')'
   ),
-  'NULL'
+  'SELECT 0 AS skip_insert_users'
 );
 
-SET @sql_diag = IF(
+SELECT @sql_insert_users AS sql_insert_users_preview;
+PREPARE stmt_ins_u FROM @sql_insert_users;
+EXECUTE stmt_ins_u;
+SELECT ROW_COUNT() AS nb_utilisateurs_crees;
+DEALLOCATE PREPARE stmt_ins_u;
+
+-- Contrôle : pour chaque nom, un login doit maintenant pointer vers un user
+SELECT '=== CONTRÔLE résolution par LOGIN ===' AS info;
+SELECT
+  SUM(CASE WHEN u.id IS NOT NULL THEN 1 ELSE 0 END) AS nb_resolus_par_login,
+  SUM(CASE WHEN u.id IS NULL THEN 1 ELSE 0 END) AS nb_toujours_sans_login,
+  SUM(CASE WHEN u.id IS NOT NULL AND IFNULL(u.etat, 0) = 0 THEN 1 ELSE 0 END) AS nb_resolus_inactifs,
+  SUM(CASE WHEN u.id IS NOT NULL AND IFNULL(u.etat, 0) > 0 THEN 1 ELSE 0 END) AS nb_resolus_actifs
+FROM tmp_noms_commerciaux n
+LEFT JOIN `utilisateurs` u
+  ON TRIM(UPPER(IFNULL(u.`login`, ''))) = TRIM(UPPER(n.nom_commercial));
+
+-- =====================================================
+-- ÉTAPE 4 : diagnostic matching (1 seule ref temp table)
+-- =====================================================
+SELECT '=== DIAGNOSTIC MATCHING ===' AS info;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_match_diag;
+CREATE TEMPORARY TABLE tmp_match_diag (
+  fh_id INT NOT NULL PRIMARY KEY,
+  id_fiche INT NOT NULL,
+  yj_nom_commercial VARCHAR(191) NULL,
+  id_commercial_resolu INT NULL,
+  diagnostic VARCHAR(80) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+SET @sql_fill_diag = IF(
   @can_run = 1,
   CONCAT(
+    'INSERT INTO tmp_match_diag (fh_id, id_fiche, yj_nom_commercial, id_commercial_resolu, diagnostic) ',
     'SELECT ',
     '  t.fh_id, ',
     '  t.id_fiche, ',
-    '  t.date_creation AS fh_date_creation, ',
-    '  fh.id_commercial AS fh_id_commercial_actuel, ',
-    '  ', @yj_nom_commercial_expr, ' AS yj_nom_commercial, ',
-    '  ', @yj_resolved_id_commercial_expr, ' AS id_commercial_resolu, ',
-    '  ', @yj_date_expr, ' AS yj_date_match, ',
-    IF(@etat_col IS NOT NULL, CONCAT('yj.`', REPLACE(@etat_col, '`', ''), '` AS yj_etat, '), 'NULL AS yj_etat, '),
+    '  LEFT(MAX(', @yj_nom_commercial_expr, '), 191) AS yj_nom, ',
+    '  MAX(', @yj_resolved_id_commercial_expr, ') AS id_com, ',
     '  CASE ',
-    '    WHEN ', @yj_id_fiche_expr, ' IS NULL THEN ''AUCUN match YJ'' ',
-    '    WHEN ', @yj_nom_commercial_expr, ' IS NULL OR ', @yj_nom_commercial_expr, ' = '''' THEN ''nom_commercial vide'' ',
-    '    WHEN ', @yj_resolved_id_commercial_expr, ' IS NULL THEN ''utilisateur toujours introuvable'' ',
-    '    WHEN fh.id_commercial IS NOT NULL AND fh.id_commercial > 0 THEN ''Déjà renseigné'' ',
-    '    ELSE ''OK à updater'' ',
+    '    WHEN MAX(CASE WHEN ', @yj_id_fiche_expr, ' IS NOT NULL THEN 1 ELSE 0 END) = 0 THEN ''AUCUN match YJ'' ',
+    '    WHEN MAX(', @yj_nom_commercial_expr, ') IS NULL OR MAX(', @yj_nom_commercial_expr, ') = '''' THEN ''nom_commercial vide'' ',
+    '    WHEN MAX(', @yj_resolved_id_commercial_expr, ') IS NULL THEN ''login introuvable dans utilisateurs'' ',
+    '    ELSE ''OK a updater'' ',
     '  END AS diagnostic ',
-    'FROM tmp_fh_signer_test t ',
-    'INNER JOIN `fiches_histo` fh ON fh.`id` = t.fh_id ',
+    'FROM tmp_fh_signer_cibles t ',
     'LEFT JOIN `', REPLACE(@yj_source_table, '`', ''), '` yj ',
     '  ON ', @yj_id_fiche_expr, ' = t.id_fiche ',
     ' AND ABS(TIMESTAMPDIFF(SECOND, t.date_creation, ', @yj_date_expr, ')) <= 5 ',
     ' AND ', @yj_etat_match, ' ',
-    'ORDER BY t.fh_id'
+    'GROUP BY t.fh_id, t.id_fiche'
   ),
-  'SELECT ''SKIP diagnostic'' AS info'
+  'SELECT 1'
 );
 
-PREPARE stmt_diag FROM @sql_diag;
-EXECUTE stmt_diag;
-DEALLOCATE PREPARE stmt_diag;
+PREPARE stmt_fill_diag FROM @sql_fill_diag;
+EXECUTE stmt_fill_diag;
+DEALLOCATE PREPARE stmt_fill_diag;
+
+SELECT diagnostic, COUNT(*) AS nb
+FROM tmp_match_diag
+GROUP BY diagnostic
+ORDER BY nb DESC;
+
+SELECT * FROM tmp_match_diag
+WHERE diagnostic != 'OK a updater'
+ORDER BY diagnostic, fh_id
+LIMIT 50;
+
+SELECT * FROM tmp_match_diag
+WHERE diagnostic = 'OK a updater'
+ORDER BY fh_id
+LIMIT 20;
 
 -- =====================================================
--- ÉTAPE 5 : UPDATE fiches_histo.id_commercial (max 5)
+-- ÉTAPE 5 : UPDATE fiches_histo.id_commercial
 -- =====================================================
-SELECT '=== UPDATE fiches_histo.id_commercial (max 5) ===' AS info;
+SELECT '=== UPDATE fiches_histo.id_commercial ===' AS info;
 
 SET @preserve_dates = CONCAT(
   IF(@fh_has_date_modif > 0, ', fh.`date_modif` = fh.`date_modif`', ''),
@@ -353,13 +395,17 @@ SET @preserve_dates = CONCAT(
   IF(@fh_has_date_modification > 0, ', fh.`date_modification` = fh.`date_modification`', '')
 );
 
+SELECT COUNT(*) AS nb_lignes_eligibles_update
+FROM tmp_match_diag
+WHERE diagnostic = 'OK a updater';
+
 SET @sql_update = IF(
-  @can_run = 1,
+  @EXECUTE = 1 AND @can_run = 1,
   CONCAT(
     'UPDATE `fiches_histo` fh ',
     'INNER JOIN (',
     '  SELECT t.fh_id, MAX(', @yj_resolved_id_commercial_expr, ') AS new_id_commercial ',
-    '  FROM tmp_fh_signer_test t ',
+    '  FROM tmp_fh_signer_cibles t ',
     '  INNER JOIN `', REPLACE(@yj_source_table, '`', ''), '` yj ',
     '    ON ', @yj_id_fiche_expr, ' = t.id_fiche ',
     '   AND ABS(TIMESTAMPDIFF(SECOND, t.date_creation, ', @yj_date_expr, ')) <= 5 ',
@@ -368,52 +414,55 @@ SET @sql_update = IF(
     '    AND ', @yj_nom_commercial_expr, ' != '''' ',
     '    AND ', @yj_resolved_id_commercial_expr, ' IS NOT NULL ',
     '    AND ', @yj_resolved_id_commercial_expr, ' > 0 ',
-    '  GROUP BY t.fh_id ',
-    '  LIMIT ', @TEST_LIMIT,
+    '  GROUP BY t.fh_id',
     ') src ON src.fh_id = fh.`id` ',
     'SET fh.`id_commercial` = src.new_id_commercial',
     @preserve_dates, ' ',
     'WHERE fh.`id_etat` = 13 ',
     '  AND (fh.`id_commercial` IS NULL OR fh.`id_commercial` = 0)'
   ),
-  'SELECT 0 AS skip_update'
+  'SELECT 0 AS skip_update_diagnostic_mode'
 );
 
 SELECT @sql_update AS sql_update_preview;
-
 PREPARE stmt_upd FROM @sql_update;
 EXECUTE stmt_upd;
 SELECT ROW_COUNT() AS nb_lignes_fiches_histo_maj;
 DEALLOCATE PREPARE stmt_upd;
 
 -- =====================================================
--- ÉTAPE 6 : VÉRIFICATION
+-- ÉTAPE 6 : vérification
 -- =====================================================
 SELECT '=== VÉRIFICATION ===' AS info;
 
-SELECT
-  t.fh_id,
-  t.id_fiche,
-  fh.id_commercial AS id_commercial_apres,
-  u.pseudo AS commercial_pseudo,
-  u.login AS commercial_login,
-  CASE
-    WHEN fh.id_commercial IS NOT NULL AND fh.id_commercial > 0 THEN 'OK rempli'
-    ELSE 'Toujours vide'
-  END AS statut
-FROM tmp_fh_signer_test t
-INNER JOIN `fiches_histo` fh ON fh.`id` = t.fh_id
-LEFT JOIN `utilisateurs` u ON u.`id` = fh.`id_commercial`
-ORDER BY t.fh_id;
+SELECT COUNT(*) AS reste_signer_sans_commercial
+FROM `fiches_histo` fh
+WHERE fh.`id_etat` = 13
+  AND (fh.`id_commercial` IS NULL OR fh.`id_commercial` = 0);
 
-DROP TEMPORARY TABLE IF EXISTS tmp_fh_signer_test;
+SELECT COUNT(*) AS signer_avec_commercial
+FROM `fiches_histo` fh
+WHERE fh.`id_etat` = 13
+  AND fh.`id_commercial` IS NOT NULL
+  AND fh.`id_commercial` > 0;
+
+SELECT u.id, u.login, u.pseudo, u.fonction, u.etat
+FROM `utilisateurs` u
+INNER JOIN tmp_users_a_creer c
+  ON TRIM(UPPER(IFNULL(u.`login`, ''))) = TRIM(UPPER(c.nom_commercial))
+ORDER BY u.id
+LIMIT 50;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_fh_signer_cibles;
 DROP TEMPORARY TABLE IF EXISTS tmp_noms_commerciaux;
 DROP TEMPORARY TABLE IF EXISTS tmp_users_a_creer;
+DROP TEMPORARY TABLE IF EXISTS tmp_match_diag;
 DROP TEMPORARY TABLE IF EXISTS temp_yj_cols;
 
 SET SQL_SAFE_UPDATES = 1;
 
-SELECT '=== FIN TEST 5 FICHES ===' AS info;
+SELECT '=== FIN FULL ===' AS info;
 SELECT
-  'utilisateurs : INSERT si pseudo absent ; login alternatif si conflit' AS etape_users,
-  'fiches_histo : UPDATE id_commercial uniquement' AS etape_histo;
+  'Match / création utilisateurs = LOGIN (= nom_commercial)' AS regle,
+  'Nouveaux : login=pseudo=nom_commercial, fonction=5, etat=0' AS creation,
+  '1) @EXECUTE=0 diagnostic  2) @EXECUTE=1 écriture' AS usage_mode;

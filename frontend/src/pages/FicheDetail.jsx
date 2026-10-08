@@ -38,6 +38,13 @@ import CodeVerificationModal from '../components/CodeVerificationModal';
 import { isBeforeRdvDateTime, isRdvDateBeforeToday, formatLocalYmd } from '../utils/compteRenduEarlyVerification';
 import { resolveConfRevenuAfterTypeContratChange } from '../utils/revenuTypeContrat';
 import { isPolicyClosedSlot, canCreateRdvOnPolicyClosedSlot } from '../utils/planningSlotPolicy';
+import { formatCommercialDisplayName } from '../utils/commercialDisplayName';
+import {
+  normalizeSituationConjugaleForm,
+  showConfProfessionMrFields,
+  showConfProfessionMmeFields,
+  clearHiddenConfProfessionFields,
+} from '../utils/confSituationConjugale';
 
 /** Style option / select « Nouvel état » : fond = couleur état, texte contrasté. */
 function getEtatSelectOptionStyle(color) {
@@ -553,6 +560,7 @@ const EMPTY_CONF_FORM_BASE = {
   conf_rdv_date: '',
   conf_rdv_time: '',
   conf_rdv_avec: '',
+  situation_conjugale: '',
   conf_appel_tunisie_avec: '',
   conf_deja_etude: '',
   conf_deja_fait_etude: '',
@@ -819,6 +827,7 @@ function buildConfFormStateFromFiche(ficheData, user) {
     conf_rdv_avec: normalizeMrMmeSelect(
       pickConfPrefillValue(ficheData.conf_rdv_avec, lastConf?.conf_rdv_avec)
     ),
+    situation_conjugale: normalizeSituationConjugaleForm(ficheData.situation_conjugale),
     conf_appel_tunisie_avec: confAppelTunisie,
     conf_deja_etude: dejaEtude,
     conf_deja_fait_etude: dejaEtude,
@@ -1317,29 +1326,7 @@ const FicheDetail = ({
   const [decalageAcceptDate, setDecalageAcceptDate] = useState('');
   const [decalageAcceptTime, setDecalageAcceptTime] = useState('');
   const [confFormData, setConfFormData] = useState({
-    produit: '',
-    id_confirmateur: '',
-    id_confirmateur_2: '',
-    id_confirmateur_3: '',
-    conf_rdv_date: '',
-    conf_rdv_time: '',
-    conf_rdv_avec: '',
-    conf_appel_tunisie_avec: '',
-    conf_deja_etude: '',
-    conf_deja_fait_etude: '',
-    conf_details_etude: '',
-    conf_profession_monsieur: '',
-    conf_type_contrat_mr: '',
-    conf_profession_madame: '',
-    conf_type_contrat_madame: '',
-    conf_revenu: '',
-    conf_credit: '',
-    conf_mode_chauffage: '',
-    conf_complement_chauffage: '',
-    conf_consommation_electricite: '',
-    conf_consommation_chauffage: '',
-    conf_rdv_annule_precedent: '',
-    conf_presence_couple: '',
+    ...EMPTY_CONF_FORM_BASE,
     conf_orientation_toiture: '',
     conf_zones_ombres: '',
     conf_site_classe: '',
@@ -1987,8 +1974,16 @@ const FicheDetail = ({
 
   const getCommercialDisplayName = (id) => {
     if (!id) return '';
+    // Priorité API détail (déjà nom||login), puis liste utilisateurs
+    if (
+      ficheData?.id_commercial != null &&
+      String(ficheData.id_commercial) === String(id) &&
+      ficheData.commercial_pseudo
+    ) {
+      return String(ficheData.commercial_pseudo).trim();
+    }
     const found = (commerciaux || []).find((c) => String(c.id) === String(id));
-    return found?.pseudo || `${found?.prenom || ''} ${found?.nom || ''}`.trim() || '';
+    return formatCommercialDisplayName(found);
   };
   const commercialAffecteNom = getCommercialDisplayName(ficheData?.id_commercial || affectationCommercial);
   
@@ -3507,6 +3502,7 @@ const FicheDetail = ({
         histo_id_confirmateur_3: conf3Id,
         date_rdv_time: dateRdvTime,
         conf_rdv_avec: confFormData.conf_rdv_avec || null,
+        situation_conjugale: confFormData.situation_conjugale || null,
         conf_appel_tunisie_avec: confFormData.conf_appel_tunisie_avec || null,
         conf_deja_etude: confFormData.conf_deja_etude || confFormData.conf_deja_fait_etude || null,
         conf_deja_fait_etude: confFormData.conf_deja_fait_etude || confFormData.conf_deja_etude || null,
@@ -3514,10 +3510,30 @@ const FicheDetail = ({
           (confFormData.conf_deja_fait_etude || confFormData.conf_deja_etude) === 'OUI'
             ? (confFormData.conf_details_etude || null)
             : null,
-        conf_profession_monsieur: confFormData.conf_profession_monsieur || null,
-        conf_type_contrat_mr: confFormData.conf_type_contrat_mr ? parseInt(confFormData.conf_type_contrat_mr) : null,
-        conf_profession_madame: confFormData.conf_profession_madame || null,
-        conf_type_contrat_madame: confFormData.conf_type_contrat_madame ? parseInt(confFormData.conf_type_contrat_madame) : null,
+        conf_profession_monsieur: showConfProfessionMrFields(
+          confFormData.situation_conjugale,
+          confFormData.conf_rdv_avec
+        )
+          ? (confFormData.conf_profession_monsieur || null)
+          : null,
+        conf_type_contrat_mr: showConfProfessionMrFields(
+          confFormData.situation_conjugale,
+          confFormData.conf_rdv_avec
+        ) && confFormData.conf_type_contrat_mr
+          ? parseInt(confFormData.conf_type_contrat_mr, 10)
+          : null,
+        conf_profession_madame: showConfProfessionMmeFields(
+          confFormData.situation_conjugale,
+          confFormData.conf_rdv_avec
+        )
+          ? (confFormData.conf_profession_madame || null)
+          : null,
+        conf_type_contrat_madame: showConfProfessionMmeFields(
+          confFormData.situation_conjugale,
+          confFormData.conf_rdv_avec
+        ) && confFormData.conf_type_contrat_madame
+          ? parseInt(confFormData.conf_type_contrat_madame, 10)
+          : null,
         conf_revenu: confFormData.conf_revenu || null,
         conf_credit: confFormData.conf_credit || null,
         conf_mode_chauffage: confFormData.conf_mode_chauffage?.trim() ? confFormData.conf_mode_chauffage.trim() : null,
@@ -3565,44 +3581,7 @@ const FicheDetail = ({
         setSelectedEtat(null);
         setCompteRenduOption('');
         setEditingCompteRendu(null);
-        setConfFormData({
-          produit: '',
-          id_confirmateur: '',
-          id_confirmateur_2: '',
-          id_confirmateur_3: '',
-          conf_rdv_date: '',
-          conf_rdv_time: '',
-          conf_rdv_avec: '',
-          conf_appel_tunisie_avec: '',
-          conf_deja_etude: '',
-          conf_deja_fait_etude: '',
-          conf_details_etude: '',
-          conf_profession_monsieur: '',
-          conf_type_contrat_mr: '',
-          conf_profession_madame: '',
-          conf_type_contrat_madame: '',
-          conf_revenu: '',
-          conf_credit: '',
-          conf_mode_chauffage: '',
-          conf_complement_chauffage: '',
-          conf_consommation_electricite: '',
-          conf_consommation_chauffage: '',
-          conf_rdv_annule_precedent: '',
-          conf_presence_couple: '',
-          conf_orientation_toiture: '',
-          conf_zones_ombres: '',
-          conf_site_classe: '',
-          nb_pans: '',
-          annee_systeme_chauffage: '',
-          surface_chauffee: '',
-          consommation_chauffage: '',
-          conf_commentaire_produit: '',
-          id_commercial_2: '',
-          is_r2: '',
-          date_r1: '',
-          id_commercial_r1: '',
-          commentaire_r1: '',
-        });
+        setConfFormData({ ...EMPTY_CONF_FORM_BASE });
         alert('Fiche confirmée avec succès');
         slotCodeVerifiedRef.current = false;
         pendingKnownSlotStatusRef.current = null;
@@ -4586,8 +4565,9 @@ const FicheDetail = ({
                 ? renderField('Crédit du foyer', 'conf_credit', fiche.conf_credit || '-', 'number')
                 : renderField('Crédit du foyer', 'credit_foyer', fiche.credit_foyer || '-', 'number')}
               {renderField('Situation Conjugale', 'situation_conjugale', fiche.situation_conjugale || '-', 'select', [
-                { value: 'MARIE', label: 'Marié' },
+                { value: 'COUPLE', label: 'Couple' },
                 { value: 'CELIBATAIRE', label: 'Célibataire' },
+                { value: 'MARIE', label: 'Marié' },
                 { value: 'CONCUBINAGE', label: 'Concubinage' },
                 { value: 'VEUF/VEUVE', label: 'Veuf/Veuve' },
                 { value: 'DIVORCE', label: 'Divorcé' },
@@ -5485,6 +5465,15 @@ const FicheDetail = ({
                   if (etatData.date_appel_time || etatData.date_creation) items.push({ label: 'Date d\'appel', value: formatDateNoSeconds(etatData.date_appel_time || etatData.date_creation) });
                   // Champs conf_ (affichés uniquement si non vides)
                   if (etatData.conf_rdv_avec) items.push({ label: 'RDV pris avec', value: etatData.conf_rdv_avec });
+                  if (etatData.situation_conjugale != null && String(etatData.situation_conjugale).trim() !== '') {
+                    const sitRaw = String(etatData.situation_conjugale).trim();
+                    const sitUp = sitRaw.toUpperCase();
+                    const sitLabel =
+                      sitUp === 'COUPLE' ? 'Couple'
+                        : sitUp.startsWith('CELIB') ? 'Célibataire'
+                          : sitRaw;
+                    items.push({ label: 'Situation conjugale', value: sitLabel });
+                  }
                   if (etatData.conf_deja_etude || etatData.conf_deja_fait_etude) {
                     items.push({ label: 'A déjà fait une étude', value: etatData.conf_deja_fait_etude || etatData.conf_deja_etude });
                   }
@@ -5607,6 +5596,7 @@ const FicheDetail = ({
                 commentaire_qualite: fiche.commentaire_qualite || null,
                 commentaire_commercial: fiche.commentaire_commercial || null,
                 conf_rdv_avec: fiche.conf_rdv_avec || null,
+                situation_conjugale: fiche.situation_conjugale || null,
                 conf_appel_tunisie_avec: fiche.conf_appel_tunisie_avec || null,
                 conf_deja_etude: fiche.conf_deja_etude || fiche.conf_deja_fait_etude || null,
                 conf_deja_fait_etude: fiche.conf_deja_fait_etude || fiche.conf_deja_etude || null,
@@ -5635,8 +5625,13 @@ const FicheDetail = ({
                 date_rdv_time: currentDateRappelTime || null,
                 date_appel_time: currentDateAppelTime || null,
                 date_sign_time: fiche.date_sign_time || null,
-                commercial_pseudo: commerciaux?.find(c => c.id === fiche.id_commercial)?.pseudo || null,
-                commercial_2_pseudo: commerciaux?.find(c => c.id === fiche.id_commercial_2)?.pseudo || null,
+                commercial_pseudo:
+                  fiche.commercial_pseudo ||
+                  formatCommercialDisplayName(commerciaux?.find((c) => c.id === fiche.id_commercial)) ||
+                  null,
+                commercial_2_pseudo:
+                  formatCommercialDisplayName(commerciaux?.find((c) => c.id === fiche.id_commercial_2)) ||
+                  null,
                 id_commercial: fiche.id_commercial != null ? fiche.id_commercial : null,
                 id_commercial_2: fiche.id_commercial_2 != null ? fiche.id_commercial_2 : null,
                 installeur_nom: installateurs?.find(i => i.id === fiche.ph3_installateur)?.nom || null,
@@ -5682,10 +5677,11 @@ const FicheDetail = ({
               const canEditEtatActuelComment = [1, 6, 7, 11, 13, 14].includes(Number(user?.fonction));
               const detailItemsActuel = (() => {
                 let items = [...detailItemsActuelRaw];
-                // Session commercial : uniquement Date RDV (+ historique des modifs plus bas)
+                // Session commercial : Date RDV + Situation conjugale
                 if (isCommercial) {
-                  let filtered = items.filter((it) => String(it.label || '') === 'Date RDV');
-                  if (filtered.length === 0) {
+                  const allowed = new Set(['Date RDV', 'Situation conjugale']);
+                  let filtered = items.filter((it) => allowed.has(String(it.label || '')));
+                  if (!filtered.some((it) => String(it.label || '') === 'Date RDV')) {
                     const dt = etatActuel.date_rdv_time || fiche.date_rdv_time;
                     if (dt) {
                       const heureAvant =
@@ -5696,7 +5692,21 @@ const FicheDetail = ({
                           value: formatRdvDateTime(dt),
                           ...(heureAvant ? { heure_rdv_avant_decalage: heureAvant } : {}),
                         },
+                        ...filtered,
                       ];
+                    }
+                  }
+                  if (!filtered.some((it) => String(it.label || '') === 'Situation conjugale')) {
+                    const sitRaw = String(
+                      etatActuel.situation_conjugale || fiche.situation_conjugale || ''
+                    ).trim();
+                    if (sitRaw) {
+                      const sitUp = sitRaw.toUpperCase();
+                      const sitLabel =
+                        sitUp === 'COUPLE' ? 'Couple'
+                          : sitUp.startsWith('CELIB') ? 'Célibataire'
+                            : sitRaw;
+                      filtered = [...filtered, { label: 'Situation conjugale', value: sitLabel }];
                     }
                   }
                   return filtered;
@@ -5766,11 +5776,19 @@ const FicheDetail = ({
                       ? Number(h.id_commercial)
                       : null;
                   if (!comId) return { pseudo: '', tel: '' };
+                  // Historique API : commercial_pseudo = nom||login ; sinon users
+                  const fromHisto = h.commercial_pseudo != null ? String(h.commercial_pseudo).trim() : '';
+                  if (fromHisto) {
+                    const found = (commerciaux || []).find((c) => Number(c.id) === comId);
+                    const tel = found?.tel != null ? String(found.tel).trim() : '';
+                    return { pseudo: fromHisto, tel };
+                  }
                   const found = (commerciaux || []).find((c) => Number(c.id) === comId);
                   if (!found) return { pseudo: '', tel: '' };
-                  const pseudo = String(found.pseudo || '').trim();
-                  const tel = found.tel != null ? String(found.tel).trim() : '';
-                  return { pseudo, tel };
+                  return {
+                    pseudo: formatCommercialDisplayName(found),
+                    tel: found.tel != null ? String(found.tel).trim() : '',
+                  };
                 };
 
                 const hasSigned = (h) => {
@@ -7762,7 +7780,7 @@ const FicheDetail = ({
                         <option value="">Sélectionner</option>
                         {commerciaux?.map(com => (
                           <option key={com.id} value={com.id}>
-                            {com.pseudo}
+                            {formatCommercialDisplayName(com)}
                           </option>
                         ))}
                       </select>
@@ -7781,7 +7799,7 @@ const FicheDetail = ({
                         <option value="">Aucun</option>
                         {commerciaux?.map(com => (
                           <option key={com.id} value={com.id}>
-                            {com.pseudo}
+                            {formatCommercialDisplayName(com)}
                           </option>
                         ))}
                       </select>
@@ -8328,7 +8346,7 @@ const FicheDetail = ({
                             .filter((u) => u.etat > 0 || u.etat == null)
                             .map((com) => (
                               <option key={com.id} value={com.id}>
-                                {com.pseudo}
+                                {formatCommercialDisplayName(com)}
                               </option>
                             ))}
                         </select>
@@ -8544,7 +8562,7 @@ const FicheDetail = ({
                                 .filter((u) => u.etat > 0 || u.etat == null)
                                 .map((com) => (
                                   <option key={com.id} value={com.id}>
-                                    {com.pseudo}
+                                    {formatCommercialDisplayName(com)}
                                   </option>
                                 ))}
                             </select>
@@ -8576,13 +8594,35 @@ const FicheDetail = ({
                           id="conf_rdv_avec"
                           className="form-control"
                           value={confFormData.conf_rdv_avec}
-                          onChange={(e) => setConfFormData({...confFormData, conf_rdv_avec: e.target.value})}
+                          onChange={(e) => {
+                            const next = { ...confFormData, conf_rdv_avec: e.target.value };
+                            setConfFormData({ ...next, ...clearHiddenConfProfessionFields(next) });
+                          }}
                           required
                         >
                           <option value="">Sélectionner</option>
                           <option value="MR">MR</option>
                           <option value="MME">MME</option>
                           <option value="AUTRE">AUTRE</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><label htmlFor="conf_situation_conjugale">Couple ou Célibataire *</label></td>
+                      <td>
+                        <select
+                          id="conf_situation_conjugale"
+                          className="form-control"
+                          value={confFormData.situation_conjugale || ''}
+                          onChange={(e) => {
+                            const next = { ...confFormData, situation_conjugale: e.target.value };
+                            setConfFormData({ ...next, ...clearHiddenConfProfessionFields(next) });
+                          }}
+                          required
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="COUPLE">Couple</option>
+                          <option value="CELIBATAIRE">Célibataire</option>
                         </select>
                       </td>
                     </tr>
@@ -8674,8 +8714,10 @@ const FicheDetail = ({
                         </select>
                       </td>
                     </tr>
+                    {showConfProfessionMrFields(confFormData.situation_conjugale, confFormData.conf_rdv_avec) && (
+                      <>
                     <tr>
-                      <td><label>Profession MR :</label></td>
+                      <td><label>Profession MR *</label></td>
                       <td>
                         <input
                           type="text"
@@ -8683,17 +8725,19 @@ const FicheDetail = ({
                           autoComplete="off"
                           value={confFormData.conf_profession_monsieur || ''}
                           onChange={(e) => setConfFormData({ ...confFormData, conf_profession_monsieur: e.target.value })}
+                          required
                         />
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_type_contrat_mr">Type de Contrat MR :</label></td>
+                      <td><label htmlFor="conf_type_contrat_mr">Type de Contrat MR *</label></td>
                       <td>
                         <select
                           id="conf_type_contrat_mr"
                           className="form-control"
                           value={confFormData.conf_type_contrat_mr}
                           onChange={(e) => applyConfTypeContratChange('conf_type_contrat_mr', e.target.value)}
+                          required
                         >
                           <option value="">Sélectionner</option>
                           {(typeContrat || []).map(t => (
@@ -8702,8 +8746,12 @@ const FicheDetail = ({
                         </select>
                       </td>
                     </tr>
+                      </>
+                    )}
+                    {showConfProfessionMmeFields(confFormData.situation_conjugale, confFormData.conf_rdv_avec) && (
+                      <>
                     <tr>
-                      <td><label>Profession MME :</label></td>
+                      <td><label>Profession MME *</label></td>
                       <td>
                         <input
                           type="text"
@@ -8711,17 +8759,19 @@ const FicheDetail = ({
                           autoComplete="off"
                           value={confFormData.conf_profession_madame || ''}
                           onChange={(e) => setConfFormData({ ...confFormData, conf_profession_madame: e.target.value })}
+                          required
                         />
                       </td>
                     </tr>
                     <tr>
-                      <td><label htmlFor="conf_type_contrat_madame">Type de Contrat MME :</label></td>
+                      <td><label htmlFor="conf_type_contrat_madame">Type de Contrat MME *</label></td>
                       <td>
                         <select
                           id="conf_type_contrat_madame"
                           className="form-control"
                           value={confFormData.conf_type_contrat_madame}
                           onChange={(e) => applyConfTypeContratChange('conf_type_contrat_madame', e.target.value)}
+                          required
                         >
                           <option value="">Sélectionner</option>
                           {(typeContrat || []).map(t => (
@@ -8730,6 +8780,8 @@ const FicheDetail = ({
                         </select>
                       </td>
                     </tr>
+                      </>
+                    )}
                     <tr>
                       <td><label htmlFor="conf_revenu">Revenu *</label></td>
                       <td>
@@ -9247,10 +9299,10 @@ const FicheDetail = ({
                     >
                       <option value="">Sélectionner</option>
                       {commerciaux?.map(com => (
-                        <option key={com.id} value={com.id}>
-                          {com.pseudo}
-                        </option>
-                      ))}
+                          <option key={com.id} value={com.id}>
+                            {formatCommercialDisplayName(com)}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 )}
@@ -9266,10 +9318,10 @@ const FicheDetail = ({
                     >
                       <option value="">Aucun</option>
                       {commerciaux?.map(com => (
-                        <option key={com.id} value={com.id}>
-                          {com.pseudo}
-                        </option>
-                      ))}
+                          <option key={com.id} value={com.id}>
+                            {formatCommercialDisplayName(com)}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 )}
@@ -9490,10 +9542,10 @@ const FicheDetail = ({
                     >
                       <option value="">Sélectionner</option>
                       {commerciaux?.map(com => (
-                        <option key={com.id} value={com.id}>
-                          {com.pseudo}
-                        </option>
-                      ))}
+                          <option key={com.id} value={com.id}>
+                            {formatCommercialDisplayName(com)}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 )}
@@ -9509,10 +9561,10 @@ const FicheDetail = ({
                     >
                       <option value="">Aucun</option>
                       {commerciaux?.map(com => (
-                        <option key={com.id} value={com.id}>
-                          {com.pseudo}
-                        </option>
-                      ))}
+                          <option key={com.id} value={com.id}>
+                            {formatCommercialDisplayName(com)}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 )}
@@ -9581,7 +9633,7 @@ const FicheDetail = ({
                     >
                       <option value="">Sélectionner</option>
                       {(commerciaux || []).filter(c => c.etat > 0 || c.etat == null).map(c => (
-                        <option key={c.id} value={c.id}>{c.pseudo || `${c.prenom || ''} ${c.nom || ''}`.trim() || c.id}</option>
+                        <option key={c.id} value={c.id}>{formatCommercialDisplayName(c) || c.id}</option>
                       ))}
                     </select>
                   </div>
@@ -10051,7 +10103,7 @@ const FicheDetail = ({
               >
                 <option value="">— Aucun —</option>
                 {(commerciaux || []).filter(c => c.etat > 0 || c.etat == null).map(c => (
-                  <option key={c.id} value={String(c.id)}>{c.pseudo || `${c.prenom || ''} ${c.nom || ''}`.trim() || c.id}</option>
+                  <option key={c.id} value={String(c.id)}>{formatCommercialDisplayName(c) || c.id}</option>
                 ))}
               </select>
             </div>
@@ -12086,7 +12138,7 @@ const CreateRdvModal = ({
                             .filter((u) => u.etat > 0 || u.etat == null)
                             .map((com) => (
                               <option key={com.id} value={com.id}>
-                                {com.pseudo}
+                                {formatCommercialDisplayName(com)}
                               </option>
                             ))}
                         </select>
@@ -12163,7 +12215,7 @@ const CreateRdvModal = ({
                         .filter((u) => u.etat > 0 || u.etat == null)
                         .map((com) => (
                           <option key={com.id} value={com.id}>
-                            {com.pseudo}
+                            {formatCommercialDisplayName(com)}
                           </option>
                         ))}
                     </select>

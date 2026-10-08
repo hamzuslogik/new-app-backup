@@ -1,13 +1,17 @@
 /**
  * Validation création / confirmation RDV (état CONFIRMER).
  * Tous les champs sont obligatoires sauf :
- * - Profession MR / MME
- * - Type de contrat MR / MME
  * - Commercial 2
  * - Confirmateur 2 / 3 (ajout facultatif)
  * - Consommation électrique si produit PAC
  * - Consommation chauffage si produit PV
+ * - Profession / Type contrat MR ou MME selon Couple/Célibataire + RDV pris avec
  */
+
+import {
+  showConfProfessionMrFields,
+  showConfProfessionMmeFields,
+} from './confSituationConjugale';
 
 function isUnset(v) {
   if (v === null || v === undefined) return true;
@@ -65,6 +69,7 @@ export function validateCreateRdvForm({
   }
 
   requireField(isUnset(data.conf_rdv_avec), 'RDV pris avec');
+  requireField(isUnset(data.situation_conjugale), 'Couple ou Célibataire');
   requireField(isUnset(data.conf_appel_tunisie_avec), 'Appel en Tunisie avec');
 
   const dejaEtude = data.conf_deja_etude || data.conf_deja_fait_etude;
@@ -75,6 +80,17 @@ export function validateCreateRdvForm({
 
   requireField(isUnset(data.conf_presence_couple), 'Présence du couple ou célibataire');
   requireField(isUnset(data.conf_rdv_annule_precedent), 'RDV déjà annulé précédemment');
+
+  // Profession / type contrat : obligatoires si affichés (Couple ou Célibataire + RDV avec)
+  if (showConfProfessionMrFields(data.situation_conjugale, data.conf_rdv_avec)) {
+    requireField(isUnset(data.conf_profession_monsieur), 'Profession MR');
+    requireField(isUnset(data.conf_type_contrat_mr), 'Type de Contrat MR');
+  }
+  if (showConfProfessionMmeFields(data.situation_conjugale, data.conf_rdv_avec)) {
+    requireField(isUnset(data.conf_profession_madame), 'Profession MME');
+    requireField(isUnset(data.conf_type_contrat_madame), 'Type de Contrat MME');
+  }
+
   requireField(isUnset(data.conf_revenu), 'Revenu');
   requireField(isUnset(data.conf_credit), 'Crédit');
   requireField(isUnset(data.conf_mode_chauffage), 'Mode de chauffage');

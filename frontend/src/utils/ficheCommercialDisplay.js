@@ -1,7 +1,7 @@
 /**
  * Affichage colonne Commercial (listes fiches).
- * En recherche signatures (date_sign_time / tout signer) : priorité au commercial
- * historisé au moment de la signature (id_commercial_signature / pseudo).
+ * Libellé = nom, sinon login (jamais pseudo).
+ * En recherche signatures : priorité au commercial historisé à la signature.
  */
 export function isSignatureSearchContext(filters = {}) {
   const dateChamp = String(filters?.date_champ || '').trim();
@@ -33,8 +33,15 @@ export function formatFicheCommercialDisplay(fiche, getUserName, filters = {}) {
       : '') ||
     '';
 
-  const current1 = resolveName(fiche?.id_commercial) || '';
-  const current2 = resolveName(fiche?.id_commercial_2) || '';
+  // commercial_pseudo API = déjà nom||login côté backend ; sinon résolution users
+  const current1 =
+    (fiche?.commercial_pseudo && String(fiche.commercial_pseudo).trim()) ||
+    resolveName(fiche?.id_commercial) ||
+    '';
+  const current2 =
+    (fiche?.commercial_2_pseudo && String(fiche.commercial_2_pseudo).trim()) ||
+    resolveName(fiche?.id_commercial_2) ||
+    '';
 
   const c1 = preferSignature ? sign1 || current1 : current1 || sign1;
   const c2 = preferSignature ? sign2 || current2 : current2 || sign2;

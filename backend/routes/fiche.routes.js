@@ -33,6 +33,10 @@ const {
   buildProductionQualifFicheConditions,
   isProductionQualifContext,
 } = require('../utils/productionQualif');
+const {
+  formatCommercialDisplayName,
+  commercialDisplaySql,
+} = require('../utils/commercialDisplayName');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -1878,7 +1882,7 @@ router.get('/', authenticate, async (req, res) => {
       date_rdv_time: 'fiche.date_rdv_time',
       id_etat_final: 'etat.titre',
       id_confirmateur: 'u1.pseudo',
-      id_commercial: 'com_sort.pseudo',
+      id_commercial: `COALESCE(NULLIF(TRIM(com_sort.nom), ''), com_sort.login)`,
       id_centre: 'centre_sort.titre',
       id_agent: 'agent_sort.pseudo',
       produit: 'fiche.produit',
@@ -1974,7 +1978,9 @@ router.get('/', authenticate, async (req, res) => {
        decale_etat.titre as etat_dec,
        u1.pseudo as confirmateur_pseudo,
        u2.pseudo as confirmateur_2_pseudo,
-       u3.pseudo as confirmateur_3_pseudo
+       u3.pseudo as confirmateur_3_pseudo,
+       ${commercialDisplaySql('com_sort')} as commercial_pseudo,
+       ${commercialDisplaySql('com2_sort')} as commercial_2_pseudo
        ${qualifSelect}
        FROM fiches fiche
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
@@ -1996,6 +2002,7 @@ router.get('/', authenticate, async (req, res) => {
        LEFT JOIN utilisateurs u2 ON fiche.id_confirmateur_2 = u2.id
        LEFT JOIN utilisateurs u3 ON fiche.id_confirmateur_3 = u3.id
        LEFT JOIN utilisateurs com_sort ON fiche.id_commercial = com_sort.id
+       LEFT JOIN utilisateurs com2_sort ON fiche.id_commercial_2 = com2_sort.id
        LEFT JOIN utilisateurs agent_sort ON fiche.id_agent = agent_sort.id
        LEFT JOIN centres centre_sort ON fiche.id_centre = centre_sort.id
        ${histoJoinForFichesHisto}
@@ -2033,7 +2040,7 @@ router.get('/', authenticate, async (req, res) => {
       for (const chunk of chunkArray(ficheIds, FICHE_IDS_IN_CHUNK)) {
         const placeholders = chunk.map(() => '?').join(',');
         const crQuery = `
-        SELECT cr.id_fiche, u.pseudo as compte_rendu_commercial_pseudo
+        SELECT cr.id_fiche, ${commercialDisplaySql('u')} as compte_rendu_commercial_pseudo
         FROM compte_rendu_pending cr
         LEFT JOIN utilisateurs u ON cr.id_commercial = u.id
         INNER JOIN (
@@ -2115,8 +2122,8 @@ router.get('/', authenticate, async (req, res) => {
               `SELECT fh.id_fiche,
                       COALESCE(fh.id_commercial, fh.id_commercial_cr) AS id_commercial_signature,
                       fh.id_commercial_2 AS id_commercial_2_signature,
-                      u.pseudo AS commercial_signature_pseudo,
-                      u2.pseudo AS commercial_2_signature_pseudo
+                      ${commercialDisplaySql('u')} AS commercial_signature_pseudo,
+                      ${commercialDisplaySql('u2')} AS commercial_2_signature_pseudo
                FROM fiches_histo fh
                INNER JOIN (
                  SELECT id_fiche, MIN(id) AS min_id
@@ -2372,8 +2379,8 @@ router.get('/planning-commercial/diagnostic/:tel', authenticate, async (req, res
         fiche.id_commercial,
         fiche.id_commercial_2,
         etat.titre as etat_titre,
-        commercial.pseudo as commercial_pseudo,
-        commercial2.pseudo as commercial_2_pseudo
+        ${commercialDisplaySql('commercial')} as commercial_pseudo,
+        ${commercialDisplaySql('commercial2')} as commercial_2_pseudo
        FROM fiches fiche
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
        LEFT JOIN utilisateurs commercial ON fiche.id_commercial = commercial.id
@@ -2626,8 +2633,8 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
         fiche.is_r2,
         etat.titre as etat_titre,
         etat.color as etat_color,
-        commercial.pseudo as commercial_pseudo,
-        commercial2.pseudo as commercial_2_pseudo,
+        ${commercialDisplaySql('commercial')} as commercial_pseudo,
+        ${commercialDisplaySql('commercial2')} as commercial_2_pseudo,
         centre.titre as centre_titre,
         ${qualifSelect}
        FROM fiches fiche
@@ -3637,7 +3644,7 @@ router.get('/validation-rdv', authenticate, checkPermissionCode('validation_view
         e.titre as etat_titre,
         e.color as etat_color,
         p.nom as produit_nom,
-        com.pseudo as commercial_pseudo
+        ${commercialDisplaySql('com')} as commercial_pseudo
        FROM fiches f
        LEFT JOIN utilisateurs u1 ON f.id_confirmateur = u1.id
        LEFT JOIN utilisateurs u2 ON f.id_confirmateur_2 = u2.id
@@ -4266,7 +4273,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
 
     try {
       if (fiche.id_commercial) {
-        commercial = await queryOne('SELECT pseudo, color FROM utilisateurs WHERE id = ?', [fiche.id_commercial]);
+        commercial = await queryOne('SELECT nom, login, pseudo, color FROM utilisateurs WHERE id = ?', [fiche.id_commercial]);
       }
     } catch (_) { }
 
@@ -4373,14 +4380,14 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
     let compte_rendu_commercial_pseudo = null;
     if (hasEtatChangedByCompteRendu) {
       const lastCr = await queryOne(
-        `SELECT u.pseudo
+        `SELECT ${commercialDisplaySql('u')} AS display_name
          FROM compte_rendu_pending cr
          LEFT JOIN utilisateurs u ON cr.id_commercial = u.id
          WHERE cr.id_fiche = ? AND cr.statut = 'approved'
          ORDER BY cr.date_approbation DESC, cr.id DESC LIMIT 1`,
         [id]
       );
-      if (lastCr && lastCr.pseudo) compte_rendu_commercial_pseudo = lastCr.pseudo;
+      if (lastCr && lastCr.display_name) compte_rendu_commercial_pseudo = lastCr.display_name;
     }
 
     // Confirmateurs : slots actuels de la fiche (conf1/2/3), repli sur l'historique état 7
@@ -4472,7 +4479,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       agent_pseudo: agent?.pseudo || null,
       agent_color: agent?.color || null,
       centre_titre: centre?.titre || null,
-      commercial_pseudo: commercial?.pseudo || null,
+      commercial_pseudo: formatCommercialDisplayName(commercial),
       commercial_color: commercial?.color || null,
       confirmateur_pseudo: confirmateur?.pseudo || null,
       confirmateur_color: confirmateur?.color || null,
@@ -4515,7 +4522,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
          se.titre as sous_etat_titre,
          u_histo.pseudo as histo_confirmateur_pseudo,
          u_histo.fonction as histo_confirmateur_fonction,
-         u_cr.pseudo as cr_commercial_pseudo
+         ${commercialDisplaySql('u_cr')} as cr_commercial_pseudo
          FROM fiches_histo histo
          LEFT JOIN etats etat ON histo.id_etat = etat.id
          LEFT JOIN sous_etat se ON histo.id_sous_etat = se.id
@@ -4557,14 +4564,16 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
         )];
         const extraConfIds = [...new Set([...histoConf1Ids, ...histoConf2Ids, ...histoConf3Ids, ...histoComIds])];
         let confPseudoById = {};
+        let comDisplayById = {};
         if (extraConfIds.length > 0) {
           try {
             const rows = await query(
-              `SELECT id, pseudo FROM utilisateurs WHERE id IN (${extraConfIds.map(() => '?').join(',')})`,
+              `SELECT id, nom, login, pseudo FROM utilisateurs WHERE id IN (${extraConfIds.map(() => '?').join(',')})`,
               extraConfIds
             );
             for (const r of rows || []) {
               confPseudoById[Number(r.id)] = r.pseudo || null;
+              comDisplayById[Number(r.id)] = formatCommercialDisplayName(r);
             }
           } catch (_) { /* colonnes absentes ou erreur : ignorer */ }
         }
@@ -4618,7 +4627,8 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           }
 
           // Commercial affiché pour SIGNER : snapshot histo (id_commercial / id_commercial_cr), pas la fiche courante
-          let commercialPseudoHisto = commercial?.pseudo || null;
+          // Libellé = nom, sinon login (jamais pseudo)
+          let commercialPseudoHisto = formatCommercialDisplayName(commercial);
           let commercial2PseudoHisto = null;
           if (isSignerEtat) {
             const histoComId =
@@ -4632,9 +4642,9 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
                 ? Number(histo.id_commercial_2)
                 : null;
             commercialPseudoHisto = histoComId
-              ? (confPseudoById[histoComId] || null)
+              ? (comDisplayById[histoComId] || null)
               : (histo.cr_commercial_pseudo || null);
-            commercial2PseudoHisto = histoCom2Id ? (confPseudoById[histoCom2Id] || null) : null;
+            commercial2PseudoHisto = histoCom2Id ? (comDisplayById[histoCom2Id] || null) : null;
           }
 
           return {
@@ -4745,7 +4755,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           observations_cq: null,
           commentaire_commercial: null,
           installeur_nom: installeur || null,
-          commercial_pseudo: isSignerEtat ? commercialPseudoHisto : (commercial?.pseudo || null),
+          commercial_pseudo: isSignerEtat ? commercialPseudoHisto : formatCommercialDisplayName(commercial),
           commercial_2_pseudo: isSignerEtat ? commercial2PseudoHisto : null,
           // Champs Phase 3 pour SIGNER
           ph3_financement: fiche.ph3_type || null,
@@ -4871,7 +4881,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       if (tableExists && tableExists.count > 0) {
         affectations = await query(
           `SELECT aff.*,
-           user.pseudo as commercial_pseudo,
+           ${commercialDisplaySql('user')} as commercial_pseudo,
            user.color as commercial_color
            FROM affectations aff
            LEFT JOIN utilisateurs user ON aff.id_commercial = user.id
@@ -4891,7 +4901,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
       comptesRendus = await query(
         `SELECT 
           cr.*,
-          u_commercial.pseudo as commercial_pseudo,
+          ${commercialDisplaySql('u_commercial')} as commercial_pseudo,
           u_approbateur.pseudo as approbateur_pseudo,
           e.titre as etat_titre,
           se.titre as sous_etat_titre

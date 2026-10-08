@@ -20,6 +20,7 @@ import {
 } from '../utils/ficheTableIndicators';
 import { isAdminSession, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
 import { formatFicheCommercialDisplay } from '../utils/ficheCommercialDisplay';
+import { formatCommercialDisplayName } from '../utils/commercialDisplayName';
 import {
   FicheAdminBadgeHeaders,
   FicheAdminValideCell,
@@ -662,8 +663,15 @@ const Fiches = () => {
     return user?.pseudo || '';
   };
 
+  /** Commercial : nom, sinon login (pas le pseudo) — lookup sur tous les users */
+  const getCommercialName = (userId) => {
+    if (!userId || !usersData) return '';
+    const user = usersData.find((u) => u.id === userId || String(u.id) === String(userId));
+    return formatCommercialDisplayName(user);
+  };
+
   const getCommercialsFormatted = (fiche) =>
-    formatFicheCommercialDisplay(fiche, getUserName, appliedFilters);
+    formatFicheCommercialDisplay(fiche, getCommercialName, appliedFilters);
 
   const getCentreName = (centreId) => {
     if (!centreId || !centresData) return '';
@@ -1276,7 +1284,7 @@ const Fiches = () => {
                     <option value="">Tous</option>
                     {commerciaux.map(com => (
                       <option key={com.id} value={com.id}>
-                        {com.pseudo}
+                        {formatCommercialDisplayName(com)}
                       </option>
                     ))}
                   </select>

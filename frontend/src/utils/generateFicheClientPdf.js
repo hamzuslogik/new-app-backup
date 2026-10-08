@@ -48,7 +48,12 @@ export function generateFicheClientPdf(fiche, lookups = {}) {
     const produitNom = fiche.produit_nom || (fiche.produit === 1 ? 'PAC' : fiche.produit === 2 ? 'PV' : '-');
     const centreNom = centres?.find(c => c.id === fiche.id_centre)?.titre || fiche.centre_titre || '-';
     const agentNom = agents?.find(a => a.id === fiche.id_agent)?.pseudo || fiche.agent_pseudo || '-';
-    const commercialNom = commerciaux?.find(c => c.id === fiche.id_commercial)?.pseudo || fiche.commercial_pseudo || '-';
+    const commercialUser = commerciaux?.find(c => c.id === fiche.id_commercial);
+    const commercialNom =
+      (commercialUser?.nom && String(commercialUser.nom).trim()) ||
+      (commercialUser?.login && String(commercialUser.login).trim()) ||
+      (fiche.commercial_pseudo && String(fiche.commercial_pseudo).trim()) ||
+      '-';
     const confirmateurNom = confirmateurs?.find(c => c.id === fiche.id_confirmateur)?.pseudo || fiche.confirmateur_pseudo || '-';
     
     // Estimer la hauteur nécessaire
