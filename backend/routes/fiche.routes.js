@@ -27,6 +27,7 @@ const {
   confirmateurDerniereLigneHistoJoin,
   fichesHistoLastInRangeJoin,
 } = require('../utils/fichesHistoJoinSql');
+const { isPolicyClosedSlot, canCreateRdvOnPolicyClosedSlot } = require('../utils/planningSlotPolicy');
 const {
   resolveProductionQualifDateRange,
   buildProductionQualifFicheConditions,
@@ -7218,9 +7219,11 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           
           // Extraire le département depuis le code postal (2 premiers chiffres)
           const cp = fiche.cp || ficheData.cp || '';
-          const dep = cp.substring(0, 2) || '01';
+          const dep = String(cp).replace(/\D/g, '').substring(0, 2).padStart(2, '0') || '01';
+
+          const policyClosed = isPolicyClosedSlot(dep, rdvDate, slotHour);
           
-          // Vérifier si le créneau est fermé
+          // Vérifier si le créneau est fermé (DB)
           const closedSlot = await queryOne(
             `SELECT id FROM planning_availablity 
              WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ? AND is_closed = 1`,
@@ -7232,7 +7235,25 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             ficheData.allow_unavailable_slot === 1 ||
             ficheData.allow_unavailable_slot === '1' ||
             ficheData.allow_unavailable_slot === 'true';
-          if (closedSlot && !allowUnavailable) {
+
+          // Créneau fermé par règle départementale : confirmateur (6) jamais ; RE/RP/admin/BO uniquement
+          if (policyClosed) {
+            if (!canCreateRdvOnPolicyClosedSlot(req.user?.fonction)) {
+              return res.status(400).json({
+                success: false,
+                code: 'PLANNING_SLOT_CLOSED',
+                message: 'Ce créneau est fermé pour ce département. Les confirmateurs ne peuvent pas y créer de RDV.'
+              });
+            }
+            if (!allowUnavailable && Number(req.user?.fonction) !== 1 && Number(req.user?.fonction) !== 7) {
+              // RE/RP/BO : même garde-fou que créneau fermé (code / allow_unavailable)
+              return res.status(400).json({
+                success: false,
+                code: 'PLANNING_SLOT_CLOSED',
+                message: 'Ce créneau horaire est fermé. Impossible de créer un RDV dans ce créneau.'
+              });
+            }
+          } else if (closedSlot && !allowUnavailable) {
             return res.status(400).json({
               success: false,
               code: 'PLANNING_SLOT_CLOSED',

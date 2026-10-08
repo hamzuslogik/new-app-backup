@@ -13,6 +13,7 @@ import './Planning.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { splitSlotDisplayName } from '../utils/splitSlotDisplayName';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
+import { isPolicyClosedSlot } from '../utils/planningSlotPolicy';
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -683,7 +684,7 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
                     const isBlocked = availabilityValue === 0;
                     // Vérifier si le créneau est fermé
                     const availData = availability?.[day.date]?.[slot.hour];
-                    const isClosed = availData?.is_closed === 1;
+                    const isClosed = availData?.is_closed === 1 || isPolicyClosedSlot(dep, day.date, slot.hour);
                     const bgColor = hasPlanning && availabilityValue > 0 ? getAvailabilityColor(rdvs.length, availabilityValue) : '#cccccc';
                     
                     return (
@@ -699,6 +700,11 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
                         {isClosed && (
                           <div className="closed-slot-overlay">
                             <span className="closed-label">FERMÉ</span>
+                            {rdvs.length > 0 && (
+                              <span className="closed-rdv-count" style={{ color: '#fff', fontWeight: 800, marginLeft: 6 }}>
+                                {rdvs.length}
+                              </span>
+                            )}
                           </div>
                         )}
                         
@@ -719,9 +725,9 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
                         )}
                         
                         
-                        {/* Liste des rendez-vous */}
+                        {/* Liste des rendez-vous (masquée si créneau fermé : seul le nombre est affiché) */}
                         <div className="rdvs-list">
-                          {rdvs.map((rdv, idx) => {
+                          {!isClosed && rdvs.map((rdv, idx) => {
                             const isUrgent = rdv.qualification === 'RDV_URGENT';
                             const isConfirme = rdv.id_etat_final === 7;
                             // Obtenir la couleur de l'état CONFIRMER
@@ -849,7 +855,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
   const isDayClosed = (date) => {
     return timeSlots.every(slot => {
       const availData = availability[date]?.[slot.hour];
-      return availData?.is_closed === 1;
+      return availData?.is_closed === 1 || isPolicyClosedSlot(dep, date, slot.hour);
     });
   };
 
@@ -938,7 +944,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                   const currentValue = hasLocalOverride
                     ? localAvailabilityOverrides[cellKey]
                     : (availData?.nbr_com ?? null); // null si pas de planning créé
-                  const isClosed = availData?.is_closed === 1; // Vérifier si le créneau est fermé
+                  const isClosed = availData?.is_closed === 1 || isPolicyClosedSlot(dep, day.date, slot.hour);
                   const isZero = currentValue === 0 || currentValue === '0';
                   
                   // Récupérer le nombre de RDV pris pour ce créneau

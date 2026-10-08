@@ -5,6 +5,7 @@ const { query, queryOne } = require('../config/database');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
 const { encodeFicheId } = require('./fiche.routes');
 const { ficheHasR2Placed, parseHistoEtatIds, normalizeIsR2Field } = require('../utils/ficheR2Placed');
+const { isPolicyClosedSlot } = require('../utils/planningSlotPolicy');
 
 // Helper pour obtenir le lundi d'une semaine ISO (plus robuste pour les transitions d'année)
 function getMondayOfWeek(year, week) {
@@ -599,10 +600,13 @@ router.get('/availability', authenticate, async (req, res) => {
           const slotHour = String(slot.hour);
           return aDate === day.date && aHour === slotHour;
         });
+        const dbClosed = av?.is_closed === 1 || av?.is_closed === true || av?.is_closed === '1' ? 1 : 0;
+        const policyClosed = isPolicyClosedSlot(dep, day.date, slot.hour) ? 1 : 0;
         availMap[day.date][slot.hour] = {
           nbr_com: av?.nbr_com ?? null, // null si pas de planning créé, 0 si bloqué
           force_crenaux: av?.force_crenaux || 0,
-          is_closed: av?.is_closed || 0 // 1 si créneau fermé, 0 sinon
+          is_closed: dbClosed || policyClosed, // fermé DB ou règle départementale
+          is_policy_closed: policyClosed
         };
       });
     });

@@ -37,6 +37,7 @@ import CompteRenduEarlyVerification from '../components/CompteRenduEarlyVerifica
 import CodeVerificationModal from '../components/CodeVerificationModal';
 import { isBeforeRdvDateTime, isRdvDateBeforeToday, formatLocalYmd } from '../utils/compteRenduEarlyVerification';
 import { resolveConfRevenuAfterTypeContratChange } from '../utils/revenuTypeContrat';
+import { isPolicyClosedSlot, canCreateRdvOnPolicyClosedSlot } from '../utils/planningSlotPolicy';
 
 /** Style option / select « Nouvel état » : fond = couleur état, texte contrasté. */
 function getEtatSelectOptionStyle(color) {
@@ -1110,7 +1111,21 @@ function lookupAvailabilityCell(availMap, dateStr, slotHour) {
 
 function isClosedAvailabilityCell(cell) {
   if (!cell) return false;
-  return Number(cell.is_closed) === 1 || cell.is_closed === true || cell.is_closed === '1';
+  return (
+    Number(cell.is_closed) === 1 ||
+    cell.is_closed === true ||
+    cell.is_closed === '1' ||
+    Number(cell.is_policy_closed) === 1 ||
+    cell.is_policy_closed === true ||
+    cell.is_policy_closed === '1'
+  );
+}
+
+function isPolicyClosedAvailabilityCell(cell, dep, dateStr, hour) {
+  if (cell && (Number(cell.is_policy_closed) === 1 || cell.is_policy_closed === true || cell.is_policy_closed === '1')) {
+    return true;
+  }
+  return isPolicyClosedSlot(dep, dateStr, hour);
 }
 
 function isZeroAvailabilityCell(cell) {
@@ -2801,11 +2816,18 @@ const FicheDetail = ({
     const slotHour = timeToSlotHour(timeStr) || timeStr;
     const cachedAvail = queryClient.getQueryData(['availability-modal', planningWeek, planningYear, planningDep]);
     const slotCell = lookupAvailabilityCell(cachedAvail?.data, dateStr, slotHour);
+    const policyClosed = isPolicyClosedAvailabilityCell(slotCell, planningDep, dateStr, slotHour);
+    // Confirmateur : pas de création sur créneaux fermés par règle départementale
+    if (policyClosed && !canCreateRdvOnPolicyClosedSlot(user?.fonction)) {
+      alert('Ce créneau est fermé pour ce département. Vous ne pouvez pas y créer de RDV.');
+      return;
+    }
     pendingKnownSlotStatusRef.current = {
       date: dateStr,
       hour: slotHour,
-      closed: isClosedAvailabilityCell(slotCell),
-      zero: isZeroAvailabilityCell(slotCell)
+      closed: isClosedAvailabilityCell(slotCell) || policyClosed,
+      zero: isZeroAvailabilityCell(slotCell),
+      policyClosed
     };
 
     setSelectedSlot({ date: dateStr, hour });
@@ -2845,15 +2867,41 @@ const FicheDetail = ({
     const dep = resolvePlanningDepFromFiche();
     const slotHour = timeToSlotHour(timeStr)
       || (selectedSlot?.hour ? String(selectedSlot.hour) : null);
-    const empty = { closed: false, zero: false, date: dateStr, hour: slotHour, dep };
+    const policyClosedFallback = isPolicyClosedSlot(dep, dateStr, slotHour);
+    const empty = {
+      closed: policyClosedFallback,
+      zero: false,
+      date: dateStr,
+      hour: slotHour,
+      dep,
+      policyClosed: policyClosedFallback
+    };
     if (!dateStr) return empty;
 
     const known = pendingKnownSlotStatusRef.current;
-    if (known && known.date === dateStr && (known.closed || known.zero)) {
-      return { ...known, hour: slotHour || known.hour, dep };
+    if (known && known.date === dateStr && (known.closed || known.zero || known.policyClosed)) {
+      const policyClosed = known.policyClosed || isPolicyClosedSlot(dep, dateStr, slotHour || known.hour);
+      return {
+        ...known,
+        hour: slotHour || known.hour,
+        dep,
+        closed: known.closed || policyClosed,
+        policyClosed
+      };
     }
 
     const readCell = (map) => lookupAvailabilityCell(map, dateStr, slotHour);
+    const buildStatus = (cell) => {
+      const policyClosed = isPolicyClosedAvailabilityCell(cell, dep, dateStr, slotHour);
+      return {
+        closed: isClosedAvailabilityCell(cell) || policyClosed,
+        zero: isZeroAvailabilityCell(cell),
+        date: dateStr,
+        hour: slotHour,
+        dep,
+        policyClosed
+      };
+    };
 
     const cachedKeys = [
       ['availability-modal', planningWeek, planningYear, planningDep],
@@ -2863,14 +2911,8 @@ const FicheDetail = ({
       if (!key[1] || !key[2] || !key[3]) continue;
       const cached = queryClient.getQueryData(key);
       const cell = readCell(cached?.data);
-      if (cell && (isClosedAvailabilityCell(cell) || isZeroAvailabilityCell(cell))) {
-        return {
-          closed: isClosedAvailabilityCell(cell),
-          zero: isZeroAvailabilityCell(cell),
-          date: dateStr,
-          hour: slotHour,
-          dep
-        };
+      if (cell && (isClosedAvailabilityCell(cell) || isZeroAvailabilityCell(cell) || isPolicyClosedAvailabilityCell(cell, dep, dateStr, slotHour))) {
+        return buildStatus(cell);
       }
     }
 
@@ -2878,20 +2920,15 @@ const FicheDetail = ({
       const allCached = queryClient.getQueriesData({ queryKey: ['availability-modal'] });
       for (const [, cached] of allCached) {
         const cell = readCell(cached?.data);
-        if (cell && (isClosedAvailabilityCell(cell) || isZeroAvailabilityCell(cell))) {
-          return {
-            closed: isClosedAvailabilityCell(cell),
-            zero: isZeroAvailabilityCell(cell),
-            date: dateStr,
-            hour: slotHour,
-            dep
-          };
+        if (cell && (isClosedAvailabilityCell(cell) || isZeroAvailabilityCell(cell) || isPolicyClosedAvailabilityCell(cell, dep, dateStr, slotHour))) {
+          return buildStatus(cell);
         }
       }
     } catch (err) {
       /* ignore cache scan */
     }
 
+    if (policyClosedFallback) return empty;
     if (!dep || !slotHour) return empty;
     try {
       const rdvDate = new Date(`${dateStr}T12:00:00`);
@@ -2904,13 +2941,7 @@ const FicheDetail = ({
         const availRes = await api.get('/planning/availability', { params: { w: week, y: year, dp: dep } });
         const cell = readCell(availRes.data?.data);
         if (cell) {
-          return {
-            closed: isClosedAvailabilityCell(cell),
-            zero: isZeroAvailabilityCell(cell),
-            date: dateStr,
-            hour: slotHour,
-            dep
-          };
+          return buildStatus(cell);
         }
       }
       return empty;
@@ -2923,9 +2954,16 @@ const FicheDetail = ({
   const openSlotCodeModalIfNeeded = async (dateStr, timeStr, thenFn) => {
     if (slotCodeVerifiedRef.current) return true;
     const status = await getPlanningSlotStatus(dateStr, timeStr);
-    if (!status.closed && !status.zero) return true;
+    const depForPolicy = status.dep || resolvePlanningDepFromFiche();
+    const slotHour = timeToSlotHour(timeStr) || timeStr;
+    const policyClosed = status.policyClosed || isPolicyClosedSlot(depForPolicy, dateStr, slotHour);
+    if (policyClosed && !canCreateRdvOnPolicyClosedSlot(user?.fonction)) {
+      alert('Ce créneau est fermé pour ce département. Vous ne pouvez pas y créer de RDV.');
+      return false;
+    }
+    if (!status.closed && !status.zero && !policyClosed) return true;
     pendingAfterSlotCodeRef.current = thenFn;
-    setSlotCodeModal(status);
+    setSlotCodeModal({ ...status, closed: status.closed || policyClosed, policyClosed });
     return false;
   };
 
@@ -11253,8 +11291,10 @@ const PlanningViewForModal = ({
                     // Utiliser d'abord la disponibilité du planning, sinon celle de availability
                     const availabilityFromPlanning = dayPlanning?.av ?? null;
                     const availData = availability?.[day.date]?.[slot.hour];
-                    const isClosed = availData?.is_closed === 1;
+                    const policyClosed = isPolicyClosedAvailabilityCell(availData, dep, day.date, slot.hour);
+                    const isClosed = availData?.is_closed === 1 || policyClosed;
                     const isPastCalendarDay = isRdvDateBeforeToday(day.date);
+                    const canCreateOnThisClosedSlot = !policyClosed || canCreateRdvOnPolicyClosedSlot(user?.fonction);
                     const availabilityCount = availabilityFromPlanning !== null ? availabilityFromPlanning : (availData?.nbr_com ?? null);
                     // availability peut être null (pas de planning créé), 0 (bloqué), ou > 0 (disponible)
                     const hasPlanning = availabilityCount !== null && availabilityCount !== undefined;
@@ -11462,7 +11502,7 @@ const PlanningViewForModal = ({
                                 </span>
                               )}
                             </div>
-                            {onSelectSlot && hasPlanning && !canEditThis && !isPastCalendarDay && (
+                            {onSelectSlot && hasPlanning && !canEditThis && !isPastCalendarDay && canCreateOnThisClosedSlot && (
                               <button
                                 type="button"
                                 className="planning-create-btn"
@@ -11555,9 +11595,9 @@ const PlanningViewForModal = ({
                               </div>
                             )}
                           </>
-                        ) : isAvailable && !isBlocked ? (
+                        ) : isAvailable && !isBlocked && !isClosed ? (
                           <>
-                            {onSelectSlot && !isPastCalendarDay && (
+                            {onSelectSlot && !isPastCalendarDay && canCreateOnThisClosedSlot && (
                               <button
                                 type="button"
                                 className="planning-create-btn"
