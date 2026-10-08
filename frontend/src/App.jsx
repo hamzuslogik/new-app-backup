@@ -51,6 +51,7 @@ import Notifications from './pages/Notifications';
 import Signatures from './pages/Signatures';
 import CQSignatures from './pages/CQSignatures';
 import RendezVousVue from './pages/RendezVousVue';
+import StatAffiliation from './pages/StatAffiliation';
 import AssistanceIA from './pages/AssistanceIA';
 import MesRappels from './pages/MesRappels';
 import RappelsBureau from './pages/RappelsBureau';
@@ -96,6 +97,14 @@ function App() {
             }
           />
           <Route path="rdv-vue" element={<ProtectedRoute permission="planning_view"><RendezVousVue /></ProtectedRoute>} />
+          <Route
+            path="stat-affiliation"
+            element={
+              <ProtectedRoute permission={null} allowFunctions={[11]}>
+                <StatAffiliation />
+              </ProtectedRoute>
+            }
+          />
           <Route path="affectation-dep" element={<ProtectedRoute permission="affectation_view"><AffectationDep /></ProtectedRoute>} />
           <Route path="statistiques" element={<ProtectedRoute permission="statistiques_view"><Statistiques /></ProtectedRoute>} />
           <Route path="statistiques-rdv" element={<ProtectedRoute permission="statistiques_rdv_view"><StatistiquesRDV /></ProtectedRoute>} />

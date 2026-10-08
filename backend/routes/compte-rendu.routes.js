@@ -4,6 +4,7 @@ const { authenticate, isAdminOrBackofficeOrRPConfirmation } = require('../middle
 const { checkPermissionCode, hasPermission } = require('../middleware/permissions.middleware');
 const { triggerWorkflowOnCompteRenduCreated, triggerWorkflowOnCompteRenduApproved } = require('../middleware/workflow.middleware');
 const { query, queryOne } = require('../config/database');
+const { syncAffectationRecord } = require('../utils/affectationSync');
 
 /**
  * Ajoute N jours ouvrés (lundi-vendredi) à une date
@@ -1230,6 +1231,27 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     if (ficheAvantDesaffectation && ficheAvantDesaffectation.valider > 0) {
       await logModification(compteRendu.id_fiche, user.id, 'valider', ficheAvantDesaffectation.valider, 0, now);
     }
+    // Snapshot affiliation dans affectations AVANT vidage (pour STAT affiliation)
+    const comAvant =
+      ficheAvantDesaffectation?.id_commercial != null && Number(ficheAvantDesaffectation.id_commercial) > 0
+        ? Number(ficheAvantDesaffectation.id_commercial)
+        : (compteRendu.id_commercial != null && Number(compteRendu.id_commercial) > 0
+          ? Number(compteRendu.id_commercial)
+          : null);
+    if (comAvant) {
+      try {
+        const ficheRdv = await queryOne('SELECT date_rdv_time FROM fiches WHERE id = ?', [compteRendu.id_fiche]);
+        await syncAffectationRecord(
+          compteRendu.id_fiche,
+          comAvant,
+          now,
+          ficheRdv?.date_rdv_time || null
+        );
+      } catch (affSnapErr) {
+        console.error('[compte-rendu][approve] Snapshot affectations ignoré:', affSnapErr?.message);
+      }
+    }
+
     // Toujours vider id_commercial / id_commercial_2 à l'approbation si renseignés
     await query(
       `UPDATE fiches SET id_commercial = NULL, id_commercial_2 = NULL, valider = 0, conf_rdv_avec = NULL, conf_presence_couple = NULL, date_modif_time = ? WHERE id = ?`,

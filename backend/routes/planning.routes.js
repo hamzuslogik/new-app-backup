@@ -6,6 +6,7 @@ const { executeWorkflow } = require('../services/workflow/workflow-executor');
 const { encodeFicheId } = require('./fiche.routes');
 const { ficheHasR2Placed, parseHistoEtatIds, normalizeIsR2Field } = require('../utils/ficheR2Placed');
 const { isPolicyClosedSlot } = require('../utils/planningSlotPolicy');
+const { commercialDisplaySql } = require('../utils/commercialDisplayName');
 
 // Helper pour obtenir le lundi d'une semaine ISO (plus robuste pour les transitions d'année)
 function getMondayOfWeek(year, week) {
@@ -2254,6 +2255,197 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des rendez-vous',
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// GET /planning/stat-affiliation
+// STAT affiliation : RDV par date_rdv_time, affiliés / non affiliés,
+// indépendant de l'état actuel (reste visible après sortie de CONFIRMER).
+// Accès : backoffice (fonction 11) uniquement.
+// =====================================================
+router.get('/stat-affiliation', authenticate, async (req, res) => {
+  try {
+    if (Number(req.user?.fonction) !== 11) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès réservé au backoffice'
+      });
+    }
+
+    const today = formatDateLocal(new Date());
+    const d = (req.query.date && String(req.query.date).match(/^\d{4}-\d{2}-\d{2}$/))
+      ? String(req.query.date)
+      : today;
+    const type = String(req.query.type || 'all');
+    if (!['all', 'affilie', 'non_affilie'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Paramètre type requis : all, affilie ou non_affilie'
+      });
+    }
+
+    const rows = await query(
+      `SELECT
+          f.id,
+          f.date_insert_time,
+          f.nom,
+          f.prenom,
+          f.tel,
+          f.adresse,
+          f.cp,
+          f.ville,
+          f.date_rdv_time,
+          f.id_confirmateur,
+          f.id_confirmateur_2,
+          f.id_confirmateur_3,
+          f.id_centre,
+          ctr.titre AS centre_titre,
+          f.produit,
+          f.id_commercial,
+          f.id_commercial_2,
+          f.id_etat_final,
+          e.titre AS etat_titre,
+          e.color AS etat_color,
+          ${commercialDisplaySql('com')} AS commercial_pseudo,
+          ${commercialDisplaySql('com2')} AS commercial2_pseudo,
+          conf_u.pseudo AS confirmateur_pseudo,
+          c.id_commercial AS confirmation_id_commercial,
+          ${commercialDisplaySql('com_conf')} AS confirmation_commercial_pseudo,
+          cr.id_commercial AS cr_id_commercial,
+          ${commercialDisplaySql('com_cr')} AS cr_commercial_pseudo,
+          aff.id_commercial AS affectation_id_commercial,
+          ${commercialDisplaySql('com_aff')} AS affectation_commercial_pseudo,
+          CASE
+            WHEN (f.id_commercial IS NOT NULL AND CAST(f.id_commercial AS UNSIGNED) > 0)
+              OR (c.id_commercial IS NOT NULL AND CAST(c.id_commercial AS UNSIGNED) > 0)
+              OR (cr.id_commercial IS NOT NULL AND CAST(cr.id_commercial AS UNSIGNED) > 0)
+              OR (
+                aff.id_commercial IS NOT NULL AND CAST(aff.id_commercial AS UNSIGNED) > 0
+                AND (
+                  aff.date_rdv_time IS NULL
+                  OR aff.date_rdv_time <=> f.date_rdv_time
+                  OR DATE(aff.date_rdv_time) = DATE(f.date_rdv_time)
+                )
+              )
+            THEN 1 ELSE 0
+          END AS is_affilie
+        FROM fiches f
+        LEFT JOIN centres ctr ON ctr.id = f.id_centre
+        LEFT JOIN etats e ON e.id = f.id_etat_final
+        LEFT JOIN utilisateurs com ON com.id = f.id_commercial
+        LEFT JOIN utilisateurs com2 ON com2.id = f.id_commercial_2
+        LEFT JOIN utilisateurs conf_u ON conf_u.id = f.id_confirmateur
+        LEFT JOIN affectations aff ON aff.id_fiche = f.id
+        LEFT JOIN utilisateurs com_aff ON com_aff.id = aff.id_commercial
+        LEFT JOIN confirmations c ON c.id = (
+          SELECT c2.id FROM confirmations c2
+          WHERE c2.id_fiche = f.id
+            AND (
+              c2.date_rdv_time <=> f.date_rdv_time
+              OR DATE(c2.date_rdv_time) = DATE(f.date_rdv_time)
+            )
+          ORDER BY c2.id DESC
+          LIMIT 1
+        )
+        LEFT JOIN utilisateurs com_conf ON com_conf.id = c.id_commercial
+        LEFT JOIN compte_rendu_pending cr ON cr.id = (
+          SELECT cr2.id FROM compte_rendu_pending cr2
+          WHERE cr2.id_fiche = f.id
+            AND cr2.id_commercial IS NOT NULL
+            AND CAST(cr2.id_commercial AS UNSIGNED) > 0
+          ORDER BY COALESCE(cr2.date_approbation, cr2.date_creation) DESC, cr2.id DESC
+          LIMIT 1
+        )
+        LEFT JOIN utilisateurs com_cr ON com_cr.id = cr.id_commercial
+        WHERE (f.archive = 0 OR f.archive IS NULL)
+          AND (f.ko = 0 OR f.ko IS NULL)
+          AND f.date_rdv_time IS NOT NULL
+          AND DATE(f.date_rdv_time) = ?
+          AND (
+            CAST(f.id_etat_final AS UNSIGNED) = 7
+            OR c.id IS NOT NULL
+            OR EXISTS (
+              SELECT 1 FROM fiches_histo h
+              WHERE h.id_fiche = f.id AND CAST(h.id_etat AS UNSIGNED) = 7
+            )
+          )
+        ORDER BY
+          CASE WHEN ctr.titre IS NULL OR ctr.titre = '' THEN 1 ELSE 0 END,
+          ctr.titre ASC,
+          f.date_rdv_time ASC,
+          f.id ASC`,
+      [d]
+    );
+
+    let result = (rows || []).map((r) => {
+      const isAffilie = Number(r.is_affilie) === 1;
+      const commercialDisplay =
+        (r.commercial_pseudo && String(r.commercial_pseudo).trim()) ||
+        (r.affectation_commercial_pseudo && String(r.affectation_commercial_pseudo).trim()) ||
+        (r.confirmation_commercial_pseudo && String(r.confirmation_commercial_pseudo).trim()) ||
+        (r.cr_commercial_pseudo && String(r.cr_commercial_pseudo).trim()) ||
+        '';
+      return {
+        ...r,
+        hash: encodeFicheId(r.id),
+        is_affilie: isAffilie,
+        commercial_display: commercialDisplay,
+        centre_titre: r.centre_titre || 'Sans centre',
+        id_centre: r.id_centre != null ? Number(r.id_centre) : null
+      };
+    });
+
+    if (type === 'affilie') {
+      result = result.filter((r) => r.is_affilie);
+    } else if (type === 'non_affilie') {
+      result = result.filter((r) => !r.is_affilie);
+    }
+
+    const byCentreMap = new Map();
+    for (const row of result) {
+      const key = row.id_centre != null ? String(row.id_centre) : 'none';
+      if (!byCentreMap.has(key)) {
+        byCentreMap.set(key, {
+          id_centre: row.id_centre,
+          centre_titre: row.centre_titre,
+          total: 0,
+          affilies: 0,
+          non_affilies: 0,
+          fiches: []
+        });
+      }
+      const group = byCentreMap.get(key);
+      group.total += 1;
+      if (row.is_affilie) group.affilies += 1;
+      else group.non_affilies += 1;
+      group.fiches.push(row);
+    }
+
+    const byCentre = Array.from(byCentreMap.values());
+    const totals = {
+      total: result.length,
+      affilies: result.filter((r) => r.is_affilie).length,
+      non_affilies: result.filter((r) => !r.is_affilie).length
+    };
+
+    res.json({
+      success: true,
+      data: {
+        date: d,
+        type,
+        totals,
+        by_centre: byCentre,
+        fiches: result
+      }
+    });
+  } catch (error) {
+    console.error('[stat-affiliation] Erreur:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des statistiques d\'affiliation',
       error: error.message
     });
   }

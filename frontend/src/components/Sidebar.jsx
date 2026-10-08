@@ -9,6 +9,7 @@ import {
   FaFileAlt,
   FaCalendarAlt,
   FaChartBar,
+  FaChartPie,
   FaUserCheck,
   FaChartLine,
   FaComments,
@@ -193,6 +194,14 @@ const Sidebar = ({ collapsed }) => {
       icon: FaCalendarAlt,
       permission: 'planning_view',
       visible: true,
+    },
+    {
+      path: '/stat-affiliation',
+      label: 'STAT affiliation',
+      icon: FaChartPie,
+      permission: null,
+      visible: true,
+      customCheck: (_item, u) => Number(u?.fonction) === 11,
     },
     {
       path: '/affectation-dep',
