@@ -237,18 +237,19 @@ function getConfirmerDetailHighlight(etatId, etatTitre, itemLabel) {
       dataHl: 'rdv',
     };
   }
-  // Signé le : cadre violet comme l'état SIGNER (état actuel + historique)
-  if (/^Signé le$/i.test(L) || /^DATE SIGNATURE$/i.test(L)) {
+  // Date signature (= date_rdv_time de la ligne fiches_histo SIGNER) : rose = couleur état SIGNER
+  if (/^Signé le$/i.test(L) || /^Date signature$/i.test(L) || /^DATE SIGNATURE$/i.test(L)) {
+    const rose = '#FF3380';
     return {
       className: 'fiche-detail-etat-signe-le',
       style: {
         fontWeight: 900,
-        color: '#CC00FF',
-        border: '4px solid #CC00FF',
+        color: rose,
+        border: `4px solid ${rose}`,
         borderRadius: '6px',
         padding: '2px 8px',
         display: 'inline-block',
-        backgroundColor: '#faf0ff',
+        backgroundColor: '#fff0f6',
         fontSize: '15px',
       },
       dataHl: 'signe-le',
@@ -4986,7 +4987,8 @@ const FicheDetail = ({
                 );
               };
 
-              const SIGNER_ETAT_IDS = [13, 16, 44, 45];
+              // 13 SIGNER, 44 SIGNER PM, 45 SIGNER COMPLET, 16/38 SIGNER RETRACTER
+              const SIGNER_ETAT_IDS = [13, 16, 38, 44, 45];
               const isEtatSigner = (id) => SIGNER_ETAT_IDS.includes(Number(id));
               // État SIGNER (13) : seul état qui porte le bloc Contrôle Qualité (affichage CQ + formulaire).
               const isEtatSigner13 = (id) => Number(id) === 13;
@@ -5401,8 +5403,18 @@ const FicheDetail = ({
                     }
                   }
                   pushCommentaireEtat(items);
-                  if (etatData.date_sign_time) {
-                    items.push({ label: 'Signé le', value: formatDateNoSeconds(etatData.date_sign_time) });
+                  // Date signature = date_heure RDV de la ligne fiches_histo correspondante (pas fiches.date_sign_time)
+                  {
+                    const dateSignatureRaw =
+                      etatData.histo_date_rdv_time ||
+                      etatData.date_rdv_time ||
+                      null;
+                    if (dateSignatureRaw) {
+                      items.push({
+                        label: 'Date signature',
+                        value: formatRdvDateTime(dateSignatureRaw) || formatDateNoSeconds(dateSignatureRaw),
+                      });
+                    }
                   }
                   if (etatData.ph3_pac) {
                     const pacValue = etatData.ph3_pac === 'reau' || etatData.ph3_pac === 'R/EAU' ? 'R/EAU' : 
@@ -5677,13 +5689,13 @@ const FicheDetail = ({
               const canEditEtatActuelComment = [1, 6, 7, 11, 13, 14].includes(Number(user?.fonction));
               const detailItemsActuel = (() => {
                 let items = [...detailItemsActuelRaw];
-                // Session commercial : Date RDV + Situation conjugale
+                // Session commercial : Date RDV + Situation conjugale (+ Date signature si SIGNER)
                 if (isCommercial) {
-                  const allowed = new Set(['Date RDV', 'Situation conjugale']);
+                  const allowed = new Set(['Date RDV', 'Situation conjugale', 'Date signature', 'Signé le']);
                   let filtered = items.filter((it) => allowed.has(String(it.label || '')));
                   if (!filtered.some((it) => String(it.label || '') === 'Date RDV')) {
                     const dt = etatActuel.date_rdv_time || fiche.date_rdv_time;
-                    if (dt) {
+                    if (dt && !isEtatSigner(etatActuel.id_etat)) {
                       const heureAvant =
                         etatActuel.heure_rdv_avant_decalage || fiche.heure_rdv_avant_decalage;
                       filtered = [
@@ -5707,6 +5719,24 @@ const FicheDetail = ({
                           : sitUp.startsWith('CELIB') ? 'Célibataire'
                             : sitRaw;
                       filtered = [...filtered, { label: 'Situation conjugale', value: sitLabel }];
+                    }
+                  }
+                  if (
+                    isEtatSigner(etatActuel.id_etat) &&
+                    !filtered.some((it) =>
+                      ['Date signature', 'Signé le'].includes(String(it.label || ''))
+                    )
+                  ) {
+                    const dateSignatureRaw =
+                      etatActuel.histo_date_rdv_time || etatActuel.date_rdv_time || null;
+                    if (dateSignatureRaw) {
+                      filtered = [
+                        ...filtered,
+                        {
+                          label: 'Date signature',
+                          value: formatRdvDateTime(dateSignatureRaw) || formatDateNoSeconds(dateSignatureRaw),
+                        },
+                      ];
                     }
                   }
                   return filtered;
