@@ -1481,6 +1481,7 @@ const FicheDetail = ({
   const validationButtonRef = useRef(null);
   const [validationDropdownPosition, setValidationDropdownPosition] = useState(null);
   const [rdvSeulDropdownOpen, setRdvSeulDropdownOpen] = useState(false);
+  const [showAbsenceCoupleHistory, setShowAbsenceCoupleHistory] = useState(false);
 
   const updateValidationDropdownPosition = () => {
     if (!validationButtonRef.current) return;
@@ -1855,6 +1856,19 @@ const FicheDetail = ({
       .filter((mod) => String(mod.type || mod.champ || '').trim() === 'date_rdv_time'),
     [modificaData]
   );
+
+  /** Historique bouton « Signaler l'absence du couple » (rdv_seul / conf_presence_couple). */
+  const absenceCoupleModifications = useMemo(() => {
+    const allowed = new Set(['rdv_seul', 'conf_presence_couple']);
+    return (Array.isArray(modificaData) ? modificaData : [])
+      .filter((mod) => allowed.has(String(mod.type || mod.champ || '').trim()))
+      .slice()
+      .sort((a, b) => {
+        const ta = a.date_modif_time ? new Date(a.date_modif_time).getTime() : 0;
+        const tb = b.date_modif_time ? new Date(b.date_modif_time).getTime() : 0;
+        return tb - ta;
+      });
+  }, [modificaData]);
 
   useEffect(() => {
     if (selectedEtat !== 7 || !confFormHydratePendingRef.current || !ficheData?.id) return;
@@ -6702,7 +6716,7 @@ const FicheDetail = ({
                         renderQualiteConfirmationBackofficePanel()}
 
                       {isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
-                        (!isCommercial || getRdvSeulRawLabel(fiche)) && (
+                        (!isCommercial || getRdvSeulRawLabel(fiche) || absenceCoupleModifications.length > 0) && (
                         <div className="etat-actuel-rdv-seul-row">
                           {getRdvSeulRawLabel(fiche) && (
                             <span className="etat-actuel-rdv-seul-label">
@@ -6750,6 +6764,62 @@ const FicheDetail = ({
                               </>
                             )}
                           </div>
+                          )}
+                          {absenceCoupleModifications.length > 0 && (
+                            <button
+                              type="button"
+                              className="etat-actuel-absence-couple-histo-btn"
+                              onClick={() => setShowAbsenceCoupleHistory((prev) => !prev)}
+                              title="Voir l'historique des signalements d'absence du couple"
+                            >
+                              <FaHistory />
+                              <span>
+                                Historique
+                                {showAbsenceCoupleHistory
+                                  ? ''
+                                  : ` (${absenceCoupleModifications.length})`}
+                              </span>
+                            </button>
+                          )}
+                          {showAbsenceCoupleHistory && absenceCoupleModifications.length > 0 && (
+                            <div className="etat-actuel-absence-couple-historique">
+                              <table className="etat-actuel-absence-couple-historique-table">
+                                <thead>
+                                  <tr>
+                                    <th>Quand</th>
+                                    <th>Qui</th>
+                                    <th>Ancienne valeur</th>
+                                    <th>Nouvelle valeur</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {absenceCoupleModifications.map((mod) => (
+                                    <tr key={mod.id || `${mod.date_modif_time}-${mod.nouvelle_valeur}`}>
+                                      <td>
+                                        {mod.date_modif_time
+                                          ? new Date(mod.date_modif_time).toLocaleString('fr-FR')
+                                          : '-'}
+                                      </td>
+                                      <td>{mod.user_pseudo || '-'}</td>
+                                      <td>
+                                        {modificaValueDisplay(
+                                          mod.ancien_valeur,
+                                          mod.type || mod.champ || 'rdv_seul',
+                                          mod.ancien_valeur_label
+                                        )}
+                                      </td>
+                                      <td>
+                                        {modificaValueDisplay(
+                                          mod.nouvelle_valeur,
+                                          mod.type || mod.champ || 'rdv_seul',
+                                          mod.nouvelle_valeur_label
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           )}
                         </div>
                       )}
@@ -10321,6 +10391,7 @@ const MODIFICA_TYPE_LABELS = {
   conf_deja_etude: 'A déjà fait une étude',
   conf_rdv_annule_precedent: 'RDV déjà annulé précédemment',
   conf_presence_couple: 'Présence du couple',
+  rdv_seul: 'Présence du couple / absence couple',
   conf_mode_chauffage: 'Mode chauffage',
   conf_complement_chauffage: 'Complément chauffage',
   conf_consommation_electricite: 'Consommation électricité',

@@ -329,7 +329,7 @@
   gap: 24px;
 }
 
-/* Ordre demandÃ©: Ã‰tat actuel -> Historique -> Changement Ã©tat -> Demande dÃ©calage */
+/* Ordre demandé: État actuel -> Historique -> Changement état -> Demande décalage */
 .fiche-sections > .etat-current-history-section {
   order: -4;
   min-height: 600px;
@@ -428,7 +428,7 @@
   font-weight: bold;
 }
 
-/* Forcer le titre "Historique des Ã©tats" en blanc */
+/* Forcer le titre "Historique des états" en blanc */
 .section-title.historique-title-bar,
 .section-title.historique-title-bar span,
 .section-title.historique-title-bar svg,
@@ -438,7 +438,7 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
-/* Renfort modal dÃ©tail fiche (prioritÃ© visuelle) */
+/* Renfort modal détail fiche (priorité visuelle) */
 .fiche-detail-modal-content .section-title.historique-title-bar,
 .fiche-detail-modal-content .section-title.historique-title-bar *,
 .fiche-detail-page .section-title.historique-title-bar,
@@ -544,7 +544,7 @@
   min-width: 160px;
 }
 
-/* DÃ©tails fiche: rÃ©duire uniquement la largeur des listes (dÃ©calage, changement Ã©tat, confirmateur...) */
+/* Détails fiche: réduire uniquement la largeur des listes (décalage, changement état, confirmateur...) */
 .fiche-detail select.form-control,
 .etat-change-form select.form-control,
 .decalage-form select.form-control,
@@ -655,7 +655,7 @@
   font-style: italic;
 }
 
-/* Styles pour le planning dans le modal - rÃ©utilisÃ©s depuis Planning.css */
+/* Styles pour le planning dans le modal - réutilisés depuis Planning.css */
 .planning-view {
   width: 100%;
   overflow-x: hidden;
@@ -716,7 +716,7 @@
   z-index: 10;
 }
 
-/* Forcer tous les textes dans les en-tÃªtes Ã  Ãªtre blancs */
+/* Forcer tous les textes dans les en-têtes à être blancs */
 .planning-table thead,
 .planning-table thead *,
 .planning-table thead th,
@@ -777,9 +777,9 @@
   min-height: 120px !important;
 }
 
-/* Bordures fines et visibles entre les crÃ©neaux du planning dans le modal dÃ©tails fiche.
-   Une spÃ©cificitÃ© .planning-tab permet de cibler uniquement le tableau du modal
-   (la page Planning principale n'est pas affectÃ©e). */
+/* Bordures fines et visibles entre les créneaux du planning dans le modal détails fiche.
+   Une spécificité .planning-tab permet de cibler uniquement le tableau du modal
+   (la page Planning principale n'est pas affectée). */
 .planning-tab .planning-table {
   border-collapse: collapse !important;
   border-spacing: 0 !important;
@@ -791,7 +791,7 @@
   border: 1px solid #6b7280 !important;
 }
 
-/* Lien info : dashboard filtrÃ© par crÃ©neau (RE / RP / backoffice) */
+/* Lien info : dashboard filtré par créneau (RE / RP / backoffice) */
 .planning-slot-dashboard-link {
   position: absolute;
   top: 3px;
@@ -916,7 +916,7 @@
   background: #f0f0f0;
 }
 
-/* Appliquer les couleurs de planning-header Ã  day-header-planning */
+/* Appliquer les couleurs de planning-header à day-header-planning */
 /* Cibler tous les th sauf le premier (qui est "Heure") */
 .planning-table thead th:not(:first-child) {
   background: #1b1e24 !important;
@@ -924,7 +924,7 @@
   border: 1px solid #1b1e24 !important;
 }
 
-/* Alternative avec :has() pour plus de prÃ©cision si supportÃ© */
+/* Alternative avec :has() pour plus de précision si supporté */
 .planning-table thead th:has(.day-header-planning) {
   background: #1b1e24 !important;
   background-color: #1b1e24 !important;
@@ -1047,7 +1047,7 @@
   white-space: nowrap;
 }
 
-/* Onglet Planning (dÃ©tail fiche): forcer la mÃªme taille que page Planning */
+/* Onglet Planning (détail fiche): forcer la même taille que page Planning */
 .planning-tab .availability-badge {
   padding: 2px 6px !important;
 }
@@ -1057,7 +1057,7 @@
   font-weight: 900 !important;
 }
 
-/* Onglet Planning (dÃ©tail fiche): Ã©viter l'Ã©crasement par les styles globaux Planning.css */
+/* Onglet Planning (détail fiche): éviter l'écrasement par les styles globaux Planning.css */
 .planning-tab .availability-input {
   width: 36px !important;
   min-width: 36px !important;
@@ -1068,7 +1068,7 @@
   line-height: 1.1 !important;
 }
 
-/* Onglet Planning (dÃ©tail fiche): day total compact + blanc */
+/* Onglet Planning (détail fiche): day total compact + blanc */
 .planning-tab .day-total-controls {
   background: #ffffff !important;
   border-radius: 6px !important;
@@ -1097,7 +1097,7 @@
   font-size: 10px !important;
 }
 
-/* RÃ©duire la taille du header horaire dans l'onglet Planning dÃ©tail fiche */
+/* Réduire la taille du header horaire dans l'onglet Planning détail fiche */
 .planning-tab .planning-table .time-slot-header,
 .planning-tab .planning-table td.time-slot-header,
 .planning-tab .planning-table .time-slot-header *,
@@ -1258,7 +1258,7 @@
   opacity: 1;
 }
 
-/* Section changement d'Ã©tat */
+/* Section changement d'état */
 .etat-change-section {
   margin-top: 32px;
   padding-top: 24px;
@@ -1297,7 +1297,7 @@
   border-color: #f7a219;
 }
 
-/* Liste Â« Nouvel Ã©tat Â» : fond = couleur Ã©tat, texte contrastÃ© (inline + option) */
+/* Liste « Nouvel état » : fond = couleur état, texte contrasté (inline + option) */
 .etat-change-form select.etat-change-select {
   font-weight: 700;
 }
@@ -1327,7 +1327,7 @@
   padding-bottom: 8px;
 }
 
-/* Tableau sans bordure (mÃªme rendu que modal crÃ©ation RDV) */
+/* Tableau sans bordure (même rendu que modal création RDV) */
 .confirmation-form .rdv-form-table {
   width: 100%;
   border-collapse: collapse;
@@ -1352,8 +1352,8 @@
   width: 99%;
 }
 
-/* !important : surcharge .fiche-detail select.form-control { max-width: 220px !important } dans la zone changement d'Ã©tat */
-/* Select, texte, nombre, date, heure : mÃªme largeur utile (fixe px pour aligner navigateurs + autocomplete) */
+/* !important : surcharge .fiche-detail select.form-control { max-width: 220px !important } dans la zone changement d'état */
+/* Select, texte, nombre, date, heure : même largeur utile (fixe px pour aligner navigateurs + autocomplete) */
 .confirmation-form .rdv-form-table .form-control:not(textarea) {
   width: 200px !important;
   max-width: 200px !important;
@@ -1368,7 +1368,7 @@
   box-sizing: border-box;
 }
 
-/* Autocomplete : mÃªme bordure / padding que .etat-change-form .form-control pour Ã©galer les inputs texte */
+/* Autocomplete : même bordure / padding que .etat-change-form .form-control pour égaler les inputs texte */
 .confirmation-form .rdv-form-table .autocomplete-wrap .autocomplete-input {
   width: 100% !important;
   min-width: 0 !important;
@@ -1550,7 +1550,7 @@
   .field-actions {
     width: 100%;
     display: block;
-    padding: 12px 0; /* Garder la distance entre labels et donnÃ©es */
+    padding: 12px 0; /* Garder la distance entre labels et données */
   }
 
   .edit-controls {
@@ -1610,12 +1610,12 @@
 
   .field-label {
     font-size: 11px;
-    padding: 12px 0; /* Garder la distance entre labels et donnÃ©es */
+    padding: 12px 0; /* Garder la distance entre labels et données */
   }
 
   .field-value {
     font-size: 11.9px;
-    padding: 12px 0; /* Garder la distance entre labels et donnÃ©es */
+    padding: 12px 0; /* Garder la distance entre labels et données */
   }
 }
 
@@ -1948,7 +1948,7 @@
   white-space: pre-wrap;
 }
 
-/* Modal de crÃ©ation de RDV */
+/* Modal de création de RDV */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -2040,7 +2040,7 @@
   padding: 0;
 }
 
-/* Tableau sans bordure : 1Ã¨re colonne = label, 2Ã¨me = champ */
+/* Tableau sans bordure : 1ère colonne = label, 2ème = champ */
 .rdv-form-table {
   width: 100%;
   border-collapse: collapse;
@@ -2365,7 +2365,7 @@
   background: #e8f4f8;
 }
 
-/* Pseudo commercial Ã  cÃ´tÃ© de <CR> : couleur du bandeau (blanc), pas le bleu Â« Commercial Â» des dÃ©tails */
+/* Pseudo commercial à côté de <CR> : couleur du bandeau (blanc), pas le bleu « Commercial » des détails */
 .fiche-detail-cr-commercial-pseudo {
   color: inherit !important;
   -webkit-text-fill-color: inherit !important;
@@ -2379,7 +2379,7 @@
   -webkit-text-fill-color: inherit !important;
 }
 
-/* Ã‰tat CONFIRMER (7) â€” dÃ©tails : lisibilitÃ© date RDV / commercial / confirmateur */
+/* État CONFIRMER (7) ? détails : lisibilité date RDV / commercial / confirmateur */
 /* !important : d'autres feuilles (ex. modal dashboard) imposent color sur span avec !important */
 .etat-current-history-section span.fiche-detail-etat-confirmer-val--rdv,
 .etat-actuel-card span.fiche-detail-etat-confirmer-val--rdv,
@@ -2423,7 +2423,7 @@
   text-transform: uppercase !important;
 }
 
-/* Modal fiche (Dashboard) : mÃªmes couleurs si section rendue dans .fiche-detail-modal-content */
+/* Modal fiche (Dashboard) : mêmes couleurs si section rendue dans .fiche-detail-modal-content */
 .fiche-detail-modal-content span.fiche-detail-etat-confirmer-val--rdv {
   color: #15803d !important;
   font-weight: 700 !important;
@@ -2441,7 +2441,7 @@
   text-transform: uppercase !important;
 }
 
-/* Attribut data : mÃªme rendu si une rÃ¨gle du modal surcharge color (WebKit + !important) */
+/* Attribut data : même rendu si une règle du modal surcharge color (WebKit + !important) */
 .fiche-detail span[data-confirmer-hl='rdv'],
 .etat-current-history-section span[data-confirmer-hl='rdv'],
 .etat-actuel-card span[data-confirmer-hl='rdv'],
@@ -2504,10 +2504,10 @@
 }
 
 /*
- * Modal Â« dÃ©tail fiche Â» : cette feuille est chargÃ©e aprÃ¨s Dashboard.css.
- * Les rÃ¨gles globales (.etat-change-form .form-control, autocomplete RDV en
- * 11.9px !important, mediaqueries compactes, etc.) ont une spÃ©cificitÃ© qui
- * empÃªchait les styles du modal dâ€™Ãªtre visibles. Bloc final = prioritÃ© cascade.
+ * Modal « détail fiche » : cette feuille est chargée après Dashboard.css.
+ * Les règles globales (.etat-change-form .form-control, autocomplete RDV en
+ * 11.9px !important, mediaqueries compactes, etc.) ont une spécificité qui
+ * empêchait les styles du modal d?être visibles. Bloc final = priorité cascade.
  */
 .fiche-detail-modal-content .fiche-detail {
   font-size: 16px !important;
@@ -2636,9 +2636,9 @@
 }
 
 /* =====================================================
-   Carte Â« Ã‰tat Actuel Â» : fond gris foncÃ© + texte blanc gras.
-   Force la couleur sur l'ensemble du contenu, sauf les Ã©lÃ©ments
-   qui portent dÃ©jÃ  une couleur fonctionnelle (badge Ã©tat, Date RDV
+   Carte « État Actuel » : fond gris foncé + texte blanc gras.
+   Force la couleur sur l'ensemble du contenu, sauf les éléments
+   qui portent déjà une couleur fonctionnelle (badge état, Date RDV
    en vert, etc.). Utilise !important car React n'autorise pas
    !important dans les styles inline.
    ===================================================== */
@@ -2727,6 +2727,62 @@
   opacity: 0.75;
 }
 
+.etat-actuel-card .etat-actuel-absence-couple-histo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #ffffff;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.etat-actuel-card .etat-actuel-absence-couple-histo-btn * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.etat-actuel-card .etat-actuel-absence-couple-historique {
+  flex: 1 1 100%;
+  width: 100%;
+  margin-top: 4px;
+  background: #ffffff;
+  color: #1f2937;
+  border-radius: 6px;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  max-width: 720px;
+}
+
+.etat-actuel-card .etat-actuel-absence-couple-historique-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: #1f2937;
+}
+
+.etat-actuel-card .etat-actuel-absence-couple-historique-table th {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #d1d5db;
+  background: #f3f4f6;
+  color: #111827;
+  font-weight: 700;
+}
+
+.etat-actuel-card .etat-actuel-absence-couple-historique-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #1f2937;
+  vertical-align: top;
+}
+
 .etat-actuel-card .etat-actuel-rdv-seul-row .etat-actuel-modifier-validation-btn {
   display: inline-flex;
   align-items: center;
@@ -2746,7 +2802,7 @@
   opacity: 0.75;
 }
 
-/* Ã‰dition commentaire (double-clic) : texte sombre sur fond blanc du textarea */
+/* Édition commentaire (double-clic) : texte sombre sur fond blanc du textarea */
 .etat-actuel-card textarea.etat-actuel-comment-edit-textarea,
 .etat-actuel-card span textarea.etat-actuel-comment-edit-textarea {
   color: #1a2529 !important;
@@ -2798,7 +2854,7 @@
   font-weight: 700 !important;
 }
 
-/* Conserver les couleurs particuliÃ¨res (highlight CONFIRMER) */
+/* Conserver les couleurs particulières (highlight CONFIRMER) */
 .etat-actuel-card span[data-confirmer-hl='rdv'],
 .etat-actuel-card span.fiche-detail-etat-confirmer-val--rdv {
   color: #15803d !important;
@@ -2833,9 +2889,9 @@
   -webkit-text-fill-color: initial;
 }
 
-/* Bouton Â« Modifier Â» de la validation RDV : fond blanc â†’ texte noir lisible.
-   Doit battre la rÃ¨gle `.etat-actuel-card span { color:#ffffff !important; }`
-   ci-dessus, d'oÃ¹ l'usage de !important sur les enfants. */
+/* Bouton « Modifier » de la validation RDV : fond blanc ? texte noir lisible.
+   Doit battre la règle `.etat-actuel-card span { color:#ffffff !important; }`
+   ci-dessus, d'où l'usage de !important sur les enfants. */
 .etat-actuel-card .etat-actuel-modifier-validation-btn,
 .etat-actuel-card .etat-actuel-modifier-validation-btn * {
   color: #000000 !important;
@@ -2843,7 +2899,7 @@
   fill: #000000 !important;
 }
 
-/* Badge de validation Â« Le ... Valider avec ... par ... Â» :
+/* Badge de validation « Le ... Valider avec ... par ... » :
    fond gris, bordure verte, texte blanc lisible. */
 .etat-actuel-card .etat-actuel-validation-badge,
 .etat-actuel-card .etat-actuel-validation-badge * {
@@ -2858,7 +2914,7 @@
   border-radius: 6px !important;
 }
 
-/* Cadre R2 / Infos R1 (Ã©tat actuel CONFIRMER) â€” bordure couleur HAS */
+/* Cadre R2 / Infos R1 (état actuel CONFIRMER) ? bordure couleur HAS */
 .etat-actuel-card .etat-actuel-r2-r1-box {
   margin-top: 16px;
   padding: 14px 16px;
@@ -2909,7 +2965,7 @@
   text-decoration: underline !important;
 }
 
-/* Date RDV dans Ã‰tat Actuel : fond gris, bordure verte, texte date blanc.
+/* Date RDV dans État Actuel : fond gris, bordure verte, texte date blanc.
    Le champ heure reste blanc pour garder son comportement input natif. */
 .etat-actuel-card .etat-actuel-date-rdv-badge,
 .etat-actuel-card span.etat-actuel-date-rdv-badge[data-confirmer-hl='rdv'] {
@@ -2932,7 +2988,7 @@
   border: 1px solid #15803d !important;
 }
 
-/* Heure / minutes : texte blanc uniquement pendant la sÃ©lection (fond bleu natif). */
+/* Heure / minutes : texte blanc uniquement pendant la sélection (fond bleu natif). */
 .etat-actuel-card .etat-actuel-date-rdv-badge input[type="time"]::-webkit-datetime-edit-hour-field:focus,
 .etat-actuel-card .etat-actuel-date-rdv-badge input[type="time"]::-webkit-datetime-edit-minute-field:focus,
 .etat-actuel-card .etat-actuel-date-rdv-badge input[type="time"]::-webkit-datetime-edit-second-field:focus,
@@ -2964,7 +3020,7 @@
   background-color: #2563eb !important;
 }
 
-/* Historique : mÃªme rendu sombre que la carte Ã‰tat Actuel */
+/* Historique : même rendu sombre que la carte État Actuel */
 .historique-list {
   align-items: center !important;
 }
@@ -2994,14 +3050,14 @@
   font-weight: 700 !important;
 }
 
-/* L'en-tÃªte de chaque historique garde la couleur de l'Ã©tat. */
+/* L'en-tête de chaque historique garde la couleur de l'état. */
 .etat-historique-card .historique-header,
 .etat-historique-card .historique-header * {
   color: inherit !important;
   -webkit-text-fill-color: currentColor !important;
 }
 
-/* Conserver les couleurs particuliÃ¨res dans les historiques CONFIRMER. */
+/* Conserver les couleurs particulières dans les historiques CONFIRMER. */
 .etat-historique-card span[data-confirmer-hl='rdv'],
 .etat-historique-card span.fiche-detail-etat-confirmer-val--rdv {
   color: #15803d !important;
@@ -3029,11 +3085,11 @@
   -webkit-text-fill-color: #CC00FF !important;
 }
 
-/* DÃ©calage / Changer l'Ã©tat / Compte rendu : mÃªme largeur effective et
-   mÃªme rendu sombre que la carte Ã‰tat Actuel.
-   La carte Ã‰tat Actuel est rendue Ã  760px avec une bordure noire de 6px
+/* Décalage / Changer l'état / Compte rendu : même largeur effective et
+   même rendu sombre que la carte État Actuel.
+   La carte État Actuel est rendue à 760px avec une bordure noire de 6px
    et un padding interne de 20px. Pour aligner visuellement, on cale
-   ces blocs sur la mÃªme largeur de contenu utile (~660px). */
+   ces blocs sur la même largeur de contenu utile (~660px). */
 .fiche-section.decalage-form,
 .fiche-section.etat-change-section,
 .fiche-section.compte-rendu-section {
@@ -3050,8 +3106,8 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
 }
 
-/* Annule les anciens styles globaux de la section "changement d'Ã©tat"
-   (fond gris clair, marge top, border-top) pour Ã©viter qu'ils ne ressurgissent. */
+/* Annule les anciens styles globaux de la section "changement d'état"
+   (fond gris clair, marge top, border-top) pour éviter qu'ils ne ressurgissent. */
 .fiche-section.etat-change-section {
   margin-top: 0 !important;
   padding-top: 0 !important;
@@ -3072,7 +3128,7 @@
 }
 
 /* Conteneur principal du formulaire (zone sous le titre). On cible des
-   classes prÃ©cises pour ne pas styliser chaque item de liste comme les
+   classes précises pour ne pas styliser chaque item de liste comme les
    .compte-rendu-item (qui ont leur propre look ci-dessous). */
 .decalage-form > .decalage-existing-list,
 .decalage-form > .decalage-new-form,
@@ -3089,7 +3145,7 @@
 
 /* Le conteneur direct dans compte-rendu-section "en attente" n'a pas de classe
    de formulaire (la liste des items est directement sous le titre). On lui
-   donne juste un padding pour aÃ©rer, sans border-top supplÃ©mentaire. */
+   donne juste un padding pour aérer, sans border-top supplémentaire. */
 .compte-rendu-section > .compte-rendu-item:first-of-type {
   margin-top: 18px !important;
 }
@@ -3131,7 +3187,7 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
-/* Bouton Â« Annuler la demande Â» (dÃ©calage) : texte noir â€” le bloc .decalage-form impose le blanc aux descendants. */
+/* Bouton « Annuler la demande » (décalage) : texte noir ? le bloc .decalage-form impose le blanc aux descendants. */
 .decalage-form button.decalage-annuler-demande-btn,
 .fiche-detail-modal-content .decalage-form button.decalage-annuler-demande-btn {
   font-size: 10px !important;
@@ -3149,7 +3205,7 @@
   cursor: wait !important;
 }
 
-/* Historique RDV + message Â« demande dÃ©jÃ  crÃ©Ã©e Â» : texte noir (le bloc .decalage-form impose le blanc). */
+/* Historique RDV + message « demande déjà créée » : texte noir (le bloc .decalage-form impose le blanc). */
 .decalage-form .decalage-rdv-historique,
 .decalage-form .decalage-rdv-historique h3,
 .decalage-form .decalage-rdv-historique-table,
@@ -3240,8 +3296,8 @@
 }
 
 /* Champs (selects, textarea, input) : fond blanc + texte sombre.
-   La version modale est rÃ©pÃ©tÃ©e pour battre les rÃ¨gles gÃ©nÃ©riques qui
-   propagent parfois la couleur blanche aux champs imbriquÃ©s. */
+   La version modale est répétée pour battre les règles génériques qui
+   propagent parfois la couleur blanche aux champs imbriqués. */
 .decalage-form .form-control,
 .decalage-form select.form-control,
 .decalage-form textarea.form-control,
@@ -3366,9 +3422,9 @@
   border-color: #80848d !important;
 }
 
-/* Items "Compte rendu en attente" : on remplace les fonds colorÃ©s inline
-   (jaune / vert / rouge) par un fond sombre uniforme pour rester cohÃ©rent
-   avec le reste de la carte. Le texte reste blanc (rÃ¨gle globale). */
+/* Items "Compte rendu en attente" : on remplace les fonds colorés inline
+   (jaune / vert / rouge) par un fond sombre uniforme pour rester cohérent
+   avec le reste de la carte. Le texte reste blanc (règle globale). */
 .compte-rendu-section .compte-rendu-item {
   background-color: #4a4a4a !important;
   border: 1px solid #5f6368 !important;
@@ -3387,8 +3443,8 @@
   border-color: #1a2529 !important;
 }
 
-/* Changement d'Ã©tat : aligner les champs fixes (Nouvel Ã©tat, Confirmateur)
-   avec les champs affichÃ©s aprÃ¨s sÃ©lection de l'Ã©tat. */
+/* Changement d'état : aligner les champs fixes (Nouvel état, Confirmateur)
+   avec les champs affichés après sélection de l'état. */
 .fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group > .form-control,
 .fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group > select.form-control {
   width: 100% !important;
@@ -3415,9 +3471,9 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
-/* Tableau .rdv-form-table dans les sections sombres (Â« Changement d'Ã©tat Â» et
-   Â« DÃ©calage Â») : mÃªme thÃ¨me sombre que .confirmation-form (le tableau lui-mÃªme
-   n'a pas de fond, mais on neutralise tout fond hÃ©ritÃ© et on assure que les
+/* Tableau .rdv-form-table dans les sections sombres (« Changement d'état » et
+   « Décalage ») : même thème sombre que .confirmation-form (le tableau lui-même
+   n'a pas de fond, mais on neutralise tout fond hérité et on assure que les
    cellules / labels sont blancs). */
 .etat-change-section .rdv-form-table,
 .etat-change-section .rdv-form-table tbody,
@@ -3457,9 +3513,9 @@
   -webkit-text-fill-color: #ffffff !important;
 }
 
-/* Suggestions de l'autocomplÃ©tion (ex. Profession MR / MME) dans les sections
-   sombres : le fond reste blanc, mais on rÃ©tablit un texte foncÃ© sinon il est
-   blanc sur blanc (hÃ©ritÃ© de la rÃ¨gle .rdv-form-table td { color: #fff }). */
+/* Suggestions de l'autocomplétion (ex. Profession MR / MME) dans les sections
+   sombres : le fond reste blanc, mais on rétablit un texte foncé sinon il est
+   blanc sur blanc (hérité de la règle .rdv-form-table td { color: #fff }). */
 .etat-change-section .autocomplete-wrap .autocomplete-suggestions,
 .fiche-section.decalage-form .autocomplete-wrap .autocomplete-suggestions,
 .fiche-detail-modal-content .etat-change-section .autocomplete-wrap .autocomplete-suggestions,
@@ -3487,7 +3543,7 @@
   -webkit-text-fill-color: #1f2937 !important;
 }
 
-/* L'input texte (champ saisi) garde un fond blanc et un texte foncÃ© pour rester lisible. */
+/* L'input texte (champ saisi) garde un fond blanc et un texte foncé pour rester lisible. */
 .etat-change-section .autocomplete-wrap .autocomplete-input,
 .fiche-section.decalage-form .autocomplete-wrap .autocomplete-input,
 .fiche-detail-modal-content .etat-change-section .autocomplete-wrap .autocomplete-input,
@@ -3497,17 +3553,17 @@
   background: #ffffff !important;
 }
 
-/* Section Â« Changement d'Ã©tat Â» : disposition uniforme label-gauche / champ-droite,
-   utilisÃ©e Ã  la fois pour Â« Nouvel Ã©tat Â», Â« Confirmateur (historique) Â» et tous
-   les champs du formulaire de confirmation (Ã©tat 7). On fige la largeur du label
+/* Section « Changement d'état » : disposition uniforme label-gauche / champ-droite,
+   utilisée à la fois pour « Nouvel état », « Confirmateur (historique) » et tous
+   les champs du formulaire de confirmation (état 7). On fige la largeur du label
    et celle du champ pour aligner verticalement tous les couples (label, champ). */
 
-/* Variables locales (commentÃ©es pour mÃ©moire) :
+/* Variables locales (commentées pour mémoire) :
    - largeur label  : 200px
-   - largeur champ  : 240px (rÃ©duite, identique pour select / input / textarea / autocomplete)
+   - largeur champ  : 240px (réduite, identique pour select / input / textarea / autocomplete)
 */
 
-/* Form-groups directs de .etat-change-form (Nouvel Ã©tat, Confirmateur historique) */
+/* Form-groups directs de .etat-change-form (Nouvel état, Confirmateur historique) */
 .fiche-detail-modal-content .etat-change-section .etat-change-form > .form-group,
 .etat-change-section .etat-change-form > .form-group {
   display: flex !important;
@@ -3536,9 +3592,9 @@
   box-sizing: border-box !important;
 }
 
-/* Formulaire de confirmation (Ã©tat 7) : on conserve la disposition table
+/* Formulaire de confirmation (état 7) : on conserve la disposition table
    (label gauche, champ droite). Cellule label de largeur fixe, cellule champ
-   contenant un contrÃ´le de largeur fixe et uniforme. */
+   contenant un contrôle de largeur fixe et uniforme. */
 .etat-change-section .confirmation-form .rdv-form-table,
 .fiche-detail-modal-content .etat-change-section .confirmation-form .rdv-form-table {
   width: auto !important;
@@ -3585,8 +3641,8 @@
 }
 
 /* =====================================================
-   Carte Â« CONTROLE QUALITE Â» (Ã©tats signer : 13, 16, 44, 45)
-   Cadre avec bandeau d'en-tÃªte + formulaire en ligne (label gauche / champ droite).
+   Carte « CONTROLE QUALITE » (états signer : 13, 16, 44, 45)
+   Cadre avec bandeau d'en-tête + formulaire en ligne (label gauche / champ droite).
    ===================================================== */
 .controle-qualite-card__done-date {
   margin: 8px 0 0 0;
@@ -3617,7 +3673,7 @@
   box-sizing: border-box;
 }
 
-/* Cadre QualitÃ© confirmation (backoffice login contenant Â« backoffice Â») â€” Ã©tat CONFIRMER */
+/* Cadre Qualité confirmation (backoffice login contenant « backoffice ») ? état CONFIRMER */
 .qualite-confirmation-backoffice-panel {
   margin-top: 14px;
   padding: 12px 14px;
@@ -3661,7 +3717,7 @@
   font-weight: 700;
 }
 
-/* Variante intÃ©grÃ©e Ã  la carte Ã‰tat actuel : pleine largeur du parent, marge top uniquement. */
+/* Variante intégrée à la carte État actuel : pleine largeur du parent, marge top uniquement. */
 .etat-actuel-card .controle-qualite-card,
 .controle-qualite-card.controle-qualite-card--embedded {
   margin: 18px 0 0 0;
@@ -3718,7 +3774,7 @@
   min-height: 70px;
 }
 
-/* Forcer le texte noir des champs CQ mÃªme imbriquÃ©s dans .etat-actuel-card
+/* Forcer le texte noir des champs CQ même imbriqués dans .etat-actuel-card
    (qui propage `-webkit-text-fill-color: #ffffff !important` aux descendants). */
 .etat-actuel-card .controle-qualite-row select.form-control,
 .etat-actuel-card .controle-qualite-row textarea.form-control,
@@ -3731,7 +3787,7 @@
   background-color: #ffffff !important;
 }
 
-/* Options du <select> (menu dÃ©roulant ouvert) : texte noir sur fond blanc. */
+/* Options du <select> (menu déroulant ouvert) : texte noir sur fond blanc. */
 .etat-actuel-card .controle-qualite-row select.form-control option,
 .controle-qualite-row select.form-control option {
   color: #1f2933 !important;
@@ -3788,10 +3844,10 @@
 }
 
 /*
- * Page plein Ã©cran /fiches/:id (sans modal).
+ * Page plein écran /fiches/:id (sans modal).
  * Le modal applique display:block sur .fiche-sections via Dashboard.css ;
- * en page directe, le flex + order rÃ©ordonnait les blocs et min-height:600px
- * crÃ©ait des espaces vides. Typo alignÃ©e sur le modal (14â€“16px).
+ * en page directe, le flex + order réordonnait les blocs et min-height:600px
+ * créait des espaces vides. Typo alignée sur le modal (14?16px).
  */
 .fiche-detail.fiche-detail-page {
   font-size: 14px;
@@ -3944,7 +4000,7 @@
 }
 
 
-/* Modal acceptation décalage (demande sans heure) depuis état CONFIRMER */
+/* Modal acceptation d?calage (demande sans heure) depuis ?tat CONFIRMER */
 .fiche-decalage-accept-modal-overlay {
   position: fixed;
   inset: 0;
