@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import api from '../config/api';
-import { FaChartBar, FaFilter, FaPrint, FaList, FaSearch, FaFileAlt, FaFileExcel, FaFileCsv, FaFilePdf, FaChevronDown, FaTimes, FaSave, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
+import { FaChartBar, FaFilter, FaPrint, FaList, FaSearch, FaFileAlt, FaFileExcel, FaFileCsv, FaFilePdf, FaChevronDown, FaTimes, FaSave, FaSort, FaSortUp, FaSortDown, FaClock } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import FicheDetailLink from '../components/FicheDetailLink';
+import RendementHoraireQualif from '../components/RendementHoraireQualif';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
@@ -76,9 +77,11 @@ const ProductionQualif = () => {
   const isRPQualif = user?.fonction === 12;
   const isSuperviseurQualif = user?.fonction === 2;
   const isAdmin = user?.fonction === 1;
-  const isBackofficeOrAdmin = user?.fonction === 11 || isAdmin;
+  const isBackoffice = Number(user?.fonction) === 11;
+  const isBackofficeOrAdmin = isBackoffice || isAdmin;
   const canViewStats = isRPQualif || isSuperviseurQualif || isBackofficeOrAdmin;
   const canViewFiches = isRPQualif || isSuperviseurQualif || isBackofficeOrAdmin;
+  const canViewRendementHoraire = isBackoffice;
   const canSeeCommentaireQualite = isRPQualif || isSuperviseurQualif || isBackofficeOrAdmin;
   
   // Vérifier si l'utilisateur peut modifier/créer des commentaires qualité
@@ -584,7 +587,7 @@ const ProductionQualif = () => {
       <div className="production-header noprint">
         <h1><FaChartBar /> Production Qualification</h1>
         <div className="header-actions">
-          {(canViewStats || canViewFiches) && (
+          {(canViewStats || canViewFiches || canViewRendementHoraire) && (
             <div className="view-mode-toggle noprint">
               {canViewStats && (
                 <button
@@ -602,32 +605,48 @@ const ProductionQualif = () => {
                   <FaList /> Fiches
                 </button>
               )}
+              {canViewRendementHoraire && (
+                <button
+                  className={`mode-btn ${viewMode === 'rendement' ? 'active' : ''}`}
+                  onClick={() => setViewMode('rendement')}
+                >
+                  <FaClock /> Rendement horaire
+                </button>
+              )}
             </div>
           )}
-          <button 
-            className="filter-toggle-btn noprint" 
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
-          </button>
-          <div className="export-buttons noprint">
-            <button className="export-btn" onClick={handleExportExcel} title="Exporter en Excel">
-              <FaFileExcel /> Excel
-            </button>
-            <button className="export-btn" onClick={handleExportCSV} title="Exporter en CSV">
-              <FaFileCsv /> CSV
-            </button>
-            <button className="export-btn" onClick={handleExportPDF} title="Exporter en PDF">
-              <FaFilePdf /> PDF
-            </button>
-          </div>
-          <button className="print-btn noprint" onClick={handlePrint}>
-            <FaPrint /> Imprimer
-          </button>
+          {viewMode !== 'rendement' && (
+            <>
+              <button 
+                className="filter-toggle-btn noprint" 
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
+              </button>
+              <div className="export-buttons noprint">
+                <button className="export-btn" onClick={handleExportExcel} title="Exporter en Excel">
+                  <FaFileExcel /> Excel
+                </button>
+                <button className="export-btn" onClick={handleExportCSV} title="Exporter en CSV">
+                  <FaFileCsv /> CSV
+                </button>
+                <button className="export-btn" onClick={handleExportPDF} title="Exporter en PDF">
+                  <FaFilePdf /> PDF
+                </button>
+              </div>
+              <button className="print-btn noprint" onClick={handlePrint}>
+                <FaPrint /> Imprimer
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {showFilters && (
+      {viewMode === 'rendement' && canViewRendementHoraire && (
+        <RendementHoraireQualif />
+      )}
+
+      {viewMode !== 'rendement' && showFilters && (
         <div className="production-filters noprint">
           <div className="filter-group">
             <label>Date début (heure incluse)</label>
@@ -820,6 +839,7 @@ const ProductionQualif = () => {
         </div>
       )}
 
+      {viewMode !== 'rendement' && (
       <div className="production-content">
         {viewMode === 'fiches' && canViewFiches ? (
           // Vue fiches
@@ -1303,6 +1323,7 @@ const ProductionQualif = () => {
           <div className="no-data">Aucune donnée disponible pour cette période</div>
         )}
       </div>
+      )}
     </div>
   );
 };

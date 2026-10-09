@@ -2024,6 +2024,251 @@ router.get('/production-qualif', authenticate, async (req, res) => {
 });
 
 // =====================================================
+// GET /statistiques/production-qualif-rendement-horaire
+// Rendement horaire (backoffice uniquement) : superviseurs par RP,
+// créneaux horaires sur date_insert_time (Agents / Fiches / Ratio).
+// =====================================================
+router.get('/production-qualif-rendement-horaire', authenticate, async (req, res) => {
+  try {
+    const fonction = Number(req.user?.fonction);
+    if (fonction !== 11) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès réservé au backoffice'
+      });
+    }
+
+    const dateRaw = String(req.query.date || '').slice(0, 10);
+    const date =
+      /^\d{4}-\d{2}-\d{2}$/.test(dateRaw) ? dateRaw : (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      })();
+
+    const hourStart = Math.min(23, Math.max(0, parseInt(req.query.hour_start, 10) || 9));
+    const hourEnd = Math.min(23, Math.max(hourStart, parseInt(req.query.hour_end, 10) || 18));
+
+    const dateStart = `${date} 00:00:00`;
+    const dateEnd = `${date} 23:59:59`;
+
+    // RP Qualification (fonction 12) actifs
+    const rps = await query(
+      `SELECT u.id, u.pseudo, u.nom, u.prenom
+       FROM utilisateurs u
+       WHERE u.fonction = 12 AND u.etat > 0
+       ORDER BY u.pseudo ASC`
+    );
+
+    // Superviseurs (fonction 2) rattachés à un RP, avec au moins 1 agent
+    const superviseurs = await query(
+      `SELECT
+          u.id,
+          u.pseudo,
+          u.nom,
+          u.prenom,
+          u.id_rp_qualif
+        FROM utilisateurs u
+        WHERE u.fonction = 2
+          AND u.etat > 0
+          AND u.id_rp_qualif IS NOT NULL
+          AND CAST(u.id_rp_qualif AS UNSIGNED) > 0
+          AND EXISTS (
+            SELECT 1 FROM utilisateurs a
+            WHERE a.chef_equipe = u.id AND a.fonction = 3 AND a.etat > 0
+          )
+        ORDER BY u.pseudo ASC`
+    );
+
+    const rpIds = (rps || []).map((r) => Number(r.id));
+    const rpMap = new Map((rps || []).map((r) => [Number(r.id), r]));
+
+    // Grouper superviseurs par RP (ignorer ceux sans RP connu)
+    const superviseursByRp = new Map();
+    for (const s of superviseurs || []) {
+      const rpId = Number(s.id_rp_qualif);
+      if (!rpMap.has(rpId)) continue;
+      if (!superviseursByRp.has(rpId)) superviseursByRp.set(rpId, []);
+      superviseursByRp.get(rpId).push(s);
+    }
+
+    const orderedRpIds = rpIds.filter((id) => (superviseursByRp.get(id) || []).length > 0);
+    const allSuperviseurs = orderedRpIds.flatMap((rpId) => superviseursByRp.get(rpId) || []);
+    const allSupIds = allSuperviseurs.map((s) => Number(s.id));
+
+    // Taille d'équipe (agents actifs) par superviseur
+    const agentsEquipeBySup = new Map();
+    if (allSupIds.length > 0) {
+      const equipeRows = await query(
+        `SELECT chef_equipe AS id_sup, COUNT(*) AS nb_agents
+         FROM utilisateurs
+         WHERE fonction = 3 AND etat > 0
+           AND chef_equipe IN (${allSupIds.map(() => '?').join(',')})
+         GROUP BY chef_equipe`,
+        allSupIds
+      );
+      for (const row of equipeRows || []) {
+        agentsEquipeBySup.set(Number(row.id_sup), Number(row.nb_agents) || 0);
+      }
+    }
+
+    // Fiches du jour par superviseur × heure (date_insert_time)
+    const fichesBySupHour = new Map(); // key `${supId}:${hour}` -> count
+    if (allSupIds.length > 0) {
+      const fichesRows = await query(
+        `SELECT
+            a.chef_equipe AS id_sup,
+            HOUR(f.date_insert_time) AS heure,
+            COUNT(*) AS nb_fiches
+          FROM fiches f
+          INNER JOIN utilisateurs a ON a.id = f.id_agent
+          WHERE a.fonction = 3
+            AND a.etat > 0
+            AND a.chef_equipe IN (${allSupIds.map(() => '?').join(',')})
+            AND f.active = 1
+            AND (f.archive = 0 OR f.archive IS NULL)
+            AND f.date_insert_time IS NOT NULL
+            AND f.date_insert_time != ''
+            AND f.date_insert_time >= ?
+            AND f.date_insert_time <= ?
+            AND HOUR(f.date_insert_time) >= ?
+            AND HOUR(f.date_insert_time) < ?
+          GROUP BY a.chef_equipe, HOUR(f.date_insert_time)`,
+        [...allSupIds, dateStart, dateEnd, hourStart, hourEnd]
+      );
+      for (const row of fichesRows || []) {
+        const key = `${Number(row.id_sup)}:${Number(row.heure)}`;
+        fichesBySupHour.set(key, Number(row.nb_fiches) || 0);
+      }
+    }
+
+    const RP_COLORS = ['#5b9bd5', '#70ad47', '#ed7d31', '#9e480e', '#6366f1', '#0d9488'];
+    const rpsPayload = orderedRpIds.map((rpId, idx) => {
+      const rp = rpMap.get(rpId);
+      const sups = superviseursByRp.get(rpId) || [];
+      return {
+        id: rpId,
+        pseudo: rp?.pseudo || `RP ${rpId}`,
+        nom: rp?.nom || null,
+        color: RP_COLORS[idx % RP_COLORS.length],
+        superviseurs: sups.map((s) => ({
+          id: Number(s.id),
+          pseudo: s.pseudo || '',
+          nom: s.nom || '',
+          prenom: s.prenom || '',
+          agents_equipe: agentsEquipeBySup.get(Number(s.id)) || 0
+        }))
+      };
+    });
+
+    const buildSlot = (hour) => {
+      const bySuperviseur = {};
+      let totalAgents = 0;
+      let totalFiches = 0;
+      const byRp = {};
+
+      for (const rp of rpsPayload) {
+        let rpAgents = 0;
+        let rpFiches = 0;
+        for (const s of rp.superviseurs) {
+          const agents = Number(s.agents_equipe) || 0;
+          const fiches = fichesBySupHour.get(`${s.id}:${hour}`) || 0;
+          const ratio = agents > 0 ? Math.round((fiches / agents) * 100) / 100 : 0;
+          bySuperviseur[s.id] = { agents, fiches, ratio };
+          rpAgents += agents;
+          rpFiches += fiches;
+          totalAgents += agents;
+          totalFiches += fiches;
+        }
+        byRp[rp.id] = {
+          agents: rpAgents,
+          fiches: rpFiches,
+          ratio: rpAgents > 0 ? Math.round((rpFiches / rpAgents) * 100) / 100 : 0
+        };
+      }
+
+      const hEnd = hour + 1;
+      return {
+        hour,
+        label: `${String(hour).padStart(2, '0')}:00`,
+        slot_label: `${hour}H-${hEnd}H`,
+        by_superviseur: bySuperviseur,
+        by_rp: byRp,
+        total: {
+          agents: totalAgents,
+          fiches: totalFiches,
+          ratio: totalAgents > 0 ? Math.round((totalFiches / totalAgents) * 100) / 100 : 0
+        }
+      };
+    };
+
+    const hours = [];
+    for (let h = hourStart; h < hourEnd; h += 1) {
+      hours.push(buildSlot(h));
+    }
+
+    // Total journée = somme des créneaux
+    const dayBySuperviseur = {};
+    const dayByRp = {};
+    let dayAgents = 0;
+    let dayFiches = 0;
+    for (const rp of rpsPayload) {
+      let rpFiches = 0;
+      let rpAgents = 0;
+      for (const s of rp.superviseurs) {
+        let fiches = 0;
+        for (const slot of hours) {
+          fiches += slot.by_superviseur[s.id]?.fiches || 0;
+        }
+        const agents = Number(s.agents_equipe) || 0;
+        dayBySuperviseur[s.id] = {
+          agents,
+          fiches,
+          ratio: agents > 0 ? Math.round((fiches / agents) * 100) / 100 : 0
+        };
+        rpFiches += fiches;
+        rpAgents += agents;
+        dayAgents += agents;
+        dayFiches += fiches;
+      }
+      dayByRp[rp.id] = {
+        agents: rpAgents,
+        fiches: rpFiches,
+        ratio: rpAgents > 0 ? Math.round((rpFiches / rpAgents) * 100) / 100 : 0
+      };
+    }
+
+    res.json({
+      success: true,
+      data: {
+        date,
+        hour_start: hourStart,
+        hour_end: hourEnd,
+        rps: rpsPayload,
+        hours,
+        day_total: {
+          label: 'TOTAL JOURNÉE',
+          slot_label: 'TOTAL',
+          by_superviseur: dayBySuperviseur,
+          by_rp: dayByRp,
+          total: {
+            agents: dayAgents,
+            fiches: dayFiches,
+            ratio: dayAgents > 0 ? Math.round((dayFiches / dayAgents) * 100) / 100 : 0
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[STAT] /production-qualif-rendement-horaire - Erreur:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération du rendement horaire',
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
 // KPI QUALIFICATION
 // =====================================================
 
