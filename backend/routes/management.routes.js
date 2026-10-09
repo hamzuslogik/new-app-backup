@@ -1287,7 +1287,9 @@ const CONFIRMATEUR_TRANSITIONS = {
   9: [9, 7, 29, 12],              // CLIENT HONORE A SUIVRE
   11: [11, 26, 8, 7, 29],         // RDV ANNULER (auto-transition autorisée)
   26: [], 12: [12, 25, 8, 7, 2, 19, 6],  // RDV ANN 2 FOIS, REFUSER (auto-transition autorisée)
-  34: [], 25: [], 35: [], 13: [], 16: []  // HHC FIN A VERIFIER, REF 2 FOIS, HHC TEC, SIGNER, SIGNER RETRACTER
+  34: [], 25: [], 35: [], 13: [], // HHC FIN A VERIFIER, REF 2 FOIS, HHC TEC, SIGNER
+  16: [7, 38], // SIGNER RETRACTER → CONFIRMER, SIGNER RETRACTER 2 FOIS
+  38: [] // SIGNER RETRACTER 2 FOIS : terminal
 };
 
 // Liste des titres d'états visibles par les confirmateurs (6) dans le filtre de recherche et le détail fiche

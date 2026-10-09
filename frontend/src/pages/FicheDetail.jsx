@@ -992,7 +992,7 @@ const FONCTIONS_BYPASS_ETAT_DEFINITIF = [1, 7, 11, 13, 14];
 function canBypassEtatDefinitif(fonction) {
   return FONCTIONS_BYPASS_ETAT_DEFINITIF.includes(Number(fonction));
 }
-const ETATS_AUTORISES_VERS_CONFIRMER_PLANNING = [1, 2, 5, 8, 9, 11, 12, 19];
+const ETATS_AUTORISES_VERS_CONFIRMER_PLANNING = [1, 2, 5, 8, 9, 11, 12, 16, 19];
 
 /** REFUSER / SIGNER RETRACTER (+ variantes 2×) : à la (re)confirmation, uniquement le confirmateur 1 (créateur du RDV). */
 const ETATS_NOUVELLE_CONFIRMATION_CONF1_SEUL = [12, 16, 25, 38];
