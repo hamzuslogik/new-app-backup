@@ -1783,15 +1783,17 @@ const FicheDetail = ({
     slotCodeVerifiedRef.current = false;
   }, [confFormData.conf_rdv_date, confFormData.conf_rdv_time, rdvFormData.date_rdv_time]);
 
+  const isBackofficeSession = userFonction === 11;
   const showCompletudeSection =
     isQualiteConfirmation ||
     isREConfirmation ||
     isRPConfirmation ||
-    isConfirmateurSession;
+    isConfirmateurSession ||
+    isBackofficeSession;
   const canTreatCompletudeDetail =
     isREConfirmation || isRPConfirmation || isConfirmateurSession;
   const showCompletudeTabBadge =
-    isConfirmateurSession || isREConfirmation || isRPConfirmation;
+    isConfirmateurSession || isREConfirmation || isRPConfirmation || isBackofficeSession;
   /** Badge DECALAGE (demande en attente) : admin, backoffice, RE/RP confirmation, confirmateur */
   const showDecalageTabBadge = [1, 6, 7, 11, 13, 14].includes(Number(userFonction));
 

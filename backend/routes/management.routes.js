@@ -1280,7 +1280,7 @@ const CONFIRMATEUR_TRANSITIONS = {
   1: [5, 7, 6, 29, 24, 2, 19],    // EN-ATTENTE
   2: [5, 7, 6, 29, 24, 2, 19],    // NRP
   19: [5, 7, 6, 29, 24, 2, 19],   // RAPPEL POUR BUREAU
-  5: [5, 22, 7, 6, 29, 24, 19],   // ANNULER (auto-transition autorisée)
+  5: [5, 22, 7, 6, 29, 24],       // ANNULER — sans RAPPEL POUR BUREAU (19)
   29: [], 6: [], 24: [], 22: [],  // HC et ANNULER 2 FOIS : aucun
   7: [8, 9, 11, 12],              // CONFIRMER
   8: [8, 7, 11],                  // ANNULER ET A REPROGRAMMER

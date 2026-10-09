@@ -12,7 +12,8 @@ const STATUT_LABELS = {
 /**
  * Complétude fiche :
  * - Qualité Confirmation (4) : création + modification (en attente)
- * - Tous les confirmateurs (6), RE (14), RP (13) : consultation + bouton « Traité »
+ * - Confirmateurs (6), RE (14), RP (13) : consultation + bouton « Traité »
+ * - Backoffice (11) : consultation (comme confirmateur, sans traitement)
  */
 const FicheCompletudeSection = ({ ficheHash, enabled, canCreate = false, canTreat = false }) => {
   const queryClient = useQueryClient();
