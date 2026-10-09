@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { query } = require('../config/database');
+const { toMysqlLocalDateTime } = require('./mysqlLocalDateTime');
 
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
 
@@ -111,7 +112,7 @@ async function approveInsertionFromDonnees({
   histoConfirmateurId,
   now,
 }) {
-  const ts = now || new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const ts = now || toMysqlLocalDateTime();
 
   await query(`UPDATE fiches SET archive = 1, date_modif_time = ? WHERE id = ?`, [
     ts,

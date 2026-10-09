@@ -2,6 +2,7 @@ const { query, queryOne } = require('../config/database');
 const { findMatchingAutorisationRule } = require('./reglesAutorisation');
 const { approveInsertionFromDonnees, encodeFicheId } = require('./demandeInsertionApprove');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
+const { toMysqlLocalDateTime } = require('./mysqlLocalDateTime');
 const {
   logReglesAutorisation,
   logReglesAutorisationError,
@@ -45,7 +46,7 @@ async function handleDuplicateFicheWithAutorisation({
       id_fiche_existante: existingFiche.id,
     });
 
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = toMysqlLocalDateTime();
     const commentaireAuto = `Acceptation automatique — règle #${matchedRule.id} : ${matchedRule.libelle}`;
 
     const { insertId, hash, donneesFiche: donneesApres } = await approveInsertionFromDonnees({
@@ -126,7 +127,7 @@ async function handleDuplicateFicheWithAutorisation({
   });
 
   const agentInfo = await queryOne(`SELECT pseudo FROM utilisateurs WHERE id = ?`, [agentId]);
-  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const now = toMysqlLocalDateTime();
 
   const demandeResult = await query(
     `INSERT INTO demandes_insertion 
