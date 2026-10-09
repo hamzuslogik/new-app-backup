@@ -31,12 +31,16 @@ const RendementTable = React.forwardRef(function RendementTable(
   { title, slot, rps },
   ref
 ) {
-  const superviseurs = useMemo(
-    () => (rps || []).flatMap((rp) => rp.superviseurs || []),
+  const rpsWithSups = useMemo(
+    () => (rps || []).filter((rp) => (rp.superviseurs || []).length > 0),
     [rps]
   );
+  const superviseurs = useMemo(
+    () => rpsWithSups.flatMap((rp) => rp.superviseurs || []),
+    [rpsWithSups]
+  );
 
-  if (!rps?.length) {
+  if (!superviseurs.length) {
     return (
       <div className="rhq-empty" ref={ref}>
         Aucun superviseur / RP à afficher.
@@ -47,25 +51,17 @@ const RendementTable = React.forwardRef(function RendementTable(
   return (
     <div className="rhq-table-card" ref={ref}>
       <table className="rhq-table">
+        <colgroup>
+          <col className="rhq-col-label" />
+          {superviseurs.map((s) => (
+            <col key={`col-${s.id}`} className="rhq-col-sup" />
+          ))}
+          <col className="rhq-col-total" />
+        </colgroup>
         <thead>
           <tr>
             <th className="rhq-corner">{title}</th>
-            {(rps || []).map((rp) => (
-              <th
-                key={rp.id}
-                className="rhq-rp-header"
-                colSpan={(rp.superviseurs || []).length}
-                style={{ backgroundColor: rp.color }}
-              >
-                {rp.pseudo}
-              </th>
-            ))}
-            <th className="rhq-total-header" rowSpan={2}>
-              TOTAL
-            </th>
-          </tr>
-          <tr>
-            {(rps || []).map((rp) =>
+            {rpsWithSups.map((rp) =>
               (rp.superviseurs || []).map((s) => (
                 <th
                   key={s.id}
@@ -77,6 +73,7 @@ const RendementTable = React.forwardRef(function RendementTable(
                 </th>
               ))
             )}
+            <th className="rhq-total-header">TOTAL</th>
           </tr>
         </thead>
         <tbody>
@@ -109,7 +106,7 @@ const RendementTable = React.forwardRef(function RendementTable(
           </tr>
           <tr className="rhq-row-footer">
             <td className="rhq-row-label rhq-footer-label">Fiches / Ratio</td>
-            {(rps || []).map((rp) => {
+            {rpsWithSups.map((rp) => {
               const rpStats = slot?.by_rp?.[rp.id] || { fiches: 0, ratio: 0 };
               const colSpan = (rp.superviseurs || []).length;
               return (
@@ -117,7 +114,6 @@ const RendementTable = React.forwardRef(function RendementTable(
                   key={`footer-${rp.id}`}
                   colSpan={colSpan}
                   className="rhq-rp-footer"
-                  style={{ '--rp-color': rp.color }}
                 >
                   <span className="rhq-rp-footer-fiches">{rpStats.fiches ?? 0}</span>
                   <span

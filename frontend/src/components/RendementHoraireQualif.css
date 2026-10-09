@@ -119,10 +119,23 @@
 
 .rhq-table {
   border-collapse: collapse;
+  table-layout: fixed;
   width: max-content;
   min-width: 100%;
   font-size: 12px;
   text-align: center;
+}
+
+.rhq-col-label {
+  width: 110px;
+}
+
+.rhq-col-sup {
+  width: 96px;
+}
+
+.rhq-col-total {
+  width: 72px;
 }
 
 .rhq-table th,
@@ -130,26 +143,18 @@
   border: 1px solid #111;
   padding: 6px 8px;
   vertical-align: middle;
+  box-sizing: border-box;
 }
 
 .rhq-corner {
   background: #dbeafe;
   color: #0f172a;
   font-weight: 700;
-  min-width: 90px;
-}
-
-.rhq-rp-header {
-  color: #fff !important;
-  font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.02em;
 }
 
 .rhq-sup-header {
   color: #fff !important;
   font-weight: 700;
-  min-width: 88px;
 }
 
 .rhq-sup-name {
