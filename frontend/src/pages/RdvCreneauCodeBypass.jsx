@@ -9,7 +9,7 @@ import { toast } from 'react-toastify';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import './RdvCreneauCodeBypass.css';
 
-const ALLOWED_FONCTIONS = [1, 7, 11, 13, 14];
+const ALLOWED_FONCTIONS = [1, 7, 11];
 
 const MOTIF_OPTIONS = [
   { value: '', label: 'Tous motifs' },
@@ -103,7 +103,7 @@ const RdvCreneauCodeBypass = () => {
       <div className="rdv-bypass-page">
         <div className="rdv-bypass-forbidden">
           <h2>Accès réservé</h2>
-          <p>Cette page est réservée aux administrateurs, backoffice, RE et RP Confirmation.</p>
+          <p>Cette page est réservée aux administrateurs et au backoffice.</p>
         </div>
       </div>
     );

@@ -367,7 +367,7 @@ const Sidebar = ({ collapsed }) => {
       icon: FaUnlockAlt,
       permission: null,
       visible: true,
-      customCheck: (item, u) => [1, 7, 11, 13, 14].includes(Number(u?.fonction)),
+      customCheck: (item, u) => [1, 7, 11].includes(Number(u?.fonction)),
     },
     {
       path: '/stats-agents-qualite',
