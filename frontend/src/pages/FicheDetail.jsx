@@ -1143,6 +1143,23 @@ function isZeroAvailabilityCell(cell) {
   return cell.nbr_com === 0 || cell.nbr_com === '0';
 }
 
+/** Créneau blindé (plein) ou en surplus : nb RDV >= capacité. */
+function isBlindOrSurplusSlot(planningWeekData, dateStr, slotHour, availCell) {
+  if (!dateStr || !slotHour) return false;
+  const timeKey = hourToTimeKey(slotHour);
+  const dayPlanning = planningWeekData?.[dateStr]?.time?.[timeKey];
+  const rdvCount = Array.isArray(dayPlanning?.planning) ? dayPlanning.planning.length : 0;
+  const rawAv =
+    dayPlanning?.av !== undefined && dayPlanning?.av !== null
+      ? dayPlanning.av
+      : availCell?.nbr_com;
+  if (rawAv === undefined || rawAv === null || rawAv === '') return false;
+  const avail = Number(rawAv);
+  if (!Number.isFinite(avail)) return false;
+  if (avail <= 0) return rdvCount > 0; // 0 dispo déjà couvert par zero ; surplus si RDV présents
+  return rdvCount >= avail;
+}
+
 function isPlanningSlotClosedError(error) {
   const data = error?.response?.data;
   if (data?.code === 'PLANNING_SLOT_CLOSED') return true;
@@ -1273,6 +1290,7 @@ const FicheDetail = ({
   const slotCodeVerifiedRef = useRef(false);
   const pendingAfterSlotCodeRef = useRef(null);
   const pendingKnownSlotStatusRef = useRef(null);
+  const slotBypassContextRef = useRef(null);
   const [showConfirmConfFields, setShowConfirmConfFields] = useState(true);
   const [rdvFormData, setRdvFormData] = useState({
     date_rdv_time: '',
@@ -2880,17 +2898,18 @@ const FicheDetail = ({
     const cachedAvail = queryClient.getQueryData(['availability-modal', planningWeek, planningYear, planningDep]);
     const slotCell = lookupAvailabilityCell(cachedAvail?.data, dateStr, slotHour);
     const policyClosed = isPolicyClosedAvailabilityCell(slotCell, planningDep, dateStr, slotHour);
-    // Confirmateur : pas de création sur créneaux fermés par règle départementale
     if (policyClosed && !canCreateRdvOnPolicyClosedSlot(user?.fonction)) {
       alert('Ce créneau est fermé pour ce département. Vous ne pouvez pas y créer de RDV.');
       return;
     }
+    const planningCached = getPlanningWeekDataCached();
     pendingKnownSlotStatusRef.current = {
       date: dateStr,
       hour: slotHour,
       closed: isClosedAvailabilityCell(slotCell) || policyClosed,
       zero: isZeroAvailabilityCell(slotCell),
-      policyClosed
+      policyClosed,
+      surplus: isBlindOrSurplusSlot(planningCached, dateStr, slotHour, slotCell)
     };
 
     setSelectedSlot({ date: dateStr, hour });
@@ -2926,6 +2945,24 @@ const FicheDetail = ({
     return null;
   };
 
+  const getPlanningWeekDataCached = () => {
+    const keys = [
+      ['planning-modal', planningWeek, planningYear, planningDep],
+      ['planning-week', planningWeek, planningYear, planningDep],
+      ['planning', planningWeek, planningYear, planningDep],
+    ];
+    for (const key of keys) {
+      if (!key[1] || !key[2] || !key[3]) continue;
+      const cached = queryClient.getQueryData(key);
+      if (cached?.data) return cached.data;
+      if (cached && typeof cached === 'object' && !cached.data) {
+        const sample = Object.values(cached)[0];
+        if (sample && sample.time) return cached;
+      }
+    }
+    return null;
+  };
+
   const getPlanningSlotStatus = async (dateStr, timeStr) => {
     const dep = resolvePlanningDepFromFiche();
     const slotHour = timeToSlotHour(timeStr)
@@ -2934,6 +2971,7 @@ const FicheDetail = ({
     const empty = {
       closed: policyClosedFallback,
       zero: false,
+      surplus: false,
       date: dateStr,
       hour: slotHour,
       dep,
@@ -2942,29 +2980,34 @@ const FicheDetail = ({
     if (!dateStr) return empty;
 
     const known = pendingKnownSlotStatusRef.current;
-    if (known && known.date === dateStr && (known.closed || known.zero || known.policyClosed)) {
+    if (known && known.date === dateStr && (known.closed || known.zero || known.policyClosed || known.surplus)) {
       const policyClosed = known.policyClosed || isPolicyClosedSlot(dep, dateStr, slotHour || known.hour);
       return {
         ...known,
         hour: slotHour || known.hour,
         dep,
         closed: known.closed || policyClosed,
-        policyClosed
+        policyClosed,
+        surplus: !!known.surplus
       };
     }
 
+    let planningWeekData = getPlanningWeekDataCached();
     const readCell = (map) => lookupAvailabilityCell(map, dateStr, slotHour);
-    const buildStatus = (cell) => {
+    const buildStatus = (cell, weekData = planningWeekData) => {
       const policyClosed = isPolicyClosedAvailabilityCell(cell, dep, dateStr, slotHour);
       return {
         closed: isClosedAvailabilityCell(cell) || policyClosed,
         zero: isZeroAvailabilityCell(cell),
+        surplus: isBlindOrSurplusSlot(weekData, dateStr, slotHour, cell),
         date: dateStr,
         hour: slotHour,
         dep,
         policyClosed
       };
     };
+    const statusNeedsWarning = (st) =>
+      !!(st && (st.closed || st.zero || st.policyClosed || st.surplus));
 
     const cachedKeys = [
       ['availability-modal', planningWeek, planningYear, planningDep],
@@ -2974,8 +3017,9 @@ const FicheDetail = ({
       if (!key[1] || !key[2] || !key[3]) continue;
       const cached = queryClient.getQueryData(key);
       const cell = readCell(cached?.data);
-      if (cell && (isClosedAvailabilityCell(cell) || isZeroAvailabilityCell(cell) || isPolicyClosedAvailabilityCell(cell, dep, dateStr, slotHour))) {
-        return buildStatus(cell);
+      if (cell) {
+        const st = buildStatus(cell);
+        if (statusNeedsWarning(st)) return st;
       }
     }
 
@@ -2983,8 +3027,9 @@ const FicheDetail = ({
       const allCached = queryClient.getQueriesData({ queryKey: ['availability-modal'] });
       for (const [, cached] of allCached) {
         const cell = readCell(cached?.data);
-        if (cell && (isClosedAvailabilityCell(cell) || isZeroAvailabilityCell(cell) || isPolicyClosedAvailabilityCell(cell, dep, dateStr, slotHour))) {
-          return buildStatus(cell);
+        if (cell) {
+          const st = buildStatus(cell);
+          if (statusNeedsWarning(st)) return st;
         }
       }
     } catch (err) {
@@ -3001,10 +3046,15 @@ const FicheDetail = ({
       isoThursday.setUTCDate(isoThursday.getUTCDate() + 4 - dayNum);
       const yearsToTry = [...new Set([isoThursday.getUTCFullYear(), rdvDate.getFullYear(), planningYear].filter(Boolean))];
       for (const year of yearsToTry) {
-        const availRes = await api.get('/planning/availability', { params: { w: week, y: year, dp: dep } });
+        const [availRes, weekRes] = await Promise.all([
+          api.get('/planning/availability', { params: { w: week, y: year, dp: dep } }),
+          api.get('/planning/week', { params: { w: week, y: year, dp: dep } }).catch(() => null),
+        ]);
+        if (weekRes?.data?.data) planningWeekData = weekRes.data.data;
         const cell = readCell(availRes.data?.data);
-        if (cell) {
-          return buildStatus(cell);
+        if (cell || planningWeekData) {
+          const st = buildStatus(cell, planningWeekData);
+          if (statusNeedsWarning(st) || cell) return st;
         }
       }
       return empty;
@@ -3024,9 +3074,20 @@ const FicheDetail = ({
       alert('Ce créneau est fermé pour ce département. Vous ne pouvez pas y créer de RDV.');
       return false;
     }
-    if (!status.closed && !status.zero && !policyClosed) return true;
+    // Fermé / 0 dispo / blindé / surplus → warning + code (confirmateur, RE, RP, BO, …)
+    if (!status.closed && !status.zero && !policyClosed && !status.surplus) return true;
     pendingAfterSlotCodeRef.current = thenFn;
-    setSlotCodeModal({ ...status, closed: status.closed || policyClosed, policyClosed });
+    const bypassCtx = {
+      closed: !!(status.closed || policyClosed),
+      zero: !!status.zero,
+      policyClosed: !!policyClosed,
+      surplus: !!status.surplus
+    };
+    slotBypassContextRef.current = bypassCtx;
+    setSlotCodeModal({
+      ...status,
+      ...bypassCtx
+    });
     return false;
   };
 
@@ -3203,6 +3264,15 @@ const FicheDetail = ({
 
       if (slotCodeVerifiedRef.current) {
         updateData.allow_unavailable_slot = true;
+        const known = slotBypassContextRef.current || pendingKnownSlotStatusRef.current;
+        if (known) {
+          updateData.slot_bypass_context = {
+            surplus: !!known.surplus,
+            closed: !!known.closed,
+            zero: !!known.zero,
+            policyClosed: !!known.policyClosed
+          };
+        }
       }
 
       // Vérifier si le RDV est pour aujourd'hui ou demain
@@ -3296,6 +3366,7 @@ const FicheDetail = ({
       setSelectedSlot(null);
       slotCodeVerifiedRef.current = false;
       pendingKnownSlotStatusRef.current = null;
+      slotBypassContextRef.current = null;
 
       // Recharger les données
       queryClient.invalidateQueries(['fiche', hash]);
@@ -3422,6 +3493,7 @@ const FicheDetail = ({
     // Warning créneau fermé / 0 dispo : uniquement pour Confirmer — ne pas conserver le statut d’un créneau planning
     if (newEtatId !== 7) {
       pendingKnownSlotStatusRef.current = null;
+      slotBypassContextRef.current = null;
       slotCodeVerifiedRef.current = false;
       setSlotCodeModal(null);
       pendingAfterSlotCodeRef.current = null;
@@ -3621,6 +3693,15 @@ const FicheDetail = ({
 
       if (slotCodeVerifiedRef.current) {
         updateData.allow_unavailable_slot = true;
+        const known = slotBypassContextRef.current || pendingKnownSlotStatusRef.current;
+        if (known) {
+          updateData.slot_bypass_context = {
+            surplus: !!known.surplus,
+            closed: !!known.closed,
+            zero: !!known.zero,
+            policyClosed: !!known.policyClosed
+          };
+        }
       }
 
       // Appeler l'API pour mettre à jour
@@ -3639,6 +3720,7 @@ const FicheDetail = ({
         alert('Fiche confirmée avec succès');
         slotCodeVerifiedRef.current = false;
         pendingKnownSlotStatusRef.current = null;
+        slotBypassContextRef.current = null;
       }
     } catch (error) {
       console.error('Erreur lors de la confirmation:', error);
@@ -10393,16 +10475,20 @@ const FicheDetail = ({
 
       {slotCodeModal && createPortal(
         <CodeVerificationModal
-          title="Créneau fermé ou indisponible"
+          title="Créneau fermé, blindé ou en surplus"
           message={
             <>
               <strong>Attention :</strong>{' '}
-              {slotCodeModal.closed && slotCodeModal.zero
-                ? 'ce créneau est fermé et sa disponibilité est à 0.'
-                : slotCodeModal.closed
-                  ? 'ce créneau du planning est fermé.'
-                  : 'ce créneau a une disponibilité à 0.'}
-              {' '}L'insertion d'un rendez-vous n'est pas recommandée.
+              {slotCodeModal.surplus && (slotCodeModal.closed || slotCodeModal.policyClosed)
+                ? 'ce créneau est fermé et déjà blindé / en surplus.'
+                : slotCodeModal.surplus
+                  ? 'ce créneau est déjà blindé ou contient un surplus de RDV.'
+                  : slotCodeModal.closed && slotCodeModal.zero
+                    ? 'ce créneau est fermé et sa disponibilité est à 0.'
+                    : slotCodeModal.closed || slotCodeModal.policyClosed
+                      ? 'ce créneau du planning est fermé.'
+                      : 'ce créneau a une disponibilité à 0.'}
+              {' '}L&apos;insertion d&apos;un rendez-vous n&apos;est pas recommandée.
               Pour continuer, reproduisez le code à 4 chiffres ci-dessous.
             </>
           }

@@ -1,7 +1,7 @@
 /**
  * Règles de fermeture automatique des créneaux planning par département.
- * Créneaux concernés : noirs (comme is_closed), création RDV interdite aux confirmateurs (6),
- * autorisée pour admin / backoffice / RE / RP confirmation.
+ * Créneaux concernés : noirs (comme is_closed).
+ * Création RDV : admin / confirmateur / backoffice / RE / RP (confirmateur via warning + code).
  */
 
 const SLOT_HOURS = ['09:00:00', '11:00:00', '13:00:00', '16:00:00', '18:00:00', '19:30:00'];
@@ -13,8 +13,8 @@ const GROUP_B = new Set(['77', '78', '91', '92', '93', '94', '95', '76', '27']);
 /** Groupe C : 60, 80, 59, 62, 67, 68, 90, 54, 55, 57 */
 const GROUP_C = new Set(['60', '80', '59', '62', '67', '68', '90', '54', '55', '57']);
 
-/** Fonctions autorisées à créer un RDV dans un créneau fermé par politique. */
-const POLICY_CLOSED_CREATE_ALLOWED_FONCTIONS = new Set([1, 7, 11, 13, 14]);
+/** Fonctions autorisées à créer un RDV dans un créneau fermé par politique (avec code / allow_unavailable). */
+const POLICY_CLOSED_CREATE_ALLOWED_FONCTIONS = new Set([1, 6, 7, 11, 13, 14]);
 
 function normalizeDep(dep) {
   if (dep == null || dep === '') return '';

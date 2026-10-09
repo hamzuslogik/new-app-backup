@@ -7234,6 +7234,9 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         ? ficheData.id_etat_final
         : fiche?.id_etat_final
     );
+    // Contexte pour journaliser un bypass code (créneau fermé / surplus) après UPDATE réussi
+    let slotBypassLog = null;
+
     if (
       targetEtatForSlotCheck === 7 &&
       ficheData.date_rdv_time !== undefined &&
@@ -7302,17 +7305,16 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             ficheData.allow_unavailable_slot === '1' ||
             ficheData.allow_unavailable_slot === 'true';
 
-          // Créneau fermé par règle départementale : confirmateur (6) jamais ; RE/RP/admin/BO uniquement
+          // Créneau fermé (politique / DB) : admin libre ; confirmateur / RE / RP / BO via allow_unavailable (code UI)
           if (policyClosed) {
             if (!canCreateRdvOnPolicyClosedSlot(req.user?.fonction)) {
               return res.status(400).json({
                 success: false,
                 code: 'PLANNING_SLOT_CLOSED',
-                message: 'Ce créneau est fermé pour ce département. Les confirmateurs ne peuvent pas y créer de RDV.'
+                message: 'Ce créneau est fermé pour ce département. Impossible d\'y créer un RDV.'
               });
             }
             if (!allowUnavailable && Number(req.user?.fonction) !== 1 && Number(req.user?.fonction) !== 7) {
-              // RE/RP/BO : même garde-fou que créneau fermé (code / allow_unavailable)
               return res.status(400).json({
                 success: false,
                 code: 'PLANNING_SLOT_CLOSED',
@@ -7325,6 +7327,37 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
               code: 'PLANNING_SLOT_CLOSED',
               message: 'Ce créneau horaire est fermé. Impossible de créer un RDV dans ce créneau.'
             });
+          }
+
+          // Journaliser uniquement si code retapé + RDV réellement créé/déplacé
+          if (allowUnavailable && incomingRdv !== previousRdv) {
+            const ctx = ficheData.slot_bypass_context && typeof ficheData.slot_bypass_context === 'object'
+              ? ficheData.slot_bypass_context
+              : {};
+            const isFermePolitique = !!policyClosed || !!ctx.policyClosed;
+            const isFermeDb = !!closedSlot || !!ctx.closed;
+            const isSurplus = !!ctx.surplus;
+            const isZeroDispo = !!ctx.zero;
+            const motifs = [];
+            if (isFermePolitique) motifs.push('ferme_politique');
+            if (isFermeDb) motifs.push('ferme_db');
+            if (isSurplus) motifs.push('surplus');
+            if (isZeroDispo) motifs.push('zero_dispo');
+            slotBypassLog = {
+              id_fiche: parseInt(id, 10),
+              id_utilisateur: req.user.id,
+              id_fonction: req.user.fonction != null ? Number(req.user.fonction) : null,
+              date_rdv: incomingRdv.length === 16 ? `${incomingRdv}:00` : incomingRdv,
+              dep,
+              slot_hour: slotHour,
+              week,
+              year,
+              is_ferme_politique: isFermePolitique ? 1 : 0,
+              is_ferme_db: isFermeDb ? 1 : 0,
+              is_surplus: isSurplus ? 1 : 0,
+              is_zero_dispo: isZeroDispo ? 1 : 0,
+              motif: motifs.length ? motifs.join(',') : 'code_bypass'
+            };
           }
         }
       } catch (error) {
@@ -7346,6 +7379,10 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         });
       }
     }
+
+    // Ne jamais persister ces flags techniques sur la table fiches
+    delete ficheData.allow_unavailable_slot;
+    delete ficheData.slot_bypass_context;
 
     // Normaliser le code postal (tous les codes postaux doivent être 5 chiffres)
     // Les codes postaux de 4 chiffres sont complétés avec un 0 devant
@@ -7975,6 +8012,36 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       } catch (error) {
         console.error('Erreur lors de l\'enregistrement new_repro:', error);
         // Ne pas bloquer la mise à jour si l'enregistrement new_repro échoue
+      }
+    }
+
+    // Journaliser le bypass code (créneau fermé / surplus) uniquement après création réussie
+    if (slotBypassLog) {
+      try {
+        await query(
+          `INSERT INTO rdv_creneau_code_bypass
+            (id_fiche, id_utilisateur, id_fonction, date_rdv, dep, slot_hour, week, year,
+             is_ferme_politique, is_ferme_db, is_surplus, is_zero_dispo, motif, date_creation)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            slotBypassLog.id_fiche,
+            slotBypassLog.id_utilisateur,
+            slotBypassLog.id_fonction,
+            slotBypassLog.date_rdv,
+            slotBypassLog.dep,
+            slotBypassLog.slot_hour,
+            slotBypassLog.week,
+            slotBypassLog.year,
+            slotBypassLog.is_ferme_politique,
+            slotBypassLog.is_ferme_db,
+            slotBypassLog.is_surplus,
+            slotBypassLog.is_zero_dispo,
+            slotBypassLog.motif,
+            now
+          ]
+        );
+      } catch (bypassLogErr) {
+        console.error('Erreur journalisation rdv_creneau_code_bypass:', bypassLogErr);
       }
     }
 

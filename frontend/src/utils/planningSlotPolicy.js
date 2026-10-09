@@ -9,8 +9,8 @@ const GROUP_A = new Set(['69', '42', '01', '38', '73', '74', '33', '24']);
 const GROUP_B = new Set(['77', '78', '91', '92', '93', '94', '95', '76', '27']);
 const GROUP_C = new Set(['60', '80', '59', '62', '67', '68', '90', '54', '55', '57']);
 
-/** Admin (1, 7), Backoffice (11), RP Confirmation (13), RE Confirmation (14) */
-export const POLICY_CLOSED_CREATE_ALLOWED_FONCTIONS = new Set([1, 7, 11, 13, 14]);
+/** Admin (1, 7), Confirmateur (6), Backoffice (11), RP (13), RE (14). Confirmateur : warning + code à retaper. */
+export const POLICY_CLOSED_CREATE_ALLOWED_FONCTIONS = new Set([1, 6, 7, 11, 13, 14]);
 
 export function normalizeDep(dep) {
   if (dep == null || dep === '') return '';
