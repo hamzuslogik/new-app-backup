@@ -26,6 +26,7 @@ const EXTRA_PAGES = [
   { path: '/suivi-agents', label: 'Suivi des Agents', permission: 'suivi_agents_view' },
   { path: '/controle-qualite', label: 'Contrôle Qualité', permission: 'controle_qualite_view' },
   { path: '/liste-completudes', label: 'Liste des complétudes', customCheck: (u) => [4, 11, 13, 14].includes(Number(u?.fonction)) },
+  { path: '/bypass-creneau', label: 'Bypass créneau', customCheck: (u) => [1, 7, 11, 13, 14].includes(Number(u?.fonction)) },
   { path: '/alertes', label: 'Alertes', customCheck: (u, hp) => hp('controle_qualite_view') },
   { path: '/remarques', label: 'Remarques', customCheck: (u, hp) => hp('controle_qualite_view') },
   { path: '/stats-agents-qualite', label: 'Stats Agents Qualité', permission: 'stats_agents_qualite_view' },

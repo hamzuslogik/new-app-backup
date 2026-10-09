@@ -32,6 +32,7 @@ import Alertes from './pages/Alertes';
 import AlertePlanningGate from './components/AlertePlanningGate';
 import Remarques from './pages/Remarques';
 import AuditRDV from './pages/AuditRDV';
+import RdvCreneauCodeBypass from './pages/RdvCreneauCodeBypass';
 import ListeCompletudes from './pages/ListeCompletudes';
 import CompteRendu from './pages/CompteRendu';
 import CompteRenduPending from './pages/CompteRenduPending';
@@ -124,6 +125,7 @@ function App() {
           <Route path="alerte-planning" element={<AlertePlanningGate />} />
           <Route path="remarques" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[2, 12]}><Remarques /></ProtectedRoute>} />
           <Route path="audit-rdv" element={<ProtectedRoute permission="controle_qualite_view" allowFunctions={[4, 13]}><AuditRDV /></ProtectedRoute>} />
+          <Route path="bypass-creneau" element={<ProtectedRoute permission={null} allowFunctions={[1, 7, 11, 13, 14]}><RdvCreneauCodeBypass /></ProtectedRoute>} />
           <Route path="liste-completudes" element={<ProtectedRoute permission={null} allowFunctions={[4, 11, 13, 14]}><ListeCompletudes /></ProtectedRoute>} />
           <Route path="compte-rendu" element={<ProtectedRoute permission="compte_rendu_view"><CompteRendu /></ProtectedRoute>} />
           <Route

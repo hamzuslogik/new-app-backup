@@ -36,6 +36,7 @@ import {
   FaChevronRight,
   FaTools,
   FaPaperPlane,
+  FaUnlockAlt,
 } from 'react-icons/fa';
 import { showTrackingInSidebar } from '../utils/trackingAccess';
 import { adminMenuUrls, isAdminMenuLinkActive } from '../utils/adminMenuUrls';
@@ -359,6 +360,14 @@ const Sidebar = ({ collapsed }) => {
       permission: null,
       visible: false,
       customCheck: (item, u) => [4, 13].includes(Number(u?.fonction)),
+    },
+    {
+      path: '/bypass-creneau',
+      label: 'Bypass créneau',
+      icon: FaUnlockAlt,
+      permission: null,
+      visible: true,
+      customCheck: (item, u) => [1, 7, 11, 13, 14].includes(Number(u?.fonction)),
     },
     {
       path: '/stats-agents-qualite',
