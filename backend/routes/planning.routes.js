@@ -2264,7 +2264,8 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
 // GET /planning/stat-affiliation
 // STAT affiliation : RDV CONFIRMER figés via fiches_histo (id_etat=7).
 // Date = fiches_histo.date_rdv_time (pas fiches.date_rdv_time qui change).
-// Affiliation principale = affectations, puis fiche / confirmations.
+// Affilié = ligne affectations avec id_commercial > 0 ET date_rdv_time le même jour
+// (pas fiches.id_commercial / confirmations, ni une ancienne affectation d'un autre jour).
 // Accès : backoffice (fonction 11) uniquement.
 // =====================================================
 router.get('/stat-affiliation', authenticate, async (req, res) => {
@@ -2288,7 +2289,7 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
       });
     }
 
-    // Plage indexable sur fiches_histo.date_rdv_time
+    // Plage indexable sur fiches_histo.date_rdv_time / affectations.date_rdv_time
     const dateStart = `${d} 00:00:00`;
     const dateEnd = `${d} 23:59:59`;
 
@@ -2316,13 +2317,8 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
           COALESCE(conf_h.pseudo, conf_f.pseudo) AS confirmateur_pseudo,
           aff.id_commercial AS affectation_id_commercial,
           ${commercialDisplaySql('com_aff')} AS affectation_commercial_pseudo,
-          ${commercialDisplaySql('com')} AS commercial_pseudo,
-          c.id_commercial AS confirmation_id_commercial,
-          ${commercialDisplaySql('com_conf')} AS confirmation_commercial_pseudo,
           CASE
             WHEN aff.id_commercial IS NOT NULL AND CAST(aff.id_commercial AS UNSIGNED) > 0 THEN 1
-            WHEN f.id_commercial IS NOT NULL AND CAST(f.id_commercial AS UNSIGNED) > 0 THEN 1
-            WHEN c.id_commercial IS NOT NULL AND CAST(c.id_commercial AS UNSIGNED) > 0 THEN 1
             ELSE 0
           END AS is_affilie
         FROM (
@@ -2339,24 +2335,17 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
           ) hx ON hx.max_id = h1.id
         ) h
         INNER JOIN fiches f ON f.id = h.id_fiche
-        LEFT JOIN affectations aff ON aff.id_fiche = f.id
+        LEFT JOIN affectations aff
+          ON aff.id_fiche = f.id
+          AND aff.date_rdv_time IS NOT NULL
+          AND aff.date_rdv_time >= ?
+          AND aff.date_rdv_time <= ?
+          AND CAST(aff.id_commercial AS UNSIGNED) > 0
         LEFT JOIN centres ctr ON ctr.id = f.id_centre
         LEFT JOIN etats e ON e.id = f.id_etat_final
         LEFT JOIN utilisateurs conf_h ON conf_h.id = h.id_confirmateur
         LEFT JOIN utilisateurs conf_f ON conf_f.id = f.id_confirmateur
         LEFT JOIN utilisateurs com_aff ON com_aff.id = aff.id_commercial
-        LEFT JOIN utilisateurs com ON com.id = f.id_commercial
-        LEFT JOIN (
-          SELECT c1.id_fiche, c1.id_commercial
-          FROM confirmations c1
-          INNER JOIN (
-            SELECT id_fiche, MAX(id) AS max_id
-            FROM confirmations
-            WHERE date_rdv_time >= ? AND date_rdv_time <= ?
-            GROUP BY id_fiche
-          ) cx ON cx.max_id = c1.id
-        ) c ON c.id_fiche = f.id
-        LEFT JOIN utilisateurs com_conf ON com_conf.id = c.id_commercial
         WHERE (f.archive = 0 OR f.archive IS NULL)
           AND (f.ko = 0 OR f.ko IS NULL)
         ORDER BY
@@ -2369,11 +2358,8 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
 
     let result = (rows || []).map((r) => {
       const isAffilie = Number(r.is_affilie) === 1;
-      // Affichage commercial : priorité affectations, puis fiche, confirmation
       const commercialDisplay =
         (r.affectation_commercial_pseudo && String(r.affectation_commercial_pseudo).trim()) ||
-        (r.commercial_pseudo && String(r.commercial_pseudo).trim()) ||
-        (r.confirmation_commercial_pseudo && String(r.confirmation_commercial_pseudo).trim()) ||
         '';
       return {
         id: r.id,
@@ -2391,7 +2377,7 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
         id_centre: r.id_centre != null ? Number(r.id_centre) : null,
         centre_titre: r.centre_titre || 'Sans centre',
         produit: r.produit,
-        id_commercial: r.id_commercial,
+        id_commercial: isAffilie ? r.affectation_id_commercial : null,
         id_etat_final: r.id_etat_final,
         etat_titre: r.etat_titre,
         etat_color: r.etat_color,
