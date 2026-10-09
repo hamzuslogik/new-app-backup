@@ -25,7 +25,7 @@ const {
 } = require('../utils/statsDrill');
 const {
   confirmateurDerniereLigneHistoJoin,
-  fichesHistoLastInRangeJoin,
+  fichesHistoAnyActionByConfirmateurJoin,
 } = require('../utils/fichesHistoJoinSql');
 const { isPolicyClosedSlot, canCreateRdvOnPolicyClosedSlot } = require('../utils/planningSlotPolicy');
 const {
@@ -1516,12 +1516,15 @@ router.get('/', authenticate, async (req, res) => {
       }
     // Filtre par confirmateur : pour toutes les sessions Dashboard sauf confirmateur (fonction 6).
     // include_confirmateur_2=1 : inclure 2ème et 3ème slots ; sinon uniquement 1er confirmateur.
-    // Pas de filtre sur les slots fiche si « Mes actions » : le JOIN fiches_histo ci-dessous fait foi.
+    // Pas de filtre slots fiche si « Mes actions » ou « Confirmer (histo) » : le JOIN histo fait foi
+    // (évite d'afficher d'autres confirmateurs via fiche.id_confirmateur alors que X a agi en histo).
     } else if (
       id_confirmateur &&
       id_confirmateur !== 'all' &&
       req.user.fonction !== 6 &&
-      String(date_champ) !== 'fiches_histo'
+      String(date_champ) !== 'fiches_histo' &&
+      String(date_champ) !== 'fiches_histo_confirmation' &&
+      String(date_champ) !== 'confirmations'
     ) {
       if (includeConfirmateurMultiSlot) {
         whereConditions.push('(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)');
@@ -1719,8 +1722,10 @@ router.get('/', authenticate, async (req, res) => {
         const timeStart = time_debut && String(time_debut).trim() !== '' ? time_debut : '00:00:00';
         const timeEnd = time_fin && String(time_fin).trim() !== '' ? time_fin : '23:59:59';
         
-        // fiches_histo : confirmateur 6 → dernière ligne fiches_histo (MAX(id)) = connecté + date_creation dans la plage.
-        // Autres profils : JOIN dernière ligne dont la date_creation est dans la plage.
+        // fiches_histo :
+        // - Confirmateur (6) : dernière ligne globale = soi + plage (« mes » dernières actions).
+        // - Admin / BO / RE / RP + confirmateur choisi : TOUTES les fiches où il a changé l'état
+        //   dans la plage (fiches_histo), même si un autre a touché avant/après.
         if (date_champ === 'fiches_histo' && !(req.user.fonction === 6 && hasCritereOuTelSearch)) {
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
@@ -1735,8 +1740,8 @@ router.get('/', authenticate, async (req, res) => {
             histoParamsForFichesHisto = j.params;
             histoIdsSubquerySql = j.idsSubquerySql;
             histoIdsSubqueryParams = j.idsSubqueryParams;
-          } else {
-            const j = fichesHistoLastInRangeJoin(
+          } else if (id_confirmateur && id_confirmateur !== 'all') {
+            const j = fichesHistoAnyActionByConfirmateurJoin(
               startDatetime,
               endDatetime,
               histoTargetUserId,
@@ -1746,15 +1751,45 @@ router.get('/', authenticate, async (req, res) => {
             histoParamsForFichesHisto = j.params;
             histoIdsSubquerySql = j.idsSubquerySql;
             histoIdsSubqueryParams = j.idsSubqueryParams;
+          } else {
+            // Sans confirmateur : toute fiche ayant au moins un passage d'état dans la plage
+            histoIdsSubquerySql = `SELECT DISTINCT id_fiche
+              FROM fiches_histo
+              WHERE date_creation >= ? AND date_creation <= ?`;
+            histoIdsSubqueryParams = [startDatetime, endDatetime];
+            histoJoinForFichesHisto = `INNER JOIN (${histoIdsSubquerySql}) histo_ids ON fiche.id = histo_ids.id_fiche`;
+            histoParamsForFichesHisto = histoIdsSubqueryParams;
           }
         } else if (date_champ === 'confirmations' || date_champ === 'fiches_histo_confirmation') {
           // Fiches confirmées : basé sur fiches_histo (id_etat=7, date_creation dans la plage)
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
           whereConditions.push(`fiche.id_etat_final = 7`);
-          histoIdsSubquerySql =
-            'SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_etat = 7 AND date_creation >= ? AND date_creation <= ?';
-          histoIdsSubqueryParams = [startDatetime, endDatetime];
+          const confFilterActive =
+            id_confirmateur &&
+            id_confirmateur !== 'all' &&
+            req.user.fonction !== 6;
+          if (confFilterActive) {
+            if (includeConfirmateurMultiSlot) {
+              histoIdsSubquerySql =
+                'SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_etat = 7 AND date_creation >= ? AND date_creation <= ? AND (id_confirmateur = ? OR id_confirmateur_2 = ? OR id_confirmateur_3 = ?)';
+              histoIdsSubqueryParams = [
+                startDatetime,
+                endDatetime,
+                id_confirmateur,
+                id_confirmateur,
+                id_confirmateur,
+              ];
+            } else {
+              histoIdsSubquerySql =
+                'SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_etat = 7 AND date_creation >= ? AND date_creation <= ? AND id_confirmateur = ?';
+              histoIdsSubqueryParams = [startDatetime, endDatetime, id_confirmateur];
+            }
+          } else {
+            histoIdsSubquerySql =
+              'SELECT DISTINCT id_fiche FROM fiches_histo WHERE id_etat = 7 AND date_creation >= ? AND date_creation <= ?';
+            histoIdsSubqueryParams = [startDatetime, endDatetime];
+          }
           histoJoinForFichesHisto = `INNER JOIN (${histoIdsSubquerySql}) histo_conf ON fiche.id = histo_conf.id_fiche`;
           histoParamsForFichesHisto = histoIdsSubqueryParams;
         } else if (date_champ === 'date_modif_time') {

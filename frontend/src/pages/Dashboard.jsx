@@ -321,6 +321,7 @@ const Dashboard = () => {
   // Pour Confirmateur (fonction 6) et RE Confirmation (fonction 14)
   const isConfirmateur = user?.fonction === 6;
   const isREConfirmation = user?.fonction === 14;
+  const isRPConfirmation = user?.fonction === 13;
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
   const isQualiteConfirmation = Number(user?.fonction) === 4;
   const isAdminFicheLayout = isAdminSession(user);
@@ -1332,10 +1333,16 @@ const Dashboard = () => {
     return conf123FromFiche();
   };
 
-  // Quand "Inclure 2ème confirmateur" est coché et un confirmateur est sélectionné : afficher Confirmateur 1 | Confirmateur 2 | Confirmateur 3, avec le sélectionné mis en avant
+  // Confirmateur sélectionné : n'afficher que lui (sauf case « Inclure 2ème » → 1|2|3 avec surbrillance).
+  // Évite RE/RP/backoffice « Mes actions » qui montrait tous les slots fiche alors qu'un seul est filtré.
   const renderConfirmateurCell = (fiche) => {
     const selectedId = appliedFilters.id_confirmateur ? String(appliedFilters.id_confirmateur) : null;
     const includeSecond = appliedFilters.include_confirmateur_2;
+
+    if (selectedId && !includeSecond) {
+      const name = getUserName(selectedId);
+      return name || getConfirmateursFormatted(fiche);
+    }
 
     if (includeSecond && selectedId) {
       const c1 = fiche.id_confirmateur ? getUserName(fiche.id_confirmateur) : null;
@@ -2050,7 +2057,11 @@ const Dashboard = () => {
                       <option value="date_rdv_time">Date Planning</option>
                     )}
                     <option value="date_sign_time">Date signature</option>
-                    <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
+                    <option value="fiches_histo">
+                      {user?.fonction === 6
+                        ? 'Mes actions sur la fiche (fiches_histo)'
+                        : 'Changements d\'état du confirmateur (fiches_histo)'}
+                    </option>
                     <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                   </select>
                 </div>
@@ -2308,7 +2319,7 @@ const Dashboard = () => {
             <h2>
               {debouncedQuickSearch.trim() !== '' 
                 ? `Résultats de la recherche rapide: ${fiches.length} fiche${fiches.length > 1 ? 's' : ''}`
-                : filters.fiche_search 
+                : (appliedFilters.fiche_search || !!statsListOverride)
                   ? `Résultats de la recherche ${pagination.total}` 
                   : `${pagination.total}`}
             </h2>
@@ -2837,7 +2848,7 @@ const Dashboard = () => {
 
         {/* Tableau des confirmateurs avec leurs RDV - Affichage conditionnel selon la permission */}
         {/* Masquer pour Confirmateur (fonction 6) ; visible pour RE Confirmation (14) et les autres rôles autorisés */}
-        {(hasPermission('dashboard_view_confirmateurs_tabs') || isREConfirmation) &&
+        {(hasPermission('dashboard_view_confirmateurs_tabs') || isREConfirmation || isRPConfirmation) &&
          !isConfirmateur &&
          !isLoadingStats && dashboardStats && (
           <div className="confirmateurs-table-section">
@@ -2899,6 +2910,21 @@ const Dashboard = () => {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot>
+                    <tr className="confirmateurs-table-total">
+                      <td><strong>Total Confirmer de la journée</strong></td>
+                      <td className="rdv-count-cell">
+                        <span className="rdv-count">
+                          <strong>{dashboardStats.rdvTodayConfirmed || 0}</strong>
+                        </span>
+                      </td>
+                      <td className="rdv-count-cell">
+                        <span className="rdv-count">
+                          <strong>{dashboardStats.rdvUpcoming || 0}</strong>
+                        </span>
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             ) : (
@@ -3181,7 +3207,11 @@ const Dashboard = () => {
                       <option value="date_rdv_time">Date Planning</option>
                     )}
                     <option value="date_sign_time">Date signature</option>
-                    <option value="fiches_histo">Mes actions sur la fiche (fiches_histo)</option>
+                    <option value="fiches_histo">
+                      {user?.fonction === 6
+                        ? 'Mes actions sur la fiche (fiches_histo)'
+                        : 'Changements d\'état du confirmateur (fiches_histo)'}
+                    </option>
                     <option value="fiches_histo_confirmation">Date confirmation (fiches_histo)</option>
                   </select>
                 </div>

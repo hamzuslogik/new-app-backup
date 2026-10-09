@@ -72,19 +72,45 @@ function confirmateurDerniereLigneHistoJoin(startDatetime, endDatetime, userId, 
 
 /**
  * Dernière ligne dans la plage, auteur = confirmateur (filtre poussé dans l'agrégat).
+ * @deprecated préférer fichesHistoAnyActionByConfirmateur* pour RE/RP/BO/admin
+ *   (ne pas exiger que ce soit la dernière action globale).
  */
 function fichesHistoLastInRangeIdsSql(startDatetime, endDatetime, userId, includeMultiSlot = false) {
+  return fichesHistoAnyActionByConfirmateurIdsSql(
+    startDatetime,
+    endDatetime,
+    userId,
+    includeMultiSlot
+  );
+}
+
+function fichesHistoLastInRangeJoin(startDatetime, endDatetime, userId, includeMultiSlot = false) {
+  return fichesHistoAnyActionByConfirmateurJoin(
+    startDatetime,
+    endDatetime,
+    userId,
+    includeMultiSlot
+  );
+}
+
+/**
+ * Toutes les fiches où le confirmateur a au moins un changement d'état (ligne fiches_histo)
+ * dans la plage — même si un autre confirmateur a touché la fiche avant ou après.
+ * (RE / RP / backoffice / admin — « Mes actions sur la fiche »)
+ */
+function fichesHistoAnyActionByConfirmateurIdsSql(
+  startDatetime,
+  endDatetime,
+  userId,
+  includeMultiSlot = false
+) {
   const slotWhere = confirmateurSlotMatch('', includeMultiSlot);
   const tailParams = confirmateurSlotParams(userId, includeMultiSlot);
 
-  const sql = `SELECT t.id_fiche
-    FROM (
-      SELECT id_fiche, MAX(id) AS max_id
-      FROM fiches_histo
-      WHERE date_creation >= ? AND date_creation <= ?
-        AND ${slotWhere}
-      GROUP BY id_fiche
-    ) t`;
+  const sql = `SELECT DISTINCT id_fiche
+    FROM fiches_histo
+    WHERE date_creation >= ? AND date_creation <= ?
+      AND ${slotWhere}`;
 
   return {
     sql,
@@ -92,8 +118,18 @@ function fichesHistoLastInRangeIdsSql(startDatetime, endDatetime, userId, includ
   };
 }
 
-function fichesHistoLastInRangeJoin(startDatetime, endDatetime, userId, includeMultiSlot = false) {
-  const ids = fichesHistoLastInRangeIdsSql(startDatetime, endDatetime, userId, includeMultiSlot);
+function fichesHistoAnyActionByConfirmateurJoin(
+  startDatetime,
+  endDatetime,
+  userId,
+  includeMultiSlot = false
+) {
+  const ids = fichesHistoAnyActionByConfirmateurIdsSql(
+    startDatetime,
+    endDatetime,
+    userId,
+    includeMultiSlot
+  );
   return {
     joinSql: `INNER JOIN (${ids.sql}) histo_ids ON fiche.id = histo_ids.id_fiche`,
     params: ids.params,
@@ -105,6 +141,8 @@ function fichesHistoLastInRangeJoin(startDatetime, endDatetime, userId, includeM
 module.exports = {
   confirmateurDerniereLigneHistoJoin,
   fichesHistoLastInRangeJoin,
+  fichesHistoAnyActionByConfirmateurJoin,
   confirmateurDerniereLigneHistoIdsSql,
   fichesHistoLastInRangeIdsSql,
+  fichesHistoAnyActionByConfirmateurIdsSql,
 };
