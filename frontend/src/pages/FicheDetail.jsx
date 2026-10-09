@@ -5740,11 +5740,12 @@ const FicheDetail = ({
                   lastHistoEtatActuel?.confirmateur_3_pseudo ||
                   confirmateurs?.find(c => Number(c.id) === Number(fiche.id_confirmateur_3))?.pseudo ||
                   null,
+                // Pas de fallback fiche : uniquement le commentaire historisé du passage d'état
                 conf_commentaire_produit:
-                  lastHistoEtatActuel?.conf_commentaire_produit ||
-                  fiche.conf_commentaire_produit ||
-                  fiche.motif_qualif ||
-                  null,
+                  lastHistoEtatActuel?.conf_commentaire_produit != null &&
+                  String(lastHistoEtatActuel.conf_commentaire_produit).trim() !== ''
+                    ? lastHistoEtatActuel.conf_commentaire_produit
+                    : null,
                 commentaire_qualite: fiche.commentaire_qualite || null,
                 commentaire_commercial: fiche.commentaire_commercial || null,
                 conf_rdv_avec: fiche.conf_rdv_avec || null,
@@ -5890,11 +5891,7 @@ const FicheDetail = ({
                 if (!hasCommentItem) {
                   items.push({
                     label: 'Commentaire',
-                    value:
-                      etatActuel.conf_commentaire_produit ||
-                      fiche.conf_commentaire_produit ||
-                      fiche.motif_qualif ||
-                      '',
+                    value: etatActuel.conf_commentaire_produit || '',
                     fullWidth: true,
                   });
                 }
@@ -5921,10 +5918,7 @@ const FicheDetail = ({
                 return pick(
                   itemValue,
                   etatActuel.conf_commentaire_produit,
-                  lastHistoEtatActuel?.conf_commentaire_produit,
-                  fiche.conf_commentaire_produit,
-                  fiche.motif_qualif,
-                  fiche.commentaire
+                  lastHistoEtatActuel?.conf_commentaire_produit
                 );
               };
               const normalizeEtatTitle = (v) =>
