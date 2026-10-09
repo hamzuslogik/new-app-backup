@@ -2,7 +2,8 @@
  * Routes complétude fiche — montées sur le routeur /api/fiches (avant GET /:id).
  * Création / modification : Qualité Confirmation (4).
  * Liste : Qualité Confirmation (4), Backoffice (11), RP (13), RE (14 — toutes les complétudes).
- * Consultation / traitement fiche : confirmateurs (6), RE (14), RP (13), QC (4), Backoffice (11).
+ * Consultation fiche : confirmateurs (6), RE (14), RP (13), QC (4), Backoffice (11).
+ * Traitement : confirmateurs (6), RE (14), RP (13), Backoffice (11).
  */
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
 
@@ -66,6 +67,7 @@ function canTreatCompletude(user, fiche) {
   const fn = Number(user.fonction);
   if (isREConfirmation(fn) || isRPConfirmation(fn)) return true;
   if (isConfirmateur(fn)) return true;
+  if (isBackoffice(fn)) return true;
   return false;
 }
 
@@ -282,14 +284,20 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
             success: true,
             data: [],
             pagination: { page: pageNum, limit: limitNum, total: 0, pages: 1 },
-            permissions: { can_treat: isREConfirmation(req.user.fonction) || isRPConfirmation(req.user.fonction) }
+            permissions: {
+              can_treat:
+                isREConfirmation(req.user.fonction) ||
+                isRPConfirmation(req.user.fonction) ||
+                isBackoffice(req.user.fonction)
+            }
           });
         }
         throw err;
       }
 
       const fn = Number(req.user.fonction);
-      const userCanTreatRole = isREConfirmation(fn) || isRPConfirmation(fn);
+      const userCanTreatRole =
+        isREConfirmation(fn) || isRPConfirmation(fn) || isBackoffice(fn);
 
       res.json({
         success: true,
@@ -542,7 +550,7 @@ function registerFicheCompletudeRoutes(router, { authenticate, hashToIdMiddlewar
       if (!canTreatCompletude(req.user, fiche)) {
         return res.status(403).json({
           success: false,
-          message: 'Seuls les confirmateurs, le RE ou le RP peuvent marquer la complétude comme traitée'
+          message: 'Seuls les confirmateurs, le RE, le RP ou le backoffice peuvent marquer la complétude comme traitée'
         });
       }
 

@@ -1791,7 +1791,7 @@ const FicheDetail = ({
     isConfirmateurSession ||
     isBackofficeSession;
   const canTreatCompletudeDetail =
-    isREConfirmation || isRPConfirmation || isConfirmateurSession;
+    isREConfirmation || isRPConfirmation || isConfirmateurSession || isBackofficeSession;
   const showCompletudeTabBadge =
     isConfirmateurSession || isREConfirmation || isRPConfirmation || isBackofficeSession;
   /** Badge DECALAGE (demande en attente) : admin, backoffice, RE/RP confirmation, confirmateur */
