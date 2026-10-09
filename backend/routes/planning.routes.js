@@ -2262,8 +2262,8 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
 
 // =====================================================
 // GET /planning/stat-affiliation
-// STAT affiliation : RDV par date_rdv_time, affiliés / non affiliés,
-// indépendant de l'état actuel (reste visible après sortie de CONFIRMER).
+// STAT affiliation : RDV par date_rdv_time, affiliés / non affiliés.
+// Source principale d'affiliation = table affectations, puis fiche / CR.
 // Accès : backoffice (fonction 11) uniquement.
 // =====================================================
 router.get('/stat-affiliation', authenticate, async (req, res) => {
@@ -2287,6 +2287,12 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
       });
     }
 
+    // Plage indexable (évite DATE(colonne) qui empêche l'usage d'index)
+    const dateStart = `${d} 00:00:00`;
+    const dateEnd = `${d} 23:59:59`;
+
+    // Base = fiches du jour (plage indexable).
+    // Affiliation principale = affectations, secours = fiches.id_commercial / confirmations du jour.
     const rows = await query(
       `SELECT
           f.id,
@@ -2299,102 +2305,85 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
           f.ville,
           f.date_rdv_time,
           f.id_confirmateur,
-          f.id_confirmateur_2,
-          f.id_confirmateur_3,
           f.id_centre,
           ctr.titre AS centre_titre,
           f.produit,
           f.id_commercial,
-          f.id_commercial_2,
           f.id_etat_final,
           e.titre AS etat_titre,
           e.color AS etat_color,
-          ${commercialDisplaySql('com')} AS commercial_pseudo,
-          ${commercialDisplaySql('com2')} AS commercial2_pseudo,
           conf_u.pseudo AS confirmateur_pseudo,
-          c.id_commercial AS confirmation_id_commercial,
-          ${commercialDisplaySql('com_conf')} AS confirmation_commercial_pseudo,
-          cr.id_commercial AS cr_id_commercial,
-          ${commercialDisplaySql('com_cr')} AS cr_commercial_pseudo,
           aff.id_commercial AS affectation_id_commercial,
           ${commercialDisplaySql('com_aff')} AS affectation_commercial_pseudo,
+          ${commercialDisplaySql('com')} AS commercial_pseudo,
+          c.id_commercial AS confirmation_id_commercial,
+          ${commercialDisplaySql('com_conf')} AS confirmation_commercial_pseudo,
           CASE
-            WHEN (f.id_commercial IS NOT NULL AND CAST(f.id_commercial AS UNSIGNED) > 0)
-              OR (c.id_commercial IS NOT NULL AND CAST(c.id_commercial AS UNSIGNED) > 0)
-              OR (cr.id_commercial IS NOT NULL AND CAST(cr.id_commercial AS UNSIGNED) > 0)
-              OR (
-                aff.id_commercial IS NOT NULL AND CAST(aff.id_commercial AS UNSIGNED) > 0
-                AND (
-                  aff.date_rdv_time IS NULL
-                  OR aff.date_rdv_time <=> f.date_rdv_time
-                  OR DATE(aff.date_rdv_time) = DATE(f.date_rdv_time)
-                )
-              )
-            THEN 1 ELSE 0
+            WHEN aff.id_commercial IS NOT NULL AND CAST(aff.id_commercial AS UNSIGNED) > 0 THEN 1
+            WHEN f.id_commercial IS NOT NULL AND CAST(f.id_commercial AS UNSIGNED) > 0 THEN 1
+            WHEN c.id_commercial IS NOT NULL AND CAST(c.id_commercial AS UNSIGNED) > 0 THEN 1
+            ELSE 0
           END AS is_affilie
         FROM fiches f
+        LEFT JOIN affectations aff ON aff.id_fiche = f.id
         LEFT JOIN centres ctr ON ctr.id = f.id_centre
         LEFT JOIN etats e ON e.id = f.id_etat_final
-        LEFT JOIN utilisateurs com ON com.id = f.id_commercial
-        LEFT JOIN utilisateurs com2 ON com2.id = f.id_commercial_2
         LEFT JOIN utilisateurs conf_u ON conf_u.id = f.id_confirmateur
-        LEFT JOIN affectations aff ON aff.id_fiche = f.id
         LEFT JOIN utilisateurs com_aff ON com_aff.id = aff.id_commercial
-        LEFT JOIN confirmations c ON c.id = (
-          SELECT c2.id FROM confirmations c2
-          WHERE c2.id_fiche = f.id
-            AND (
-              c2.date_rdv_time <=> f.date_rdv_time
-              OR DATE(c2.date_rdv_time) = DATE(f.date_rdv_time)
-            )
-          ORDER BY c2.id DESC
-          LIMIT 1
-        )
+        LEFT JOIN utilisateurs com ON com.id = f.id_commercial
+        LEFT JOIN (
+          SELECT c1.id_fiche, c1.id_commercial
+          FROM confirmations c1
+          INNER JOIN (
+            SELECT id_fiche, MAX(id) AS max_id
+            FROM confirmations
+            WHERE date_rdv_time >= ? AND date_rdv_time <= ?
+            GROUP BY id_fiche
+          ) cx ON cx.max_id = c1.id
+        ) c ON c.id_fiche = f.id
         LEFT JOIN utilisateurs com_conf ON com_conf.id = c.id_commercial
-        LEFT JOIN compte_rendu_pending cr ON cr.id = (
-          SELECT cr2.id FROM compte_rendu_pending cr2
-          WHERE cr2.id_fiche = f.id
-            AND cr2.id_commercial IS NOT NULL
-            AND CAST(cr2.id_commercial AS UNSIGNED) > 0
-          ORDER BY COALESCE(cr2.date_approbation, cr2.date_creation) DESC, cr2.id DESC
-          LIMIT 1
-        )
-        LEFT JOIN utilisateurs com_cr ON com_cr.id = cr.id_commercial
         WHERE (f.archive = 0 OR f.archive IS NULL)
           AND (f.ko = 0 OR f.ko IS NULL)
-          AND f.date_rdv_time IS NOT NULL
-          AND DATE(f.date_rdv_time) = ?
-          AND (
-            CAST(f.id_etat_final AS UNSIGNED) = 7
-            OR c.id IS NOT NULL
-            OR EXISTS (
-              SELECT 1 FROM fiches_histo h
-              WHERE h.id_fiche = f.id AND CAST(h.id_etat AS UNSIGNED) = 7
-            )
-          )
+          AND f.date_rdv_time >= ?
+          AND f.date_rdv_time <= ?
         ORDER BY
           CASE WHEN ctr.titre IS NULL OR ctr.titre = '' THEN 1 ELSE 0 END,
           ctr.titre ASC,
           f.date_rdv_time ASC,
           f.id ASC`,
-      [d]
+      [dateStart, dateEnd, dateStart, dateEnd]
     );
 
     let result = (rows || []).map((r) => {
       const isAffilie = Number(r.is_affilie) === 1;
+      // Affichage commercial : priorité affectations, puis fiche, confirmation
       const commercialDisplay =
-        (r.commercial_pseudo && String(r.commercial_pseudo).trim()) ||
         (r.affectation_commercial_pseudo && String(r.affectation_commercial_pseudo).trim()) ||
+        (r.commercial_pseudo && String(r.commercial_pseudo).trim()) ||
         (r.confirmation_commercial_pseudo && String(r.confirmation_commercial_pseudo).trim()) ||
-        (r.cr_commercial_pseudo && String(r.cr_commercial_pseudo).trim()) ||
         '';
       return {
-        ...r,
+        id: r.id,
         hash: encodeFicheId(r.id),
-        is_affilie: isAffilie,
-        commercial_display: commercialDisplay,
+        date_insert_time: r.date_insert_time,
+        nom: r.nom,
+        prenom: r.prenom,
+        tel: r.tel,
+        adresse: r.adresse,
+        cp: r.cp,
+        ville: r.ville,
+        date_rdv_time: r.date_rdv_time,
+        id_confirmateur: r.id_confirmateur,
+        id_centre: r.id_centre != null ? Number(r.id_centre) : null,
         centre_titre: r.centre_titre || 'Sans centre',
-        id_centre: r.id_centre != null ? Number(r.id_centre) : null
+        produit: r.produit,
+        id_commercial: r.id_commercial,
+        id_etat_final: r.id_etat_final,
+        etat_titre: r.etat_titre,
+        etat_color: r.etat_color,
+        confirmateur_pseudo: r.confirmateur_pseudo,
+        is_affilie: isAffilie,
+        commercial_display: commercialDisplay
       };
     });
 
