@@ -7424,7 +7424,25 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           ? ficheData.id_sous_etat
           : null;
         const resolvedSous = await resolveSousEtatForEtatChange(newEtatId, providedSous);
-        ficheData.id_sous_etat = resolvedSous;
+
+        // HC (55) : sous-état obligatoire (motifs depuis sous_etat)
+        if (newEtatId === 55) {
+          if (resolvedSous == null) {
+            return res.status(400).json({
+              success: false,
+              message: 'Le sous-état HC est obligatoire',
+            });
+          }
+          ficheData.id_sous_etat = resolvedSous;
+          ficheData.hc = 1;
+          ficheData.ko = 0;
+        } else {
+          ficheData.id_sous_etat = resolvedSous;
+          // Quitter HC : remettre le flag
+          if (oldEtatId === 55 || Number(fiche.hc) === 1) {
+            ficheData.hc = 0;
+          }
+        }
       }
 
       // Date d'appel du passage d'état → fiches_histo uniquement (ne plus écrire fiches.date_appel_time)
@@ -7695,6 +7713,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       'date_rdv_time', 'date_appel_time', 'date_modif_time', 'id_centre', 'id_agent', 'id_commercial', 'id_confirmateur',
       'id_confirmateur_2', 'id_confirmateur_3', 'id_commercial_2', 'id_etat_final', 'id_sous_etat',
       'id_qualif', 'rdv_urgent', 'commentaire', 'commentaire_qualite', 'observation_qualite', 'id_qualite_confirmation', 'motif_qualif', 'type_contrat_mr', 'type_contrat_madame',
+      'ko', 'hc',
       // Champs de confirmation
       'conf_commentaire_produit', 'conf_consommations', 'conf_profession_monsieur',
       'conf_profession_madame', 'conf_presence_couple', 'conf_produit',
@@ -7726,6 +7745,18 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
         `UPDATE fiches SET ${fields.join(', ')} WHERE id = ?`,
         [...values, id]
       );
+
+      // Passage en HC : nettoyer l'historique fiches_ko si la fiche n'est plus en KO
+      if (
+        parseEtatId(ficheData.id_etat_final) === 55 ||
+        (Object.prototype.hasOwnProperty.call(ficheData, 'ko') && Number(ficheData.ko) === 0)
+      ) {
+        try {
+          await clearFicheKoHistoryWhenKoRemoved(id);
+        } catch (e) {
+          console.error('clearFicheKoHistoryWhenKoRemoved (PUT fiche):', e.message);
+        }
+      }
 
       // Enregistrer chaque modification dans modifica
       const userPseudo = req.user.pseudo || 'Utilisateur';

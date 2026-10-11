@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useQuery } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { FaChartBar, FaFilter, FaCalendarAlt, FaSearch, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
+import { FaChartBar, FaFilter, FaCalendarAlt, FaSearch, FaSort, FaSortUp, FaSortDown, FaPlus } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import {
   BarChart,
   Bar,
@@ -16,6 +17,7 @@ import {
 } from 'recharts';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FicheDetailLink from '../components/FicheDetailLink';
+import CreateFicheModal from '../components/CreateFicheModal';
 import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
 import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
@@ -98,12 +100,15 @@ const StatistiquesFiches = () => {
   }, []);
 
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const isPartenaire = Number(user?.fonction) === 9;
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
   const [showFilters, setShowFilters] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Récupérer les centres (filtrés selon le rôle)
   const { data: centresData } = useQuery(
@@ -114,8 +119,63 @@ const StatistiquesFiches = () => {
     }
   );
 
+  const { data: produitsData } = useQuery(
+    ['produits', 'statistiques-fiches-create'],
+    async () => {
+      const res = await api.get('/management/produits');
+      return res.data.data || [];
+    },
+    { enabled: isPartenaire }
+  );
+
   // Vérifier si l'utilisateur a accès à cette page
   const hasAccess = !!user?.id && ([1, 2, 7].includes(user.fonction) || user.fonction === 9);
+
+  const partnerCentreIds = isPartenaire
+    ? (Array.isArray(user?.centres_ids) && user.centres_ids.length > 0
+        ? user.centres_ids.map(Number)
+        : user?.centre
+          ? [Number(user.centre)]
+          : [])
+    : null;
+  const centresForCreate = (centresData || []).filter((c) => {
+    if (!(c.etat > 0)) return false;
+    if (partnerCentreIds) return partnerCentreIds.includes(Number(c.id));
+    return true;
+  });
+
+  const createFicheMutation = useMutation(
+    async (ficheData) => {
+      const response = await api.post('/fiches', ficheData);
+      return response.data;
+    },
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(['statistiques-fiches']);
+        queryClient.invalidateQueries(['fiches-detaillees']);
+        queryClient.invalidateQueries('fiches');
+        setShowCreateModal(false);
+        if (data?.data?.autoApproved) {
+          toast.success(
+            data.message ||
+              `Fiche acceptée automatiquement (${data.data.regleLibelle || 'règle'})`
+          );
+        } else if (data?.data?.demandeCreated) {
+          toast.info(
+            data.message ||
+              "Une demande d'insertion a été créée (doublon téléphone)."
+          );
+        } else if (data?.data?.alreadyInsertedToday) {
+          toast.info(data.message || "Fiche déjà insérée aujourd'hui.");
+        } else {
+          toast.success(data?.message || 'Fiche créée avec succès');
+        }
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Erreur lors de la création de la fiche');
+      },
+    }
+  );
 
   const buildQueryParams = (f) => {
     const params = {
@@ -408,13 +468,25 @@ const StatistiquesFiches = () => {
         <h1>
           <FaChartBar /> Statistiques Fiches
         </h1>
-        <button
-          type="button"
-          className="filter-toggle-btn"
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
-        </button>
+        <div className="page-header-actions">
+          {isPartenaire && (
+            <button
+              type="button"
+              className="btn-insert-fiche"
+              onClick={() => setShowCreateModal(true)}
+              title="Insérer une nouvelle fiche"
+            >
+              <FaPlus /> Insérer une fiche
+            </button>
+          )}
+          <button
+            type="button"
+            className="filter-toggle-btn"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <FaFilter /> {showFilters ? 'Masquer' : 'Afficher'} les filtres
+          </button>
+        </div>
       </div>
 
       {showFilters && (
@@ -825,6 +897,18 @@ const StatistiquesFiches = () => {
           </div>
         )}
       </div>
+      )}
+
+      {showCreateModal && isPartenaire && (
+        <CreateFicheModal
+          centres={centresForCreate}
+          agents={[]}
+          produits={produitsData || []}
+          partenaireMode
+          onClose={() => setShowCreateModal(false)}
+          onSave={(data) => createFicheMutation.mutate(data)}
+          isLoading={createFicheMutation.isLoading}
+        />
       )}
     </div>
   );

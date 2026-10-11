@@ -1643,9 +1643,10 @@ const FicheDetail = ({
   });
 
   // Sous-états chargés depuis l'API pour ces états (11 RDV ANNULER, 12 REFUSER : liste affichée, sélection facultative)
-  const etatsAvecListeSousEtats = [2, 8, 11, 12, 13, 16, 19, 44, 45];
+  // 55 = HC (motifs via sous_etat)
+  const etatsAvecListeSousEtats = [2, 8, 11, 12, 13, 16, 19, 44, 45, 55];
   // Sous-état obligatoire seulement pour ces états lorsque la liste existe (pas 11 ni 12)
-  const etatsSousEtatObligatoire = [2, 8, 16, 19];
+  const etatsSousEtatObligatoire = [2, 8, 16, 19, 55];
   const { data: sousEtats = [] } = useQuery(
     ['sous-etat', selectedEtat],
     async () => {
@@ -3499,8 +3500,8 @@ const FicheDetail = ({
       setSlotCodeModal(null);
       pendingAfterSlotCodeRef.current = null;
     }
-    if ([5, 6, 11, 12, 22, 23, 24, 25, 26, 29, 34].includes(newEtatId)) {
-      setEtatFormData(prev => ({ ...prev, motif_qualif: '' }));
+    if ([5, 6, 11, 12, 22, 23, 24, 25, 26, 29, 34, 55].includes(newEtatId)) {
+      setEtatFormData(prev => ({ ...prev, motif_qualif: '', id_sous_etat: '' }));
     }
     // État 19 (RAPPEL POUR BUREAU) : toujours date/heure actuelles (comme NRP)
     if (newEtatId === 19) {
@@ -3813,6 +3814,24 @@ const FicheDetail = ({
         }
       }
 
+      // HC (55) : sous-état (motif) obligatoire ; commentaire obligatoire si motif AUTRE
+      if (Number(selectedEtat) === 55) {
+        const idSousEtatHc = (etatFormData.id_sous_etat || '').toString().trim();
+        if (!idSousEtatHc) {
+          alert('Veuillez sélectionner un sous-état HC.');
+          return;
+        }
+        const selectedHcSousEtat = (sousEtats || []).find(
+          (se) => String(se.id) === String(idSousEtatHc)
+        );
+        const isHcAutre = String(selectedHcSousEtat?.titre || '').trim().toUpperCase() === 'AUTRE';
+        const commentaireHc = (etatFormData.motif_qualif || etatFormData.conf_commentaire_produit || '').trim();
+        if (isHcAutre && !commentaireHc) {
+          alert('Veuillez préciser le motif (commentaire obligatoire pour AUTRE).');
+          return;
+        }
+      }
+
       // Validation : commentaire obligatoire lorsque le formulaire le propose
       // (11 et 12 : commentaire facultatif ; NRP (2) : commentaire facultatif)
       // Session commercial : le champ « Compte rendu » alimente conf_commentaire_produit
@@ -4047,6 +4066,18 @@ const FicheDetail = ({
         }
         if (etatFormData.motif_qualif) {
           updateData.motif_qualif = etatFormData.motif_qualif;
+        }
+      } else if (Number(selectedEtat) === 55) {
+        // HC (état 55) : sous-état obligatoire + commentaire optionnel (obligatoire si AUTRE)
+        updateData.id_sous_etat = etatFormData.id_sous_etat
+          ? parseInt(etatFormData.id_sous_etat, 10)
+          : null;
+        updateData.hc = 1;
+        updateData.ko = 0;
+        const motifCommentaire = (etatFormData.motif_qualif || etatFormData.conf_commentaire_produit || '').trim();
+        if (motifCommentaire) {
+          updateData.motif_qualif = motifCommentaire;
+          updateData.commentaire_qualite = motifCommentaire;
         }
       } else if ([5, 6, 9, 11, 12, 22, 23, 24, 25, 26, 29, 34, 35].includes(selectedEtat)) {
         // CLIENT HONORE A SUIVRE (9), RDV ANNULER (11), REFUSER (12), HORS CIBLE (23), HHC FINANCEMENT (34), HCC TECHNIQUE (35), ANNULER (5), HC ÂGE/DBL/LOC (6), ANNULER 2× (22), HC FINANCEMENT (24), REFUSER 2× (25), RDV ANNULER 2× (26), HC AIR AIR (29)
@@ -9966,13 +9997,97 @@ const FicheDetail = ({
               </div>
             )}
 
+            {/* HC (55) : sous-état (motif) obligatoire */}
+            {Number(selectedEtat) === 55 && (
+              <div className="etat-form" style={{ marginTop: '20px' }}>
+                <div className="form-group">
+                  <label htmlFor="etat_id_sous_etat_hc">Sous-état HC *</label>
+                  <select
+                    id="etat_id_sous_etat_hc"
+                    className="form-control"
+                    value={etatFormData.id_sous_etat || ''}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      const se = (sousEtats || []).find((s) => String(s.id) === String(nextId));
+                      const titre = String(se?.titre || '').trim();
+                      setEtatFormData({
+                        ...etatFormData,
+                        id_sous_etat: nextId,
+                        motif_qualif:
+                          titre.toUpperCase() === 'AUTRE'
+                            ? ''
+                            : getCommentPrefillFromSousEtatTitre(titre) || etatFormData.motif_qualif,
+                      });
+                    }}
+                  >
+                    <option value="">-- Sélectionner un sous-état --</option>
+                    {sousEtats.map((se) => (
+                      <option key={se.id} value={String(se.id)}>{se.titre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="etat_commentaire_hc">
+                    Commentaire
+                    {String(
+                      (sousEtats || []).find((se) => String(se.id) === String(etatFormData.id_sous_etat))?.titre || ''
+                    )
+                      .trim()
+                      .toUpperCase() === 'AUTRE' ? (
+                      <span> *</span>
+                    ) : null}
+                  </label>
+                  <textarea
+                    id="etat_commentaire_hc"
+                    className="form-control"
+                    rows="4"
+                    value={etatFormData.motif_qualif}
+                    onChange={(e) => setEtatFormData({ ...etatFormData, motif_qualif: e.target.value })}
+                    placeholder={
+                      String(
+                        (sousEtats || []).find((se) => String(se.id) === String(etatFormData.id_sous_etat))?.titre || ''
+                      )
+                        .trim()
+                        .toUpperCase() === 'AUTRE'
+                        ? 'Précisez le motif…'
+                        : 'Commentaire (optionnel)…'
+                    }
+                  />
+                </div>
+                <div className="form-actions">
+                  <button
+                    className="btn-confirm"
+                    onClick={handleEtatSubmit}
+                    disabled={etatSubmitting || isChangementEtatBloque || !etatFormData.id_sous_etat}
+                  >
+                    {etatSubmitting ? 'Enregistrement…' : 'Enregistrer'}
+                  </button>
+                  <button
+                    className="btn-cancel"
+                    onClick={() => {
+                      setSelectedEtat(null);
+                      setCompteRenduOption('');
+                      setEtatFormData({
+                        ...etatFormData,
+                        conf_commentaire_produit: '',
+                        motif_qualif: '',
+                        id_sous_etat: '',
+                      });
+                    }}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Bouton Enregistrer pour les autres états sans formulaire spécifique */}
             {selectedEtat && 
              selectedEtat !== 7 && 
              selectedEtat !== 2 && 
              selectedEtat !== 8 && 
              selectedEtat !== 19 && 
-             ![5, 6, 9, 11, 12, 13, 16, 22, 23, 24, 25, 26, 29, 34, 38, 44, 45].includes(selectedEtat) && (
+             ![5, 6, 9, 11, 12, 13, 16, 22, 23, 24, 25, 26, 29, 34, 38, 44, 45, 55].includes(selectedEtat) && (
               <div className="form-actions" style={{ marginTop: '20px' }}>
                 <button
                   className="btn-confirm"
