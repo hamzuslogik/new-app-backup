@@ -130,6 +130,21 @@ async function enrichWorkflowEventData(triggerType, eventData) {
       };
     }
 
+    if (triggerType === 'rdv_validated' && eventData.fiche) {
+      const commercial = await loadUser(eventData.fiche.id_commercial);
+      const commercial2 = await loadUser(eventData.fiche.id_commercial_2);
+      return {
+        ...eventData,
+        fiche: {
+          ...eventData.fiche,
+          commercial_pseudo:
+            eventData.fiche.commercial_pseudo ?? commercial?.pseudo ?? null,
+          commercial_2_pseudo:
+            eventData.fiche.commercial_2_pseudo ?? commercial2?.pseudo ?? null,
+        },
+      };
+    }
+
     if (
       typeof triggerType === 'string' &&
       triggerType.startsWith('demande_insertion_') &&

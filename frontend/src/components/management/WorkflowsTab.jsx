@@ -49,6 +49,7 @@ const TRIGGER_VARIABLES = {
   ],
   rdv_validated: [
     '{fiche.id}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}', '{fiche.valider}',
+    '{fiche.id_commercial}', '{fiche.commercial_pseudo}', '{fiche.id_commercial_2}', '{fiche.commercial_2_pseudo}',
     '{old_valider}', '{new_valider}', '{conf_rdv_avec}', '{conf_presence_couple}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
