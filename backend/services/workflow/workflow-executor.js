@@ -433,8 +433,29 @@ function doesWorkflowTriggerRowFire(trigger, triggerType, eventData) {
  * @param {Object} eventData - Données de l'événement (fiche, user, etc.)
  * @returns {Promise<Array>} Liste des workflows exécutés
  */
+/**
+ * RDV validé : ne pas notifier le commercial s'il est lui-même le validateur.
+ */
+function shouldSkipRdvValidatedSelfCommercialNotify(eventData, recipientId) {
+  if (!eventData || eventData._triggerType !== 'rdv_validated') return false;
+  const validatorId = Number(eventData.user?.id);
+  const recipient = Number(recipientId);
+  if (!Number.isFinite(validatorId) || validatorId <= 0) return false;
+  if (!Number.isFinite(recipient) || recipient <= 0) return false;
+  if (recipient !== validatorId) return false;
+
+  const commercialId = Number(eventData.fiche?.id_commercial);
+  const commercial2Id = Number(eventData.fiche?.id_commercial_2);
+  const isCommercial =
+    (Number.isFinite(commercialId) && commercialId > 0 && commercialId === validatorId) ||
+    (Number.isFinite(commercial2Id) && commercial2Id > 0 && commercial2Id === validatorId);
+
+  return isCommercial;
+}
+
 async function executeWorkflow(triggerType, eventDataIn) {
   const eventData = await enrichWorkflowEventData(triggerType, eventDataIn);
+  eventData._triggerType = triggerType;
   console.log('[WORKFLOW] ========== executeWorkflow DÉBUT ==========');
   console.log('[WORKFLOW] Trigger type:', triggerType);
   console.log('[WORKFLOW] Event data (résumé):', JSON.stringify({
@@ -932,10 +953,18 @@ async function executeNotificationAction(config, eventData) {
         rows.forEach(r => { if (r && r.id) userIds.add(parseInt(r.id, 10)); });
       }
     }
-    const recipientIds = Array.from(userIds);
+    const recipientIds = Array.from(userIds).filter((uid) => {
+      if (shouldSkipRdvValidatedSelfCommercialNotify(eventData, uid)) {
+        console.log(
+          `[WORKFLOW] ⏭️ RDV validé — skip notif commercial=validateur (user=${uid})`
+        );
+        return false;
+      }
+      return true;
+    });
     if (recipientIds.length === 0) {
       console.warn('[WORKFLOW] Aucun utilisateur actif trouvé pour les fonctions/utilisateurs sélectionnés');
-      return { success: true, message: 'Aucun destinataire actif', count: 0 };
+      return { success: true, message: 'Aucun destinataire actif', count: 0, skipped: 1 };
     }
     console.log(`[WORKFLOW] ${recipientIds.length} destinataire(s) (fonctions/utilisateurs)`);
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -985,12 +1014,26 @@ async function executeNotificationAction(config, eventData) {
       throw new Error('Message de notification vide');
     }
     
-    const validAdmins = admins.filter(admin => admin && admin.id && admin.id > 0);
+    const validAdmins = admins.filter((admin) => {
+      if (!admin || !admin.id || admin.id <= 0) return false;
+      if (shouldSkipRdvValidatedSelfCommercialNotify(eventData, admin.id)) {
+        console.log(
+          `[WORKFLOW] ⏭️ RDV validé — skip notif admin commercial=validateur (user=${admin.id})`
+        );
+        return false;
+      }
+      return true;
+    });
     console.log(`[WORKFLOW] Admins valides après filtrage:`, validAdmins.length);
     
     if (validAdmins.length === 0) {
-      console.error(`[WORKFLOW] ❌ Aucun admin valide trouvé`);
-      throw new Error('Aucun administrateur valide trouvé');
+      console.log(`[WORKFLOW] ⏭️ Aucun destinataire admin après exception validateur=commercial`);
+      return {
+        success: true,
+        message: 'Notification ignorée (validateur RDV = commercial de la fiche)',
+        count: 0,
+        skipped: 1,
+      };
     }
     
     let createdCount = 0;
@@ -1127,6 +1170,20 @@ async function executeNotificationAction(config, eventData) {
   if (isNaN(destId) || destId <= 0) {
     console.error(`[WORKFLOW] ❌ Destinataire invalide (NaN ou <= 0):`, destId);
     throw new Error(`Destinataire invalide (ID: ${destId})`);
+  }
+
+  // RDV validé par le commercial de la fiche → pas d'auto-notification
+  if (shouldSkipRdvValidatedSelfCommercialNotify(eventData, destId)) {
+    console.log(
+      `[WORKFLOW] ⏭️ RDV validé — notification ignorée (validateur = commercial, dest=${destId})`
+    );
+    console.log(`[WORKFLOW] ========== executeNotificationAction FIN ==========`);
+    return {
+      success: true,
+      message: 'Notification ignorée (validateur RDV = commercial de la fiche)',
+      skipped: true,
+      notification_id: null,
+    };
   }
   
   // Vérifier que l'utilisateur destinataire existe
