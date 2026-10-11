@@ -24,6 +24,10 @@ const KoMotifModal = ({
 
   if (!isOpen) return null;
 
+  const isAutre = String(motifKo || '').trim().toUpperCase() === 'AUTRE';
+  const complementOk = String(commentaireComplement || '').trim().length > 0;
+  const canSubmit = !!motifKo && (!isAutre || complementOk);
+
   const modalContent = (
     <div className="modal-overlay ko-motif-modal-overlay" onClick={onClose}>
       <div className="modal-content ko-modal" onClick={(e) => e.stopPropagation()}>
@@ -54,13 +58,16 @@ const KoMotifModal = ({
             </select>
           </div>
           <div className="form-group">
-            <label>Commentaire complémentaire (optionnel)</label>
+            <label>
+              Commentaire complémentaire{isAutre ? <span className="required"> *</span> : ' (optionnel)'}
+            </label>
             <textarea
               value={commentaireComplement}
               onChange={(e) => onCommentaireChange(e.target.value)}
               className="ko-commentaire-textarea"
-              placeholder="Précisions éventuelles…"
+              placeholder={isAutre ? 'Précisez le motif…' : 'Précisions éventuelles…'}
               rows={3}
+              required={isAutre}
             />
           </div>
         </div>
@@ -72,7 +79,7 @@ const KoMotifModal = ({
             type="button"
             className="btn-confirm-ko"
             onClick={onSubmit}
-            disabled={isLoading || !motifKo}
+            disabled={isLoading || !canSubmit}
           >
             {isLoading ? 'Enregistrement…' : submitLabel}
           </button>

@@ -3,8 +3,8 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { query, queryOne } = require('../config/database');
 
-/** Admin (1, 7), Backoffice (11) */
-const ALLOWED_FONCTIONS = new Set([1, 7, 11]);
+/** Admin (1, 7), Backoffice (11), RP Confirmation (13) */
+const ALLOWED_FONCTIONS = new Set([1, 7, 11, 13]);
 
 function canViewBypassPage(fonction) {
   return ALLOWED_FONCTIONS.has(Number(fonction));

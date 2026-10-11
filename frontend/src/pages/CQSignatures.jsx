@@ -240,6 +240,11 @@ const CQSignatures = () => {
   const getCommercialsFormatted = (sig) => {
     const c1 = sig.commercial_pseudo || '';
     const c2 = sig.commercial_2_pseudo || '';
+    const id1 = sig.id_commercial != null ? Number(sig.id_commercial) : null;
+    const id2 = sig.id_commercial_2 != null ? Number(sig.id_commercial_2) : null;
+    const sameId =
+      id1 != null && id2 != null && !Number.isNaN(id1) && !Number.isNaN(id2) && id1 > 0 && id1 === id2;
+    if (sameId || (c1 && c2 && c1 === c2)) return c1 || c2 || '-';
     if (c1 && c2) return `${c1} | ${c2}`;
     return c1 || c2 || '-';
   };

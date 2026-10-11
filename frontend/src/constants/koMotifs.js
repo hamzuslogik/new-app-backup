@@ -21,6 +21,7 @@ export const KO_MOTIFS = [
   'COORDONNÉES NON VÉRIFIÉES',
   'VÉRIFICATION REVENU',
   "DOMAINE D'ACTIVITÉ",
+  'AUTRE',
 ];
 
 export default KO_MOTIFS;

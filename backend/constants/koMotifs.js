@@ -21,6 +21,7 @@ const KO_MOTIFS = [
   'COORDONNÉES NON VÉRIFIÉES',
   'VÉRIFICATION REVENU',
   "DOMAINE D'ACTIVITÉ",
+  'AUTRE',
 ];
 
 function normalizeKoMotif(value) {

@@ -743,6 +743,13 @@ const ControleQualite = () => {
       toast.warning('Veuillez sélectionner un motif KO');
       return;
     }
+    if (
+      String(koModal.motifKo).trim().toUpperCase() === 'AUTRE' &&
+      !String(koModal.commentaireComplement || '').trim()
+    ) {
+      toast.warning('Veuillez préciser le motif (commentaire obligatoire pour AUTRE)');
+      return;
+    }
     const ficheKo = getFicheByHash(koModal.ficheHash);
     if (!requireCommentaireQualite(ficheKo)) return;
     validateQualiteKoMutation.mutate({
@@ -778,8 +785,16 @@ const ControleQualite = () => {
       toast.warning('Veuillez sélectionner un sous-état HC');
       return;
     }
+    const selectedHcSousEtat = sousEtatsHc.find(
+      (se) => String(se.id) === String(hcModal.sousEtatId)
+    );
+    const isHcAutre = String(selectedHcSousEtat?.titre || '').trim().toUpperCase() === 'AUTRE';
     const ficheHc = getFicheByHash(hcModal.ficheHash);
     const commentaireHcOk = String(hcModal.commentaire ?? '').trim().length > 0;
+    if (isHcAutre && !commentaireHcOk) {
+      toast.warning('Veuillez préciser le motif (commentaire obligatoire pour AUTRE)');
+      return;
+    }
     if (!hasCommentaireQualiteRenseigne(ficheHc) && !commentaireHcOk) {
       toast.warning(MSG_COMMENTAIRE_QUALITE_REQUIS);
       return;
@@ -1503,25 +1518,42 @@ const ControleQualite = () => {
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label>Sous-état HC <span className="required">*</span></label>
+                <label>Motif HC <span className="required">*</span></label>
                 <select
                   value={hcModal.sousEtatId}
                   onChange={(e) => setHcModal({ ...hcModal, sousEtatId: e.target.value })}
                   className="hc-sous-etat-select"
                 >
-                  <option value="">-- Sélectionner un sous-état --</option>
+                  <option value="">-- Sélectionner un motif --</option>
                   {sousEtatsHc.map(se => (
                     <option key={se.id} value={se.id}>{se.titre}</option>
                   ))}
                 </select>
               </div>
               <div className="form-group">
-                <label>Commentaire</label>
+                <label>
+                  Commentaire
+                  {String(
+                    sousEtatsHc.find((se) => String(se.id) === String(hcModal.sousEtatId))?.titre || ''
+                  )
+                    .trim()
+                    .toUpperCase() === 'AUTRE' ? (
+                    <span className="required"> *</span>
+                  ) : null}
+                </label>
                 <textarea
                   value={hcModal.commentaire}
                   onChange={(e) => setHcModal({ ...hcModal, commentaire: e.target.value })}
                   className="hc-commentaire-textarea"
-                  placeholder="Commentaire sur la raison du HC..."
+                  placeholder={
+                    String(
+                      sousEtatsHc.find((se) => String(se.id) === String(hcModal.sousEtatId))?.titre || ''
+                    )
+                      .trim()
+                      .toUpperCase() === 'AUTRE'
+                      ? 'Précisez le motif…'
+                      : 'Commentaire sur la raison du HC...'
+                  }
                   rows={4}
                 />
               </div>
@@ -1533,7 +1565,16 @@ const ControleQualite = () => {
               <button
                 className="btn-confirm-hc"
                 onClick={handleHcModalSubmit}
-                disabled={validateQualiteHcMutation.isLoading || !hcModal.sousEtatId}
+                disabled={
+                  validateQualiteHcMutation.isLoading ||
+                  !hcModal.sousEtatId ||
+                  (String(
+                    sousEtatsHc.find((se) => String(se.id) === String(hcModal.sousEtatId))?.titre || ''
+                  )
+                    .trim()
+                    .toUpperCase() === 'AUTRE' &&
+                    !String(hcModal.commentaire || '').trim())
+                }
               >
                 {validateQualiteHcMutation.isLoading ? 'Validation...' : 'Valider HC'}
               </button>

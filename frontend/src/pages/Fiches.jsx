@@ -1903,6 +1903,12 @@ const Fiches = () => {
         onCommentaireChange={(v) => setKoModal((m) => ({ ...m, commentaireComplement: v }))}
         onSubmit={() => {
           if (!koModal.motifKo || !koModal.ficheHash) return;
+          if (
+            String(koModal.motifKo).trim().toUpperCase() === 'AUTRE' &&
+            !String(koModal.commentaireComplement || '').trim()
+          ) {
+            return;
+          }
           koMutation.mutate({
             id: koModal.ficheHash,
             ko: true,

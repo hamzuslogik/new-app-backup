@@ -537,6 +537,8 @@ const Statistiques = () => {
     const visibleEtats = getVisibleEtats(etats, data, columnPrefs);
     const visibleTauxCols = getVisibleTauxColumns(data, columnPrefs);
     const visibleEtatIds = visibleEtats.map((e) => e.id);
+    // Une seule ligne (ex. 1 centre / 1 confirmateur) : pas de ligne TOTAL redondante
+    const showTotalRow = data.length > 1;
 
     if (statType === 'taux') {
       // Affichage en mode TAUX - Taux = positif / (positif + négatif)
@@ -605,6 +607,7 @@ const Statistiques = () => {
                 <td className="stat-taux">{calcTaux(item.totals.positive, item.totals.negative)}</td>
               </tr>
             ))}
+            {showTotalRow && (
             <tr className="total-row">
               <td className="stat-numero">—</td>
               <td {...getDrillCellProps({ isTotalRow: true, etatIds: visibleEtatIds, cellKind: 'name' }, etats)}>
@@ -647,6 +650,7 @@ const Statistiques = () => {
               })}
               <td className="stat-taux"><strong>{calcTaux(totalPos, totalNeg)}</strong></td>
             </tr>
+            )}
           </tbody>
         </table>
       );
@@ -700,6 +704,7 @@ const Statistiques = () => {
                   </td>
                 </tr>
               ))}
+              {showTotalRow && (
               <tr className="total-row">
                 <td className="stat-numero">—</td>
                 <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>TOTAL</td>
@@ -726,6 +731,7 @@ const Statistiques = () => {
                   <strong>{total}</strong>
                 </td>
               </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -780,6 +786,7 @@ const Statistiques = () => {
                   </td>
                 </tr>
               ))}
+              {showTotalRow && (
               <tr className="total-row">
                 <td className="stat-numero">—</td>
                 <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>TOTAL</td>
@@ -801,6 +808,7 @@ const Statistiques = () => {
                 })}
                 <td className="stat-total"><strong>100%</strong></td>
               </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -945,6 +953,7 @@ const Statistiques = () => {
                 </td>
               </tr>
             ))}
+            {showTotalRow && (
             <tr className="total-row">
               <td className="stat-numero">—</td>
               <td style={{ color: '#ffffff', backgroundColor: '#222d32', fontWeight: 800 }}>
@@ -972,6 +981,7 @@ const Statistiques = () => {
                 <strong>{total}</strong>
               </td>
             </tr>
+            )}
           </tbody>
         </table>
       </div>

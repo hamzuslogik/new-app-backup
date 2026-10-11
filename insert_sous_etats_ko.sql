@@ -33,6 +33,9 @@ INSERT INTO sous_etat (id_etat, titre) VALUES
 (54, 'VÉRIFICATION REVENU'),
 (54, 'DOMAINE D''ACTIVITÉ');
 
+-- Note : le modal KO applicatif utilise la liste statique backend/frontend constants/koMotifs.js
+-- (champ fiches.ko), pas ces sous-états. Conserver ce script uniquement à titre historique / legacy.
+
 -- Vérifier les sous-états insérés
 SELECT id, id_etat, titre 
 FROM sous_etat 
