@@ -509,19 +509,31 @@
 
 /* Mùme gabarit que l'ùdition ligne par ligne (pas de pleine largeur) */
 .edit-controls-bulk {
-  width: auto;
+  width: 100%;
   max-width: 100%;
 }
 
 .edit-controls-bulk .form-control {
-  width: auto;
+  width: 100%;
   flex: 1;
-  max-width: 220px;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 32px;
+}
+
+.edit-controls-bulk select.form-control {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 32px;
+  min-height: 32px;
 }
 
 .edit-controls-bulk textarea.form-control {
   max-width: 100%;
   min-width: 160px;
+  height: auto;
+  min-height: 64px;
 }
 
 /* Forcer le titre "Historique des ùtats" en blanc */
@@ -630,6 +642,10 @@
 
 .edit-controls .form-control {
   flex: 1;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 32px;
   padding: 6.4px 9.6px;
   border: 2px solid #f7a219;
   border-radius: 5px;
@@ -637,14 +653,33 @@
 }
 
 .edit-controls select.form-control {
-  min-width: 160px;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 32px;
+  min-height: 32px;
 }
 
-/* Dùtails fiche: rùduire uniquement la largeur des listes (dùcalage, changement ùtat, confirmateur...) */
-.fiche-detail select.form-control,
+/* Tableau dùtails fiche (modal / page) : selects = mùme taille que les champs texte */
+.fiche-detail .fiche-details-table .edit-controls select.form-control,
+.fiche-detail .fiche-details-table .edit-controls-bulk select.form-control,
+.fiche-detail-modal-content .fiche-details-table select.form-control,
+.fiche-detail-page .fiche-details-table select.form-control {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 32px;
+  min-height: 32px;
+  box-sizing: border-box !important;
+}
+
+/* Hors tableau dùtails : listes plus compactes (changement d'ùtat, dùcalage, RDVù) */
 .etat-change-form select.form-control,
 .decalage-form select.form-control,
-.rdv-form select.form-control {
+.rdv-form select.form-control,
+.fiche-detail .etat-change-form select.form-control,
+.fiche-detail .decalage-form select.form-control,
+.fiche-detail .rdv-form select.form-control {
   max-width: 220px !important;
 }
 

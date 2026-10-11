@@ -18,12 +18,31 @@
   max-width: 100%;
   box-sizing: border-box;
   min-height: 32px;
+  height: 32px;
   padding: 4px 8px;
   font-size: 13px;
+  line-height: 1.3;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #fff;
+}
+
+/* Même largeur / hauteur que les inputs (surcharge .fiche-detail select { max-width: 220px }) */
+.create-fiche-modal-form .fiche-details-table select.form-control {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 32px;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 13px;
+  line-height: 1.3;
+  appearance: auto;
 }
 
 .create-fiche-modal-form .fiche-details-table textarea.form-control {
   min-height: 64px;
+  height: auto;
   resize: vertical;
 }
 
