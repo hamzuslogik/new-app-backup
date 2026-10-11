@@ -214,6 +214,9 @@ const Notifications = () => {
         return 'Demande d\'insertion acceptée';
       case 'demande_insertion_refusee':
         return 'Demande d\'insertion refusée';
+      case 'demande_insertion_modal':
+      case 'demande_insertion_created':
+        return 'Demande d\'insertion';
       case 'workflow':
         return 'Workflow / alerte';
       default:

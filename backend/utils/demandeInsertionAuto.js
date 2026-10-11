@@ -215,7 +215,12 @@ async function handleDuplicateFicheWithAutorisation({
     [existingFiche.id]
   );
 
-  executeWorkflow('demande_insertion_created', {
+  const idInsert =
+    Number(donneesStockees.id_insert) > 0
+      ? Number(donneesStockees.id_insert)
+      : Number(req.user?.id) || agentId;
+
+  const workflowPayload = {
     user: req.user,
     fiche: {
       id: existingFiche.id,
@@ -223,19 +228,30 @@ async function handleDuplicateFicheWithAutorisation({
       nom: ficheExistanteInfo?.nom || null,
       prenom: ficheExistanteInfo?.prenom || null,
       tel: ficheExistanteInfo?.tel || null,
+      id_agent: agentId,
+      id_insert: idInsert,
+      id_centre: Number.isFinite(newIdCentre) ? newIdCentre : null,
     },
     demande_insertion: {
       id: demandeResult.insertId,
       id_fiche_existante: existingFiche.id,
       id_agent: agentId,
+      id_insert: idInsert,
       agent_pseudo: agentInfo?.pseudo || null,
       from_partenaire: isPartenaire,
       partenaire_pseudo: partenairePseudo,
       donnees_fiche: donneesStockees,
       date_demande: now,
     },
-  }).catch((wfError) => {
+  };
+
+  executeWorkflow('demande_insertion_created', workflowPayload).catch((wfError) => {
     logReglesAutorisationError('Workflow demande_insertion_created', wfError);
+  });
+
+  // Déclencheur dédié modal d'insertion (CreateFicheModal / partenaire)
+  executeWorkflow('demande_insertion_modal', workflowPayload).catch((wfError) => {
+    logReglesAutorisationError('Workflow demande_insertion_modal', wfError);
   });
 
   const message = isPartenaire

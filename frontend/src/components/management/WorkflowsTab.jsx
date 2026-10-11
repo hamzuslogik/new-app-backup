@@ -69,6 +69,15 @@ const TRIGGER_VARIABLES = {
     '{demande_insertion.agent_pseudo}', '{demande_insertion.donnees_fiche}', '{demande_insertion.date_demande}',
     '{user.id}', '{user.pseudo}', '{user.fonction}'
   ],
+  demande_insertion_modal: [
+    '{fiche.id}', '{fiche.hash}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
+    '{fiche.id_insert}', '{fiche.id_agent}', '{fiche.id_centre}',
+    '{demande_insertion.id}', '{demande_insertion.id_fiche_existante}', '{demande_insertion.id_agent}',
+    '{demande_insertion.id_insert}', '{demande_insertion.agent_pseudo}',
+    '{demande_insertion.partenaire_pseudo}', '{demande_insertion.from_partenaire}',
+    '{demande_insertion.donnees_fiche}', '{demande_insertion.date_demande}',
+    '{user.id}', '{user.pseudo}', '{user.fonction}'
+  ],
   demande_insertion_approved: [
     '{fiche.id}', '{fiche.hash}', '{fiche.nom}', '{fiche.prenom}', '{fiche.tel}',
     '{fiche.id_agent}', '{fiche.id_centre}', '{fiche.id_etat_final}',
@@ -244,6 +253,7 @@ const DYNAMIC_RECIPIENT_OPTIONS = [
   { value: '{decalage.expediteur}', label: 'Expéditeur du décalage ({decalage.expediteur})' },
   { value: '{decalage.destination}', label: 'Confirmateur (destination du décalage) ({decalage.destination})' },
   { value: '{demande_insertion.id_agent}', label: "Agent demandeur d'insertion ({demande_insertion.id_agent})" },
+  { value: '{demande_insertion.id_insert}', label: "Celui qui a inséré ({demande_insertion.id_insert})" },
   { value: '{demande_insertion.id_superviseur}', label: 'Superviseur (RE) de l\'agent demandeur ({demande_insertion.id_superviseur})' },
   { value: '{demande_insertion.id_rp_qualif}', label: 'RP qualification ({demande_insertion.id_rp_qualif})' },
   { value: '{demande_insertion.id_traitant}', label: 'Traitant du refus / approbation ({demande_insertion.id_traitant})' },
@@ -575,6 +585,8 @@ const WorkflowsTab = () => {
           'id_commercial': 'Commercial',
           'id_commercial_2': 'Commercial 2',
           'demande_insertion_agent': 'Agent demandeur insertion',
+          'demande_insertion_insereur': 'Celui qui a inséré',
+          'demande_insertion_id_insert': 'Celui qui a inséré',
           'demande_insertion_superviseur': 'Superviseur agent demandeur',
           'demande_insertion_rp_qualif': 'RP qualification',
           'demande_insertion_traitant': 'Traitant insertion'
@@ -806,6 +818,7 @@ const WorkflowsTab = () => {
                         <option value="compte_rendu_created">Compte rendu créé</option>
                         <option value="compte_rendu_approved">Compte rendu approuvé</option>
                         <option value="demande_insertion_created">Demande d'insertion créée</option>
+                        <option value="demande_insertion_modal">Demande d'insertion (modal)</option>
                         <option value="demande_insertion_approved">Demande d'insertion approuvée</option>
                         <option value="demande_insertion_refusee">Demande d'insertion refusée</option>
                         <option value="planning_created">Planning créé</option>
@@ -1228,6 +1241,7 @@ const WorkflowsTab = () => {
                             <option value="decalage_expediteur">Expéditeur du décalage (ex. commercial)</option>
                             <option value="decalage_destination">Confirmateur du décalage (destination)</option>
                             <option value="demande_insertion_agent">Agent demandeur d&apos;insertion ({'{demande_insertion.id_agent}'})</option>
+                            <option value="demande_insertion_insereur">Celui qui a inséré ({'{demande_insertion.id_insert}'})</option>
                             <option value="demande_insertion_superviseur">Superviseur (RE) de l&apos;agent demandeur ({'{demande_insertion.id_superviseur}'})</option>
                             <option value="demande_insertion_rp_qualif">RP qualification ({'{demande_insertion.id_rp_qualif}'})</option>
                             <option value="demande_insertion_traitant">Traitant approbation / refus ({'{demande_insertion.id_traitant}'})</option>

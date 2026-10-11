@@ -137,10 +137,22 @@ async function enrichWorkflowEventData(triggerType, eventData) {
     ) {
       const u = await loadUser(eventData.demande_insertion.id_agent);
       const nomAff = formatAgentQualificationDisplayName(u);
+      const idInsert =
+        eventData.demande_insertion.id_insert ??
+        eventData.fiche?.id_insert ??
+        eventData.demande_insertion.id_agent ??
+        eventData.user?.id ??
+        null;
       return {
         ...eventData,
+        fiche: {
+          ...(eventData.fiche || {}),
+          id_insert: eventData.fiche?.id_insert ?? idInsert,
+          id_agent: eventData.fiche?.id_agent ?? eventData.demande_insertion.id_agent,
+        },
         demande_insertion: {
           ...eventData.demande_insertion,
+          id_insert: idInsert,
           agent_pseudo: eventData.demande_insertion.agent_pseudo ?? u?.pseudo ?? null,
           agent_qualification_nom: nomAff || null
         }
@@ -1062,6 +1074,20 @@ async function executeNotificationAction(config, eventData) {
   } else if (destination === 'demande_insertion_agent' && eventData.demande_insertion?.id_agent) {
     destId = eventData.demande_insertion.id_agent;
     console.log('[WORKFLOW] Destination résolue depuis demande_insertion_agent:', destId);
+  } else if (
+    destination === 'demande_insertion_insereur' ||
+    destination === 'demande_insertion_id_insert'
+  ) {
+    // Celui qui a inséré (modal / partenaire) : id_insert puis id_agent puis user
+    const insertId =
+      eventData.demande_insertion?.id_insert ||
+      eventData.fiche?.id_insert ||
+      eventData.demande_insertion?.id_agent ||
+      eventData.user?.id;
+    if (insertId) {
+      destId = insertId;
+      console.log('[WORKFLOW] Destination résolue depuis demande_insertion_insereur (celui qui a inséré):', destId);
+    }
   } else if (destination === 'demande_insertion_superviseur' && eventData.demande_insertion?.id_superviseur) {
     destId = eventData.demande_insertion.id_superviseur;
     console.log('[WORKFLOW] Destination résolue depuis demande_insertion_superviseur:', destId);
