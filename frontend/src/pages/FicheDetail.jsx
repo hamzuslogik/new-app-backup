@@ -1235,17 +1235,18 @@ const FicheDetail = ({
   const isQualiteConfirmation = userFonction === 4;
   const isREConfirmation = userFonction === 14;
   const isRPConfirmation = userFonction === 13;
-  /** Session partenaire : libellé fonction ou centre (ex. centre PARTENAIRE, titre « Partenaire »). */
+  /** Session partenaire : fonction 9, ou libellé fonction/centre « Partenaire ». */
   const isPartenaireProfil =
+    Number(user?.fonction) === 9 ||
     (typeof user?.fonction_titre === 'string' && /partenaire/i.test(user.fonction_titre)) ||
     (typeof user?.centre_titre === 'string' && /partenaire/i.test(user.centre_titre));
-  /** Modal détail fiche : uniquement onglets Fiches + Modifica pour les partenaires. */
+  /** Modal détail fiche partenaire : uniquement l'onglet Fiches (pas Modifica / historique états). */
   const isPartenaireModalLimitedTabs = Boolean(isModal && isPartenaireProfil);
 
   useEffect(() => {
     if (!isModal || !initialTab) return;
     const allowed = isPartenaireModalLimitedTabs
-      ? ['fiches', 'modifica']
+      ? ['fiches']
       : ['fiches', 'modifica', 'affectation', 'planning', 'sms', 'pdf'];
     if (allowed.includes(initialTab)) setActiveTab(initialTab);
   }, [isModal, initialTab, isPartenaireModalLimitedTabs]);
@@ -1263,10 +1264,10 @@ const FicheDetail = ({
     }
   }, [isQualiteQualif, activeTab]);
 
-  // Modal partenaire : seuls Fiches et Modifica — éviter PDF / planning / SMS / affectation
+  // Modal partenaire : onglet Fiches uniquement
   useEffect(() => {
     if (!isPartenaireModalLimitedTabs) return;
-    if (activeTab !== 'fiches' && activeTab !== 'modifica') {
+    if (activeTab !== 'fiches') {
       setActiveTab('fiches');
     }
   }, [isPartenaireModalLimitedTabs, activeTab]);
@@ -4540,8 +4541,8 @@ const FicheDetail = ({
         >
           <FaFileAlt /> Fiches
         </button>
-        {/* Désactiver l'onglet Modifica pour les commerciaux */}
-        {!isCommercial && (
+        {/* Désactiver l'onglet Modifica pour les commerciaux et le modal partenaire */}
+        {!isCommercial && !isPartenaireModalLimitedTabs && (
           <button
             className={`fiche-tab ${activeTab === 'modifica' ? 'active' : ''}`}
             onClick={() => setActiveTab('modifica')}
@@ -6136,8 +6137,8 @@ const FicheDetail = ({
                     </div>
                   )}
 
-                  {/* Section Historique - Pliable (masquée en session commercial) */}
-                  {user?.fonction !== 5 && fiche.historique && fiche.historique.length > 0 && (
+                  {/* Section Historique - Pliable (masquée en session commercial et modal partenaire) */}
+                  {!isPartenaireModalLimitedTabs && user?.fonction !== 5 && fiche.historique && fiche.historique.length > 0 && (
                     <>
                       {historiqueListeSansEtatActuel.length > 0 && (
                       <>
@@ -10326,7 +10327,7 @@ const FicheDetail = ({
       )}
 
       {/* Onglet Modifica */}
-      {activeTab === 'modifica' && (
+      {activeTab === 'modifica' && !isPartenaireModalLimitedTabs && (
         <ModificaTab ficheHash={hash} />
       )}
 

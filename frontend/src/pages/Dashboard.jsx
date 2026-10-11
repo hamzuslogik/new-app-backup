@@ -4,12 +4,14 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
-import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSignature, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash, FaExpand, FaCompress } from 'react-icons/fa';
+import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSignature, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash, FaExpand, FaCompress, FaPlus } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import {
   QualiteConfirmationAuditButton,
   QualiteConfirmationAuditModal,
 } from '../components/QualiteConfirmationAuditModal';
 import FicheDetailModal from '../components/FicheDetailModal';
+import CreateFicheModal from '../components/CreateFicheModal';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
@@ -259,6 +261,8 @@ const Dashboard = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = 'confirmed'; // Toujours 'confirmed' puisqu'il n'y a plus d'onglet
+  const isPartenaire = Number(user?.fonction) === 9;
+  const [showCreateModal, setShowCreateModal] = useState(false);
   
   useEffect(() => {
     document.body.classList.add('dashboard-page');
@@ -913,6 +917,53 @@ const Dashboard = () => {
   // Filtrer les utilisateurs par fonction
   const confirmateurs = usersData ? usersData.filter(u => u.fonction === 6 && u.etat > 0) : [];
   const commerciaux = usersData ? usersData.filter(u => u.fonction === 5 && u.etat > 0) : [];
+  const agents = usersData ? usersData.filter(u => u.fonction === 3 && u.etat > 0) : [];
+  const partnerCentreIds = isPartenaire
+    ? (Array.isArray(user?.centres_ids) && user.centres_ids.length > 0
+        ? user.centres_ids.map(Number)
+        : user?.centre
+          ? [Number(user.centre)]
+          : [])
+    : null;
+  const centresForCreate = centresData
+    ? centresData.filter((c) => {
+        if (!(c.etat > 0)) return false;
+        if (partnerCentreIds) return partnerCentreIds.includes(Number(c.id));
+        return true;
+      })
+    : [];
+
+  const createFicheMutation = useMutation(
+    async (ficheData) => {
+      const response = await api.post('/fiches', ficheData);
+      return response.data;
+    },
+    {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries('dashboard');
+        queryClient.invalidateQueries('fiches');
+        setShowCreateModal(false);
+        if (data?.data?.autoApproved) {
+          toast.success(
+            data.message ||
+              `Fiche acceptée automatiquement (${data.data.regleLibelle || 'règle'})`
+          );
+        } else if (data?.data?.demandeCreated) {
+          toast.info(
+            data.message ||
+              "Une demande d'insertion a été créée (doublon téléphone)."
+          );
+        } else if (data?.data?.alreadyInsertedToday) {
+          toast.info(data.message || "Fiche déjà insérée aujourd'hui.");
+        } else {
+          toast.success(data?.message || 'Fiche créée avec succès');
+        }
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Erreur lors de la création de la fiche');
+      },
+    }
+  );
   const centres = centresData ? centresData.filter(c => c.etat > 0) : [];
   /** Profils multi-centres / gestion : même liste qu’en recherche avancée (excl. commercial seul). */
   const showCentreDashboardFilter =
@@ -1780,6 +1831,16 @@ const Dashboard = () => {
               title="Ouvrir la recherche avancée"
             >
               <FaSearch /> Recherche
+            </button>
+          )}
+          {isPartenaire && (
+            <button
+              type="button"
+              className="btn-search-modal"
+              onClick={() => setShowCreateModal(true)}
+              title="Insérer une nouvelle fiche"
+            >
+              <FaPlus /> Insérer une fiche
             </button>
           )}
           <div>
@@ -2944,10 +3005,22 @@ const Dashboard = () => {
           ficheHash={ficheDetailModal.hash}
           onClose={closeDashboardFicheDetail}
           options={{
-            focusHistoriqueEtats: !!ficheDetailModal.focusHistoriqueEtats,
-            initialTab: ficheDetailModal.initialTab || undefined,
+            focusHistoriqueEtats: isPartenaire ? false : !!ficheDetailModal.focusHistoriqueEtats,
+            initialTab: isPartenaire ? 'fiches' : (ficheDetailModal.initialTab || undefined),
             pinchZoom: isDashboardTouchMobile,
           }}
+        />
+      )}
+
+      {showCreateModal && isPartenaire && (
+        <CreateFicheModal
+          centres={centresForCreate}
+          agents={agents}
+          produits={produitsData || []}
+          partenaireMode
+          onClose={() => setShowCreateModal(false)}
+          onSave={(data) => createFicheMutation.mutate(data)}
+          isLoading={createFicheMutation.isLoading}
         />
       )}
 

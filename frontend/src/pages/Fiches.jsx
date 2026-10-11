@@ -1011,13 +1011,13 @@ const Fiches = () => {
       <div className="fiches-header">
         <h1><FaFileAlt /> Gestion des Fiches</h1>
         {/* Permissions : Admin (1, 2), Agents (3), Qualité (4), Commerciaux (5), Confirmateurs (6), Dev (7), Autres (8) - pas de création pour agent qualification (3) */}
-        {hasPermission('fiches_create') && user?.fonction !== 3 && (
+        {(hasPermission('fiches_create') || isPartenaire) && user?.fonction !== 3 && (
           <button 
             className="btn-primary"
             onClick={() => setShowCreateModal(true)}
-            title="Créer une nouvelle fiche client"
+            title={isPartenaire ? 'Insérer une nouvelle fiche' : 'Créer une nouvelle fiche client'}
           >
-            <FaPlus /> Créer une fiche
+            <FaPlus /> {isPartenaire ? 'Insérer une fiche' : 'Créer une fiche'}
           </button>
         )}
       </div>
