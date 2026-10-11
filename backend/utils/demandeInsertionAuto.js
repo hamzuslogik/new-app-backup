@@ -9,15 +9,35 @@ const {
   snapshotFicheForLog,
 } = require('./reglesAutorisationLogger');
 
+function buildPartenaireMeta(req) {
+  if (Number(req.user?.fonction) !== 9) return null;
+  const pseudo =
+    req.user.pseudo ||
+    `${req.user.nom || ''} ${req.user.prenom || ''}`.trim() ||
+    `ID ${req.user.id}`;
+  return {
+    source: 'partenaire',
+    id_partenaire: req.user.id,
+    partenaire_pseudo: pseudo,
+    partenaire_nom: req.user.nom || null,
+    partenaire_prenom: req.user.prenom || null,
+  };
+}
+
 /**
  * Doublon téléphone : consulte regles_autorisation puis accepte directement ou crée EN_ATTENTE.
+ * Partenaire (fonction 9) : toujours demande EN_ATTENTE avec origine partenaire explicite.
  */
 async function handleDuplicateFicheWithAutorisation({
   existingFiche,
   ficheData,
   req,
 }) {
-  const agentId = ficheData.id_agent || req.user.id;
+  const isPartenaire = Number(req.user?.fonction) === 9;
+  const partenaireMeta = buildPartenaireMeta(req);
+  const agentId = isPartenaire
+    ? req.user.id
+    : ficheData.id_agent || req.user.id;
   const newIdCentre =
     ficheData.id_centre != null && ficheData.id_centre !== ''
       ? Number(ficheData.id_centre)
@@ -25,19 +45,32 @@ async function handleDuplicateFicheWithAutorisation({
         ? Number(req.user.centre)
         : null;
 
+  // Enrichir les données stockées pour tracer l'origine partenaire
+  const donneesStockees = { ...ficheData };
+  if (isPartenaire) {
+    donneesStockees.id_agent = req.user.id;
+    donneesStockees.id_insert = req.user.id;
+    donneesStockees.id_etat_final = 1;
+    donneesStockees._meta = partenaireMeta;
+  }
+
   logReglesAutorisation('Doublon detecte — debut traitement', {
     source: 'POST /fiches',
     user_id: req.user?.id,
     user_pseudo: req.user?.pseudo,
+    is_partenaire: isPartenaire,
     agent_id: agentId,
     tel_nouveau: ficheData.tel,
     fiche_existante: snapshotFicheForLog(existingFiche),
     id_centre_nouveau: Number.isFinite(newIdCentre) ? newIdCentre : null,
   });
 
-  const matchedRule = await findMatchingAutorisationRule(existingFiche, {
-    newIdCentre: Number.isFinite(newIdCentre) ? newIdCentre : null,
-  });
+  // Partenaire : jamais d'auto-approbation — demande manuelle avec origine visible
+  const matchedRule = isPartenaire
+    ? null
+    : await findMatchingAutorisationRule(existingFiche, {
+        newIdCentre: Number.isFinite(newIdCentre) ? newIdCentre : null,
+      });
 
   if (matchedRule) {
     logReglesAutorisation('AUTO-APPROBATION — regle appliquee', {
@@ -50,7 +83,7 @@ async function handleDuplicateFicheWithAutorisation({
     const commentaireAuto = `Acceptation automatique — règle #${matchedRule.id} : ${matchedRule.libelle}`;
 
     const { insertId, hash, donneesFiche: donneesApres } = await approveInsertionFromDonnees({
-      donneesFiche: ficheData,
+      donneesFiche: donneesStockees,
       existingFicheId: existingFiche.id,
       id_agent: agentId,
       id_centre_fallback: req.user.centre || null,
@@ -68,7 +101,7 @@ async function handleDuplicateFicheWithAutorisation({
       `INSERT INTO demandes_insertion 
        (id_agent, id_fiche_existante, donnees_fiche, date_demande, statut, date_traitement, id_traitant, commentaire)
        VALUES (?, ?, ?, ?, 'APPROUVEE', ?, NULL, ?)`,
-      [agentId, existingFiche.id, JSON.stringify(ficheData), now, now, commentaireAuto]
+      [agentId, existingFiche.id, JSON.stringify(donneesStockees), now, now, commentaireAuto]
     );
 
     logReglesAutorisation('AUTO-APPROBATION — demande tracee APPROUVEE', {
@@ -121,24 +154,60 @@ async function handleDuplicateFicheWithAutorisation({
     };
   }
 
+  // Demande déjà en attente pour le même demandeur + même fiche existante
+  const pendingSame = await queryOne(
+    `SELECT id FROM demandes_insertion
+     WHERE id_agent = ? AND id_fiche_existante = ? AND statut = 'EN_ATTENTE'
+     ORDER BY date_demande DESC LIMIT 1`,
+    [agentId, existingFiche.id]
+  );
+  if (pendingSame) {
+    const msg = isPartenaire
+      ? `Une demande d'insertion est déjà en attente pour ce numéro (partenaire : ${partenaireMeta.partenaire_pseudo}).`
+      : "Une demande d'insertion est déjà en attente pour ce numéro de téléphone.";
+    return {
+      action: 'demande_existing',
+      statusCode: 200,
+      body: {
+        success: true,
+        message: msg,
+        data: {
+          demandeId: pendingSame.id,
+          existingFicheId: existingFiche.id,
+          demandeCreated: true,
+          demandeAlreadyPending: true,
+          fromPartenaire: isPartenaire,
+          partenairePseudo: partenaireMeta?.partenaire_pseudo || null,
+        },
+      },
+    };
+  }
+
   logReglesAutorisation('EN_ATTENTE — aucune regle applicable, creation demande', {
     id_fiche_existante: existingFiche.id,
     agent_id: agentId,
+    is_partenaire: isPartenaire,
   });
 
-  const agentInfo = await queryOne(`SELECT pseudo FROM utilisateurs WHERE id = ?`, [agentId]);
+  const agentInfo = await queryOne(`SELECT pseudo, nom, prenom, fonction FROM utilisateurs WHERE id = ?`, [
+    agentId,
+  ]);
   const now = toMysqlLocalDateTime();
+  const partenairePseudo =
+    partenaireMeta?.partenaire_pseudo || agentInfo?.pseudo || null;
 
   const demandeResult = await query(
     `INSERT INTO demandes_insertion 
      (id_agent, id_fiche_existante, donnees_fiche, date_demande, statut)
      VALUES (?, ?, ?, ?, 'EN_ATTENTE')`,
-    [agentId, existingFiche.id, JSON.stringify(ficheData), now]
+    [agentId, existingFiche.id, JSON.stringify(donneesStockees), now]
   );
 
   logReglesAutorisation('EN_ATTENTE — demande creee', {
     demande_id: demandeResult.insertId,
     id_fiche_existante: existingFiche.id,
+    is_partenaire: isPartenaire,
+    partenaire_pseudo: partenairePseudo,
   });
 
   const ficheExistanteInfo = await queryOne(
@@ -160,24 +229,31 @@ async function handleDuplicateFicheWithAutorisation({
       id_fiche_existante: existingFiche.id,
       id_agent: agentId,
       agent_pseudo: agentInfo?.pseudo || null,
-      donnees_fiche: ficheData,
+      from_partenaire: isPartenaire,
+      partenaire_pseudo: partenairePseudo,
+      donnees_fiche: donneesStockees,
       date_demande: now,
     },
   }).catch((wfError) => {
     logReglesAutorisationError('Workflow demande_insertion_created', wfError);
   });
 
+  const message = isPartenaire
+    ? `Une fiche existe déjà avec ce numéro. Demande d'insertion créée (partenaire : ${partenairePseudo}).`
+    : "Une fiche existe déjà avec ce numéro de téléphone. Une demande d'insertion a été créée.";
+
   return {
     action: 'demande_created',
     statusCode: 200,
     body: {
       success: true,
-      message:
-        'Une fiche existe déjà avec ce numéro de téléphone. Une demande d\'insertion a été créée.',
+      message,
       data: {
         demandeId: demandeResult.insertId,
         existingFicheId: existingFiche.id,
         demandeCreated: true,
+        fromPartenaire: isPartenaire,
+        partenairePseudo,
       },
     },
   };

@@ -128,6 +128,15 @@ const StatistiquesFiches = () => {
     { enabled: isPartenaire }
   );
 
+  const { data: typeContratData } = useQuery(
+    'type-contrat',
+    async () => {
+      const res = await api.get('/management/type-contrat');
+      return res.data?.data || [];
+    },
+    { enabled: isPartenaire, staleTime: 5 * 60 * 1000 }
+  );
+
   // Vérifier si l'utilisateur a accès à cette page
   const hasAccess = !!user?.id && ([1, 2, 7].includes(user.fonction) || user.fonction === 9);
 
@@ -163,7 +172,9 @@ const StatistiquesFiches = () => {
         } else if (data?.data?.demandeCreated) {
           toast.info(
             data.message ||
-              "Une demande d'insertion a été créée (doublon téléphone)."
+              (data.data.fromPartenaire
+                ? `Demande d'insertion créée (partenaire : ${data.data.partenairePseudo || '—'}).`
+                : "Une demande d'insertion a été créée (doublon téléphone).")
           );
         } else if (data?.data?.alreadyInsertedToday) {
           toast.info(data.message || "Fiche déjà insérée aujourd'hui.");
@@ -904,6 +915,7 @@ const StatistiquesFiches = () => {
           centres={centresForCreate}
           agents={[]}
           produits={produitsData || []}
+          typeContratData={typeContratData || []}
           partenaireMode
           onClose={() => setShowCreateModal(false)}
           onSave={(data) => createFicheMutation.mutate(data)}

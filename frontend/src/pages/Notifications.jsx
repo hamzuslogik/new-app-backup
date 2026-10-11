@@ -379,6 +379,12 @@ const Notifications = () => {
                   {/* Métadonnées pour les demandes d'insertion */}
                   {isDemandeInsertion && metadata && (
                     <div className="notification-metadata">
+                      {(metadata.partenaire_pseudo || metadata.from_partenaire) && (
+                        <div>
+                          <strong>Partenaire :</strong>{' '}
+                          {metadata.partenaire_pseudo || metadata.agent_pseudo || '—'}
+                        </div>
+                      )}
                       {metadata.commentaire && (
                         <div>
                           <strong>Commentaire :</strong> {metadata.commentaire}

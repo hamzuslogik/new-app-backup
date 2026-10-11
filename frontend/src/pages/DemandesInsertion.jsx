@@ -157,7 +157,7 @@ const DemandesInsertion = () => {
           <table className="demandes-table">
             <thead>
               <tr>
-                <th>Agent</th>
+                <th>Demandeur</th>
                 <th>Fiche existante</th>
                 <th>Date insertion</th>
                 <th>Date modification</th>
@@ -172,7 +172,23 @@ const DemandesInsertion = () => {
                 <tr key={demande.id}>
                   <td>
                     <div className="agent-info">
-                      <strong>{demande.agent_pseudo || `${demande.agent_nom || ''} ${demande.agent_prenom || ''}`.trim()}</strong>
+                      {demande.from_partenaire ? (
+                        <>
+                          <span className="badge badge-info" style={{ marginRight: 6 }}>
+                            Partenaire
+                          </span>
+                          <strong>
+                            {demande.partenaire_pseudo ||
+                              demande.agent_pseudo ||
+                              `${demande.agent_nom || ''} ${demande.agent_prenom || ''}`.trim()}
+                          </strong>
+                        </>
+                      ) : (
+                        <strong>
+                          {demande.agent_pseudo ||
+                            `${demande.agent_nom || ''} ${demande.agent_prenom || ''}`.trim()}
+                        </strong>
+                      )}
                     </div>
                   </td>
                   <td>

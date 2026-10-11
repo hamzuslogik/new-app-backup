@@ -1,13 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useQuery } from 'react-query';
 import { FaFileAlt, FaInfoCircle, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../config/api';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { isRdvDateBeforeToday } from '../utils/compteRenduEarlyVerification';
 import '../pages/Dashboard.css';
 import '../pages/FicheDetail.css';
 import './CreateFicheModal.css';
+
+const typeContratLabel = (c) => c?.nom || c?.titre || c?.libelle || String(c?.id ?? '');
 
 /**
  * Modal de création de fiche — même shell visuel que le détail fiche (close=0),
@@ -17,7 +21,6 @@ const CreateFicheModal = ({
   centres = [],
   agents = [],
   produits = [],
-  professions = [],
   modeChauffage = [],
   typeContratData = [],
   partenaireMode = false,
@@ -28,6 +31,20 @@ const CreateFicheModal = ({
   const { user } = useAuth();
   const isPartenaireCreate = Boolean(partenaireMode);
   const modalContentRef = useRef(null);
+
+  const { data: fetchedTypeContrat = [] } = useQuery(
+    'type-contrat',
+    async () => {
+      const res = await api.get('/management/type-contrat');
+      return res.data?.data || [];
+    },
+    { enabled: !typeContratData?.length, staleTime: 5 * 60 * 1000 }
+  );
+
+  const typeContrats = useMemo(
+    () => (typeContratData?.length ? typeContratData : fetchedTypeContrat),
+    [typeContratData, fetchedTypeContrat]
+  );
 
   useModalScrollLock(true);
 
@@ -474,23 +491,16 @@ const CreateFicheModal = ({
                       {renderRow(
                         'Profession Du MR',
                         'profession_mr',
-                        select(
-                          'profession_mr',
-                          professions.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.nom}
-                            </option>
-                          ))
-                        )
+                        input('profession_mr', 'text', { placeholder: 'Profession' })
                       )}
                       {renderRow(
                         'Type de Contrat MR',
                         'type_contrat_mr',
                         select(
                           'type_contrat_mr',
-                          typeContratData.map((c) => (
+                          typeContrats.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.nom}
+                              {typeContratLabel(c)}
                             </option>
                           ))
                         )
@@ -498,23 +508,16 @@ const CreateFicheModal = ({
                       {renderRow(
                         'Profession Du Madame',
                         'profession_madame',
-                        select(
-                          'profession_madame',
-                          professions.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.nom}
-                            </option>
-                          ))
-                        )
+                        input('profession_madame', 'text', { placeholder: 'Profession' })
                       )}
                       {renderRow(
                         'Type de Contrat MME',
                         'type_contrat_madame',
                         select(
                           'type_contrat_madame',
-                          typeContratData.map((c) => (
+                          typeContrats.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.nom}
+                              {typeContratLabel(c)}
                             </option>
                           ))
                         )

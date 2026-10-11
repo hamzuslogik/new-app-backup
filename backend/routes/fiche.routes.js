@@ -4009,6 +4009,7 @@ router.get('/demandes-insertion', authenticate, checkPermissionCode('demandes_in
         u.pseudo as agent_pseudo,
         u.nom as agent_nom,
         u.prenom as agent_prenom,
+        u.fonction as agent_fonction,
         f.nom as fiche_nom,
         f.prenom as fiche_prenom,
         f.tel as fiche_tel,
@@ -4026,10 +4027,30 @@ router.get('/demandes-insertion', authenticate, checkPermissionCode('demandes_in
       params
     );
 
-    const demandesWithHash = (demandes || []).map((d) => ({
-      ...d,
-      fiche_hash: d.fiche_hash || (d.id_fiche_existante ? encodeFicheId(d.id_fiche_existante) : null),
-    }));
+    const demandesWithHash = (demandes || []).map((d) => {
+      let meta = null;
+      try {
+        const parsed = d.donnees_fiche
+          ? typeof d.donnees_fiche === 'string'
+            ? JSON.parse(d.donnees_fiche)
+            : d.donnees_fiche
+          : null;
+        meta = parsed?._meta || null;
+      } catch (_) {
+        meta = null;
+      }
+      const fromPartenaire =
+        Number(d.agent_fonction) === 9 || meta?.source === 'partenaire';
+      const partenairePseudo =
+        meta?.partenaire_pseudo || (fromPartenaire ? d.agent_pseudo : null);
+
+      return {
+        ...d,
+        fiche_hash: d.fiche_hash || (d.id_fiche_existante ? encodeFicheId(d.id_fiche_existante) : null),
+        from_partenaire: fromPartenaire,
+        partenaire_pseudo: partenairePseudo,
+      };
+    });
     
     res.json({
       success: true,
@@ -5634,6 +5655,56 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
     if (!ficheData.gsm2 || ficheData.gsm2 === '0') {
       ficheData.gsm2 = ficheData.tel;
     }
+
+    // Partenaire : normaliser AVANT le contrôle doublon (demande d'insertion avec origine)
+    if (isPartenaire) {
+      ficheData.id_etat_final = 1;
+      ficheData.id_agent = req.user.id;
+      ficheData.id_insert = req.user.id;
+      delete ficheData.id_qualite;
+      delete ficheData.id_confirmateur;
+      delete ficheData.id_confirmateur_2;
+      delete ficheData.id_confirmateur_3;
+      delete ficheData.id_commercial;
+      delete ficheData.id_commercial_2;
+      delete ficheData.date_rdv_time;
+      delete ficheData.date_rdv;
+
+      let allowedCentres = Array.isArray(req.user.centres_ids)
+        ? req.user.centres_ids.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)
+        : [];
+      if (allowedCentres.length === 0) {
+        const rows = await query(
+          'SELECT id_centre FROM utilisateurs_centres WHERE id_utilisateur = ?',
+          [req.user.id]
+        );
+        allowedCentres = (rows || [])
+          .map((r) => Number(r.id_centre))
+          .filter((n) => Number.isFinite(n) && n > 0);
+      }
+      if (allowedCentres.length === 0 && req.user.centre) {
+        allowedCentres = [Number(req.user.centre)].filter((n) => Number.isFinite(n) && n > 0);
+      }
+
+      const centreId = parseInt(ficheData.id_centre, 10);
+      if (!Number.isFinite(centreId) || centreId <= 0) {
+        if (allowedCentres.length === 1) {
+          ficheData.id_centre = allowedCentres[0];
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: 'Centre obligatoire pour créer une fiche partenaire',
+          });
+        }
+      } else if (allowedCentres.length > 0 && !allowedCentres.includes(centreId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Centre non autorisé pour votre compte partenaire',
+        });
+      } else {
+        ficheData.id_centre = centreId;
+      }
+    }
     
     // Vérifier les doublons par téléphone (ignorer les fiches archivées)
     // Si un doublon est trouvé, créer une demande d'insertion au lieu de rejeter
@@ -5665,7 +5736,9 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       const placeholders = allVariations.map(() => '?').join(',');
       const phoneParams = [...allVariations, ...allVariations, ...allVariations];
 
-      // Fiche déjà insérée aujourd'hui (même téléphone) → ne pas réinsérer ni créer de demande
+      // Fiche déjà insérée aujourd'hui (même téléphone)
+      // — agents : bloquer la réinsertion
+      // — partenaire : créer une demande d'insertion (origine partenaire)
       const todayLocal = toMysqlLocalDateTime().slice(0, 10);
       const existingToday = await queryOne(
         `SELECT id, id_etat_final, id_centre, date_insert_time, date_appel, date_appel_time,
@@ -5684,7 +5757,7 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
         [...phoneParams, `${todayLocal} 00:00:00`, `${todayLocal} 23:59:59`]
       );
 
-      if (existingToday) {
+      if (existingToday && !isPartenaire) {
         return res.status(200).json({
           success: true,
           message: "Fiche deja inseree aujourd'hui, pas de reinsertion.",
@@ -5696,21 +5769,25 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
           },
         });
       }
-      
-      existingFiche = await queryOne(
-        `SELECT id, id_etat_final, id_centre, date_insert_time, date_appel, date_appel_time,
-                date_modif_time, nom, prenom, tel, hash
-         FROM fiches 
-         WHERE (
-           tel IN (${placeholders})
-           OR gsm1 IN (${placeholders})
-           OR gsm2 IN (${placeholders})
-         )
-         AND (archive = 0 OR archive IS NULL)
-         ORDER BY date_insert_time DESC
-         LIMIT 1`,
-        phoneParams
-      );
+
+      if (existingToday && isPartenaire) {
+        existingFiche = existingToday;
+      } else {
+        existingFiche = await queryOne(
+          `SELECT id, id_etat_final, id_centre, date_insert_time, date_appel, date_appel_time,
+                  date_modif_time, nom, prenom, tel, hash
+           FROM fiches 
+           WHERE (
+             tel IN (${placeholders})
+             OR gsm1 IN (${placeholders})
+             OR gsm2 IN (${placeholders})
+           )
+           AND (archive = 0 OR archive IS NULL)
+           ORDER BY date_insert_time DESC
+           LIMIT 1`,
+          phoneParams
+        );
+      }
     }
     
     // Doublon : consulter regles_autorisation → acceptation directe ou demande EN_ATTENTE
@@ -5809,58 +5886,7 @@ router.post('/', authenticate, checkPermissionCode('fiches_create'), triggerWork
       }
     }
 
-    // Partenaire : forcer état EN-ATTENTE (1), id_insert = user (comme import masse), centres autorisés
-    if (isPartenaire) {
-      ficheData.id_etat_final = 1;
-      ficheData.id_agent = req.user.id;
-      // Ne pas renseigner id_qualite (réservé à l'agent qualité qui audite)
-      delete ficheData.id_qualite;
-      delete ficheData.id_confirmateur;
-      delete ficheData.id_confirmateur_2;
-      delete ficheData.id_confirmateur_3;
-      delete ficheData.id_commercial;
-      delete ficheData.id_commercial_2;
-      delete ficheData.date_rdv_time;
-      delete ficheData.date_rdv;
-
-      let allowedCentres = Array.isArray(req.user.centres_ids)
-        ? req.user.centres_ids.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)
-        : [];
-      if (allowedCentres.length === 0) {
-        const rows = await query(
-          'SELECT id_centre FROM utilisateurs_centres WHERE id_utilisateur = ?',
-          [req.user.id]
-        );
-        allowedCentres = (rows || [])
-          .map((r) => Number(r.id_centre))
-          .filter((n) => Number.isFinite(n) && n > 0);
-      }
-      if (allowedCentres.length === 0 && req.user.centre) {
-        allowedCentres = [Number(req.user.centre)].filter((n) => Number.isFinite(n) && n > 0);
-      }
-
-      const centreId = parseInt(ficheData.id_centre, 10);
-      if (!Number.isFinite(centreId) || centreId <= 0) {
-        if (allowedCentres.length === 1) {
-          ficheData.id_centre = allowedCentres[0];
-        } else {
-          return res.status(400).json({
-            success: false,
-            message: 'Centre obligatoire pour créer une fiche partenaire',
-          });
-        }
-      } else if (allowedCentres.length > 0 && !allowedCentres.includes(centreId)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Centre non autorisé pour votre compte partenaire',
-        });
-      } else {
-        ficheData.id_centre = centreId;
-      }
-
-      // Aligné import masse : id_insert = utilisateur qui insère (pas l'id centre)
-      ficheData.id_insert = req.user.id;
-    }
+    // Partenaire : déjà normalisé avant le contrôle doublon (id_agent / id_insert / centres)
     
     ficheData.active = 1;
     ficheData.archive = 0;

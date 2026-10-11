@@ -95,8 +95,14 @@ function prepareDonneesFicheForInsert(donneesFiche, { id_agent, id_centre_fallba
     data.id_centre = id_centre_fallback;
   }
 
-  // id_insert réservé à l'import en masse
-  delete data.id_insert;
+  // Métadonnées demande (partenaire, etc.) — jamais en colonne SQL
+  delete data._meta;
+
+  // id_insert : conservé pour import masse / partenaire ; sinon retiré
+  const idInsertNum = Number(data.id_insert);
+  if (!Number.isFinite(idInsertNum) || idInsertNum <= 0) {
+    delete data.id_insert;
+  }
 
   return data;
 }

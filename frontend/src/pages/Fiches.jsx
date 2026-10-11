@@ -458,7 +458,9 @@ const Fiches = () => {
         } else if (data?.data?.demandeCreated) {
           toast.info(
             data.message ||
-              'Une demande d\'insertion a été créée (doublon téléphone).'
+              (data.data.fromPartenaire
+                ? `Demande d'insertion créée (partenaire : ${data.data.partenairePseudo || '—'}).`
+                : "Une demande d'insertion a été créée (doublon téléphone).")
           );
         } else if (data?.data?.alreadyInsertedToday) {
           toast.info(data.message || "Fiche déjà insérée aujourd'hui.");
@@ -1882,7 +1884,6 @@ const Fiches = () => {
           centres={centres}
           agents={agents}
           produits={produitsData || []}
-          professions={professionsData || []}
           modeChauffage={modeChauffageData || []}
           typeContratData={typeContratData || []}
           partenaireMode={isPartenaire}

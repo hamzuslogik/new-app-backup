@@ -190,6 +190,11 @@
   letter-spacing: 0.5px;
 }
 
+.badge-info {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
 .badge-warning {
   background: #fff3cd;
   color: #856404;
