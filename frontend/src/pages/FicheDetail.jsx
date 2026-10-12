@@ -1142,7 +1142,7 @@ function isZeroAvailabilityCell(cell) {
   return cell.nbr_com === 0 || cell.nbr_com === '0';
 }
 
-/** Créneau blindé (plein) ou en surplus : nb RDV >= capacité. */
+/** Créneau en surplus : nb RDV > capacité (ex. 3/2). Exactement plein (2/2) n'est pas un surplus. */
 function isBlindOrSurplusSlot(planningWeekData, dateStr, slotHour, availCell) {
   if (!dateStr || !slotHour) return false;
   const timeKey = hourToTimeKey(slotHour);
@@ -1156,7 +1156,7 @@ function isBlindOrSurplusSlot(planningWeekData, dateStr, slotHour, availCell) {
   const avail = Number(rawAv);
   if (!Number.isFinite(avail)) return false;
   if (avail <= 0) return rdvCount > 0; // 0 dispo déjà couvert par zero ; surplus si RDV présents
-  return rdvCount >= avail;
+  return rdvCount > avail;
 }
 
 function isPlanningSlotClosedError(error) {
@@ -3170,9 +3170,9 @@ const FicheDetail = ({
         availabilityCount = availabilityFromPlanning;
       }
 
-      // Vérifier si le créneau est disponible ou a atteint sa limite
+      // Surplus uniquement si on dépasse la capacité (ex. 3/2), pas à égalité (2/2)
       if (availabilityCount !== null && availabilityCount !== undefined) {
-        if (Number(availabilityCount) > 0 && rdvCountInSlot >= availabilityCount) {
+        if (Number(availabilityCount) > 0 && rdvCountInSlot > Number(availabilityCount)) {
           needsApproval = true;
         }
       }
@@ -3407,8 +3407,9 @@ const FicheDetail = ({
 
   const getAvailabilityColor = (planningCount, availability) => {
     if (availability === 0) return '#cccccc';
-    if (planningCount >= availability && planningCount > 0) return '#f44336'; // Rouge
-    if (planningCount < availability && planningCount > 0) return '#f7a219'; // Orange
+    if (planningCount > availability && planningCount > 0) return '#f44336'; // Rouge = surplus (ex. 3/2)
+    if (planningCount === availability && planningCount > 0) return '#ff9800'; // Orange = plein exact (2/2)
+    if (planningCount < availability && planningCount > 0) return '#f7a219'; // Orange clair = partiel
     return '#8BC34A'; // Vert
   };
 
@@ -11801,7 +11802,9 @@ const PlanningViewForModal = ({
                     const availabilityBadgeBgColor = (() => {
                       if (totalRdvInSlot <= 0) return '#4caf50';
                       if (!hasPlanning || Number(displayAvailability) <= 0) return '#f44336';
-                      if (totalRdvInSlot >= Number(displayAvailability)) return '#f44336';
+                      // Rouge seulement en surplus (dépasse), pas à capacité exacte (2/2)
+                      if (totalRdvInSlot > Number(displayAvailability)) return '#f44336';
+                      if (totalRdvInSlot === Number(displayAvailability)) return '#ff9800';
                       return '#ffc107';
                     })();
                     

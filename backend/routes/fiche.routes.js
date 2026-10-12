@@ -7504,34 +7504,88 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
           }
 
           // Journaliser uniquement si code retapé + RDV réellement créé/déplacé
+          // Surplus = créneau qui DÉPASSE la capacité (ex. 3/2), pas à égalité (2/2).
           if (allowUnavailable && incomingRdv !== previousRdv) {
             const ctx = ficheData.slot_bypass_context && typeof ficheData.slot_bypass_context === 'object'
               ? ficheData.slot_bypass_context
               : {};
             const isFermePolitique = !!policyClosed || !!ctx.policyClosed;
             const isFermeDb = !!closedSlot || !!ctx.closed;
-            const isSurplus = !!ctx.surplus;
             const isZeroDispo = !!ctx.zero;
+
+            let isSurplus = false;
+            try {
+              const availRow = await queryOne(
+                `SELECT nbr_com FROM planning_availablity
+                 WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?
+                 LIMIT 1`,
+                [week, year, dep, rdvDate, slotHour]
+              );
+              const capacity = availRow?.nbr_com != null ? Number(availRow.nbr_com) : NaN;
+              const slotRanges = {
+                '09:00:00': ['09:00:00', '10:59:59'],
+                '11:00:00': ['11:00:00', '12:59:59'],
+                '13:00:00': ['13:00:00', '15:59:59'],
+                '16:00:00': ['16:00:00', '17:59:59'],
+                '18:00:00': ['18:00:00', '19:29:59'],
+                '19:30:00': ['19:30:00', '20:00:00'],
+              };
+              const range = slotRanges[slotHour];
+              if (range && Number.isFinite(capacity)) {
+                const countRow = await queryOne(
+                  `SELECT COUNT(*) AS nb
+                   FROM fiches f
+                   WHERE CAST(f.id_etat_final AS UNSIGNED) = 7
+                     AND (f.archive = 0 OR f.archive IS NULL)
+                     AND (f.ko = 0 OR f.ko IS NULL)
+                     AND f.date_rdv_time IS NOT NULL
+                     AND f.date_rdv_time >= ?
+                     AND f.date_rdv_time <= ?
+                     AND f.id != ?
+                     AND LPAD(LEFT(TRIM(COALESCE(f.cp, '')), 2), 2, '0') = ?`,
+                  [`${rdvDate} ${range[0]}`, `${rdvDate} ${range[1]}`, parseInt(id, 10), dep]
+                );
+                // +1 = ce RDV après placement ; surplus seulement si on dépasse (pas 2/2)
+                const countAfter = Number(countRow?.nb || 0) + 1;
+                if (capacity <= 0) {
+                  isSurplus = countAfter > 0;
+                } else {
+                  isSurplus = countAfter > capacity;
+                }
+              } else {
+                // Repli : ne croire le front que s'il affirme déjà un dépassement
+                isSurplus = !!ctx.surplus;
+              }
+            } catch (surplusErr) {
+              console.warn('[bypass] calcul surplus ignoré:', surplusErr?.message);
+              isSurplus = !!ctx.surplus;
+            }
+
             const motifs = [];
             if (isFermePolitique) motifs.push('ferme_politique');
             if (isFermeDb) motifs.push('ferme_db');
             if (isSurplus) motifs.push('surplus');
             if (isZeroDispo) motifs.push('zero_dispo');
-            slotBypassLog = {
-              id_fiche: parseInt(id, 10),
-              id_utilisateur: req.user.id,
-              id_fonction: req.user.fonction != null ? Number(req.user.fonction) : null,
-              date_rdv: incomingRdv.length === 16 ? `${incomingRdv}:00` : incomingRdv,
-              dep,
-              slot_hour: slotHour,
-              week,
-              year,
-              is_ferme_politique: isFermePolitique ? 1 : 0,
-              is_ferme_db: isFermeDb ? 1 : 0,
-              is_surplus: isSurplus ? 1 : 0,
-              is_zero_dispo: isZeroDispo ? 1 : 0,
-              motif: motifs.length ? motifs.join(',') : 'code_bypass'
-            };
+
+            // N'écrire dans rdv_creneau_code_bypass que s'il y a un vrai motif
+            // (surplus uniquement en dépassement, ou créneau fermé / 0 dispo)
+            if (motifs.length > 0) {
+              slotBypassLog = {
+                id_fiche: parseInt(id, 10),
+                id_utilisateur: req.user.id,
+                id_fonction: req.user.fonction != null ? Number(req.user.fonction) : null,
+                date_rdv: incomingRdv.length === 16 ? `${incomingRdv}:00` : incomingRdv,
+                dep,
+                slot_hour: slotHour,
+                week,
+                year,
+                is_ferme_politique: isFermePolitique ? 1 : 0,
+                is_ferme_db: isFermeDb ? 1 : 0,
+                is_surplus: isSurplus ? 1 : 0,
+                is_zero_dispo: isZeroDispo ? 1 : 0,
+                motif: motifs.join(',')
+              };
+            }
           }
         }
       } catch (error) {

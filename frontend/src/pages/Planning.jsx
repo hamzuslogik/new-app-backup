@@ -469,7 +469,8 @@ const Planning = () => {
 
   const getAvailabilityColor = (planningCount, availability) => {
     if (availability === 0) return '#cccccc';
-    if (planningCount >= availability && planningCount > 0) return '#f44336'; // Rouge
+    if (planningCount > availability && planningCount > 0) return '#f44336'; // Rouge = surplus (ex. 3/2)
+    if (planningCount === availability && planningCount > 0) return '#ff9800'; // Plein exact (2/2)
     if (planningCount < availability && planningCount > 0) return '#f7a219'; // Orange
     return '#8BC34A'; // Vert
   };
@@ -791,8 +792,9 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
     if (totalAvailability === null || totalAvailability === undefined || Number(totalAvailability) <= 0) {
       return '#f44336'; // Rouge (surplus / pas de capacité)
     }
-    if (rdvCount >= totalAvailability) return '#f44336'; // Rouge (blindé/surplus)
-    return '#ffc107'; // Jaune (partiellement blindé)
+    if (rdvCount > totalAvailability) return '#f44336'; // Rouge (surplus, ex. 3/2)
+    if (rdvCount === totalAvailability) return '#ff9800'; // Plein exact (2/2)
+    return '#ffc107'; // Jaune (partiellement rempli)
   };
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
