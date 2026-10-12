@@ -2039,7 +2039,7 @@ router.get('/', authenticate, async (req, res) => {
       date_rdv_time: 'fiche.date_rdv_time',
       id_etat_final: 'etat.titre',
       id_confirmateur: 'u1.pseudo',
-      id_commercial: `COALESCE(NULLIF(TRIM(com_sort.nom), ''), com_sort.login)`,
+      id_commercial: `COALESCE(NULLIF(TRIM(com_sort.pseudo), ''), NULLIF(TRIM(com_sort.login), ''), com_sort.nom)`,
       id_centre: 'centre_sort.titre',
       id_agent: 'agent_sort.pseudo',
       produit: 'fiche.produit',

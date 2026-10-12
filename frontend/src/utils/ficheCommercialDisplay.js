@@ -1,6 +1,6 @@
 /**
  * Affichage colonne Commercial (listes fiches).
- * Libellé = nom, sinon login (jamais pseudo).
+ * Libellé = pseudo (API commercial_pseudo / utilisateurs).
  * En recherche signatures : priorité au commercial historisé à la signature.
  */
 export function isSignatureSearchContext(filters = {}) {
@@ -33,7 +33,7 @@ export function formatFicheCommercialDisplay(fiche, getUserName, filters = {}) {
       : '') ||
     '';
 
-  // commercial_pseudo API = déjà nom||login côté backend ; sinon résolution users
+  // commercial_pseudo API = pseudo (repli login/nom) côté backend ; sinon résolution users
   const current1 =
     (fiche?.commercial_pseudo && String(fiche.commercial_pseudo).trim()) ||
     resolveName(fiche?.id_commercial) ||
