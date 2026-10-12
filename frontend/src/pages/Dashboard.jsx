@@ -26,7 +26,7 @@ import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { exportToCSV, exportToExcel } from '../utils/exportUtils';
 import {
   canExportDashboardResults,
-  DASHBOARD_EXPORT_COLUMNS,
+  getDashboardExportColumns,
   buildDashboardExportRows,
 } from '../utils/dashboardResultsExport';
 import {
@@ -1546,8 +1546,17 @@ const Dashboard = () => {
       const params = { ...getQueryParams(), page: 1, limit: 999999 };
       const response = await api.get('/fiches', { params });
       const allFiches = response.data?.data || [];
+      const exportColumns = getDashboardExportColumns({
+        layout: useBadgeColumnsLayout ? 'badge' : 'standard',
+        includeCq: showCqColumns,
+        includeBadges: showBadgeColumns,
+        includeDecalage: useBadgeColumnsLayout ? showDecalageColAdmin : true,
+        isColVisible,
+      });
       const exportData = buildDashboardExportRows(allFiches, {
         formatRdvDateTime,
+        formatDate,
+        etatsData: etatsData || [],
         getEtatDisplay: (f) => getEtatFullLabel(f) || getEtatDisplayName(f),
         getCommercial: (f) => {
           const v = getCommercialsFormatted(f);
@@ -1556,16 +1565,25 @@ const Dashboard = () => {
         getConfirmateur: (f) => getConfirmateursFormatted(f),
         getCentre: (f) => getCentreName(f.id_centre),
         getProduit: (f) => getProduitName(f.produit),
+        getIndicators: (f) => checkIndicators(f.id_etat_histo, f),
+        getDecalage: (f) => {
+          const info = getDecalageDashboardInfo(f);
+          return info?.text || '';
+        },
       });
       if (!exportData.length) {
         toast.warning('Aucune donnée à exporter');
         return;
       }
+      if (!exportColumns.length) {
+        toast.warning('Aucune colonne visible à exporter');
+        return;
+      }
       const filename = `dashboard_resultats_${new Date().toISOString().slice(0, 10)}`;
       if (format === 'csv') {
-        exportToCSV(exportData, DASHBOARD_EXPORT_COLUMNS, filename);
+        exportToCSV(exportData, exportColumns, filename);
       } else {
-        exportToExcel(exportData, DASHBOARD_EXPORT_COLUMNS, filename);
+        exportToExcel(exportData, exportColumns, filename);
       }
       toast.success(`${exportData.length} ligne(s) exportée(s)`);
     } catch (err) {
