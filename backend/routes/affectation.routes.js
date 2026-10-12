@@ -232,7 +232,7 @@ router.post('/affecter', authenticate, async (req, res) => {
     for (const ficheId of fiches_ids) {
       try {
         const fiche = await queryOne(
-          'SELECT id, id_commercial, id_etat_final, date_rdv_time FROM fiches WHERE id = ?',
+          'SELECT id, id_commercial, id_commercial_2, id_etat_final, date_rdv_time FROM fiches WHERE id = ?',
           [parseInt(ficheId)]
         );
 
@@ -247,10 +247,15 @@ router.post('/affecter', authenticate, async (req, res) => {
         }
 
         const ancienCommercial = fiche.id_commercial || 0;
+        const ancienCommercial2 =
+          fiche.id_commercial_2 != null && Number(fiche.id_commercial_2) > 0
+            ? Number(fiche.id_commercial_2)
+            : null;
         const commercialId = parseInt(id_commercial, 10);
 
+        // À l'affectation : commercial principal seulement — vider commercial 2 s'il est renseigné
         await query(
-          'UPDATE fiches SET id_commercial = ?, date_modif_time = ? WHERE id = ?',
+          'UPDATE fiches SET id_commercial = ?, id_commercial_2 = NULL, date_modif_time = ? WHERE id = ?',
           [commercialId, dateModifTime, parseInt(ficheId)]
         );
 
@@ -267,6 +272,13 @@ router.post('/affecter', authenticate, async (req, res) => {
              VALUES (?, ?, 'Affectation', ?, ?, ?)`,
             [parseInt(ficheId), userId, String(ancienCommercial), String(id_commercial), dateModifTime]
           );
+          if (ancienCommercial2 != null) {
+            await query(
+              `INSERT INTO modifica (id_fiche, id_user, type, ancien_valeur, nouvelle_valeur, date_modif_time)
+               VALUES (?, ?, 'id_commercial_2', ?, ?, ?)`,
+              [parseInt(ficheId), userId, String(ancienCommercial2), '', dateModifTime]
+            );
+          }
         } catch (modifError) {
           console.error('Erreur lors de l\'enregistrement dans modifica:', modifError);
           // Ne pas bloquer l'affectation si modifica échoue
