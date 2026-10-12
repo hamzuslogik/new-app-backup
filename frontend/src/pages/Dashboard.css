@@ -1259,6 +1259,35 @@ button.stat-card.stat-card-clickable {
   margin-left: auto;
 }
 
+.dashboard .export-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.dashboard .btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid #9cbfc8;
+  border-radius: 6px;
+  background: #fff;
+  color: #1a2529;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dashboard .btn-export:hover:not(:disabled) {
+  background: #f0f7f8;
+  border-color: #7aa8b2;
+}
+
+.dashboard .btn-export:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .fiche-columns-picker {
   position: relative;
   z-index: 20;

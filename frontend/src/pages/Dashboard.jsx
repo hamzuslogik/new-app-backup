@@ -4,7 +4,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import api from '../config/api';
-import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSignature, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash, FaExpand, FaCompress } from 'react-icons/fa';
+import { toast } from 'react-toastify';
+import { FaSearch, FaChevronDown, FaChevronUp, FaFileAlt, FaCalendarAlt, FaChartBar, FaComments, FaCheck, FaHome, FaCalendarCheck, FaCalendarTimes, FaSignature, FaSort, FaSortUp, FaSortDown, FaTimes, FaEye, FaEyeSlash, FaExpand, FaCompress, FaFileCsv, FaFileExcel } from 'react-icons/fa';
 import {
   QualiteConfirmationAuditButton,
   QualiteConfirmationAuditModal,
@@ -22,6 +23,12 @@ import { getEtatDisplayWithSousEtat, getEtatTableAbbr, isSignerSearchFilter } fr
 import { cleanObservationCQ } from '../utils/cleanObservationCQ';
 import { getCentreTableAbbr } from '../utils/tableAbbreviations';
 import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
+import { exportToCSV, exportToExcel } from '../utils/exportUtils';
+import {
+  canExportDashboardResults,
+  DASHBOARD_EXPORT_COLUMNS,
+  buildDashboardExportRows,
+} from '../utils/dashboardResultsExport';
 import {
   getFicheTableIndicators,
   ficheHasDecalageRequest,
@@ -344,6 +351,8 @@ const Dashboard = () => {
   const [showFilters, setShowFilters] = useState(true);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [exportingResults, setExportingResults] = useState(false);
+  const canExportResults = canExportDashboardResults(user);
   const [isTableDesktopView, setIsTableDesktopView] = useState(() => Boolean(getFicheModalStateFromUrl()));
   const isDashboardTouchMobile = isTouchMobileDevice();
 
@@ -1526,6 +1535,47 @@ const Dashboard = () => {
   const showDecalageColAdmin =
     useBadgeColumnsLayout && fiches.some((f) => ficheHasDecalageRequest(f));
 
+  const handleExportResults = async (format) => {
+    if (!canExportResults || exportingResults) return;
+    if (!appliedFilters.fiche_search && statsListOverride !== 'upcoming') {
+      toast.warning('Lancez d\'abord une recherche pour exporter les résultats');
+      return;
+    }
+    setExportingResults(true);
+    try {
+      const params = { ...getQueryParams(), page: 1, limit: 999999 };
+      const response = await api.get('/fiches', { params });
+      const allFiches = response.data?.data || [];
+      const exportData = buildDashboardExportRows(allFiches, {
+        formatRdvDateTime,
+        getEtatDisplay: (f) => getEtatFullLabel(f) || getEtatDisplayName(f),
+        getCommercial: (f) => {
+          const v = getCommercialsFormatted(f);
+          return v && v !== '-' ? v : '';
+        },
+        getConfirmateur: (f) => getConfirmateursFormatted(f),
+        getCentre: (f) => getCentreName(f.id_centre),
+        getProduit: (f) => getProduitName(f.produit),
+      });
+      if (!exportData.length) {
+        toast.warning('Aucune donnée à exporter');
+        return;
+      }
+      const filename = `dashboard_resultats_${new Date().toISOString().slice(0, 10)}`;
+      if (format === 'csv') {
+        exportToCSV(exportData, DASHBOARD_EXPORT_COLUMNS, filename);
+      } else {
+        exportToExcel(exportData, DASHBOARD_EXPORT_COLUMNS, filename);
+      }
+      toast.success(`${exportData.length} ligne(s) exportée(s)`);
+    } catch (err) {
+      console.error('Export Dashboard:', err);
+      toast.error('Erreur lors de l\'export');
+    } finally {
+      setExportingResults(false);
+    }
+  };
+
   const copyFicheTelFromMenu = (tel) => {
     const t = (tel || '').trim();
     if (!t) {
@@ -2338,6 +2388,28 @@ const Dashboard = () => {
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+            {canExportResults && (
+              <div className="export-buttons">
+                <button
+                  type="button"
+                  className="btn-export"
+                  title="Exporter en CSV"
+                  onClick={() => handleExportResults('csv')}
+                  disabled={exportingResults || isFetchingList || (!appliedFilters.fiche_search && statsListOverride !== 'upcoming')}
+                >
+                  <FaFileCsv /> {exportingResults ? 'Export...' : 'CSV'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-export"
+                  title="Exporter en Excel"
+                  onClick={() => handleExportResults('excel')}
+                  disabled={exportingResults || isFetchingList || (!appliedFilters.fiche_search && statsListOverride !== 'upcoming')}
+                >
+                  <FaFileExcel /> {exportingResults ? 'Export...' : 'Excel'}
+                </button>
               </div>
             )}
             {canCustomizeColumns && fiches.length > 0 && (
