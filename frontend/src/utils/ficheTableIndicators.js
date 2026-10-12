@@ -1,4 +1,5 @@
 import { ficheHasR2Placed } from './ficheR2Placed';
+import { formatRdvDateTime } from './formatRdvDateTime';
 
 const PRESENCE_SEUL = [
   'MME SEULE SANS MR',
@@ -109,6 +110,36 @@ export function getFicheTableIndicators(histoString, fiche = {}, etatsData = nul
   };
 }
 
+function normalizeDecalageDateTime(value) {
+  if (value == null || value === '') return '';
+  const s = String(value).trim().replace('T', ' ');
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[ ](\d{1,2}):(\d{2})/);
+  if (!m) return s;
+  return `${m[1]} ${String(m[2]).padStart(2, '0')}:${m[3]}`;
+}
+
+/** Demande sans nouvelle heure (vide ou identique au RDV prévu). */
+export function isDecalageSansHeureFiche(fiche) {
+  if (!fiche?.decale_date_nouvelle) return true;
+  const a = normalizeDecalageDateTime(fiche.decale_date_nouvelle);
+  const b = normalizeDecalageDateTime(fiche.decale_date_prevu);
+  return Boolean(a && b && a === b);
+}
+
+/**
+ * Message admin type « ADMIN : 14-15-16-13h30-13h » → première heure demandée (« 14 »).
+ * Préfixe ADMIN retiré ; séparateur « - ».
+ */
+export function extractAdminDecalageFirstRequestedHour(message) {
+  if (message == null || String(message).trim() === '') return null;
+  let s = String(message).trim();
+  if (!/^ADMIN\s*:/i.test(s)) return null;
+  s = s.replace(/^ADMIN\s*:\s*/i, '').trim();
+  if (!s) return null;
+  const first = s.split('-')[0].trim();
+  return first || null;
+}
+
 /** True si la fiche a une demande de décalage (tous états). */
 export function ficheHasDecalageRequest(fiche) {
   const etatIdRaw = fiche?.decale_id_etat;
@@ -117,8 +148,38 @@ export function ficheHasDecalageRequest(fiche) {
     fiche?.decale_date_prevu ||
       fiche?.decale_date_nouvelle ||
       (fiche?.etat_dec && String(fiche.etat_dec).trim() !== '') ||
-      (etatIdRaw != null && etatIdRaw !== '' && Number.isFinite(etatId))
+      (etatIdRaw != null && etatIdRaw !== '' && Number.isFinite(etatId)) ||
+      (fiche?.decale_message && String(fiche.decale_message).trim() !== '')
   );
+}
+
+/**
+ * Libellé affichable pour « nouvelle heure » / message admin sans heure.
+ * Admin sans heure : 1ʳᵉ heure du message (ex. « 14 » depuis « ADMIN : 14-15-… »).
+ */
+export function getDecalageNouvelleHeureDisplay(ficheOrDecalage) {
+  if (!ficheOrDecalage) return null;
+
+  const dateNouvelle =
+    ficheOrDecalage.decale_date_nouvelle ?? ficheOrDecalage.date_nouvelle ?? null;
+  const datePrevu =
+    ficheOrDecalage.decale_date_prevu ?? ficheOrDecalage.date_prevu ?? null;
+  const message =
+    ficheOrDecalage.decale_message ?? ficheOrDecalage.message ?? null;
+
+  const sansHeure =
+    !dateNouvelle ||
+    (normalizeDecalageDateTime(dateNouvelle) &&
+      normalizeDecalageDateTime(datePrevu) &&
+      normalizeDecalageDateTime(dateNouvelle) === normalizeDecalageDateTime(datePrevu));
+
+  if (sansHeure) {
+    const firstHour = extractAdminDecalageFirstRequestedHour(message);
+    if (firstHour) return firstHour;
+    return null;
+  }
+
+  return formatRdvDateTime(dateNouvelle) || null;
 }
 
 /** Libellé / statut décalage pour affichage (tous états). */
@@ -143,8 +204,10 @@ export function getDecalageDisplayInfo(fiche) {
   } else if (etatId === 3 || etatId === 4 || titre.includes('REFUS')) {
     status = 'refused';
     text = 'Refusée';
-  } else if (!fiche?.etat_dec) {
-    text = 'En cours';
+  } else {
+    // En cours : nouvelle heure, ou 1ʳᵉ heure du message admin si sans heure
+    const heureDisplay = getDecalageNouvelleHeureDisplay(fiche);
+    text = heureDisplay || fiche?.etat_dec || 'En cours';
   }
 
   return { status, text };

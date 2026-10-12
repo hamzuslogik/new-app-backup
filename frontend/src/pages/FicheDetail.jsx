@@ -45,7 +45,6 @@ import {
   showConfProfessionMmeFields,
   clearHiddenConfProfessionFields,
 } from '../utils/confSituationConjugale';
-
 /** Style option / select « Nouvel état » : fond = couleur état, texte contrasté. */
 function getEtatSelectOptionStyle(color) {
   const bg = color || '#cccccc';

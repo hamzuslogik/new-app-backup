@@ -33,27 +33,9 @@ function getProduitColor(produitId) {
 }
 
 function getDecalageInfo(fiche) {
-  const etatIdRaw = fiche?.decale_id_etat;
-  const etatId = Number(etatIdRaw);
-  const titre = String(fiche?.etat_dec || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const hasDecalage = Boolean(
-    fiche?.decale_date_prevu ||
-    fiche?.decale_date_nouvelle ||
-    (fiche?.etat_dec && String(fiche.etat_dec).trim() !== '') ||
-    (etatIdRaw != null && etatIdRaw !== '' && Number.isFinite(etatId))
-  );
-  if (!hasDecalage) return null;
-  if (etatId === 6 || titre.includes('ANNUL')) return null;
-  let status = 'pending';
-  let text = 'En cours';
-  if (etatId === 2 || titre.includes('ACCEPT') || titre.includes('VALID')) {
-    status = 'accepted';
-    text = 'Acceptée';
-  } else if (etatId === 3 || etatId === 4 || titre.includes('REFUS')) {
-    status = 'refused';
-    text = 'Refusée';
-  }
-  return { status, text };
+  const info = getDecalageDisplayInfo(fiche);
+  if (!info || info.status === 'cancelled') return null;
+  return info;
 }
 
 function formatConfirmateurs(fiche) {

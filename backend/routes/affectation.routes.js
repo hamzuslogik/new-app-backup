@@ -127,6 +127,7 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
         decale.id_etat as decale_id_etat,
         decale.date_prevu as decale_date_prevu,
         decale.date_nouvelle as decale_date_nouvelle,
+        decale.message as decale_message,
         decale_etat.titre as etat_dec
       FROM fiches f
       LEFT JOIN etats etat ON f.id_etat_final = etat.id
@@ -139,7 +140,7 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
       LEFT JOIN utilisateurs conf3 ON f.id_confirmateur_3 = conf3.id
       LEFT JOIN produits prod ON f.produit = prod.id
       LEFT JOIN (
-        SELECT d.id, d.id_fiche, d.id_etat, d.date_prevu, d.date_nouvelle
+        SELECT d.id, d.id_fiche, d.id_etat, d.date_prevu, d.date_nouvelle, d.message
         FROM decalages d
         INNER JOIN (
           SELECT id_fiche, MAX(id) AS max_id

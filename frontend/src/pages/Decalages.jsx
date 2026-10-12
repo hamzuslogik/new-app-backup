@@ -8,6 +8,7 @@ import { toast } from 'react-toastify';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { formatLocalYmd, isRdvDateBeforeToday } from '../utils/compteRenduEarlyVerification';
+import { getDecalageNouvelleHeureDisplay } from '../utils/ficheTableIndicators';
 import './Decalages.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -484,11 +485,12 @@ const Decalages = () => {
                       : '-'}
                   </td>
                   <td data-label="Nouveau RDV:">
-                    {isDecalageSansHeure(decalage)
-                      ? 'Non défini'
-                      : decalage.date_nouvelle
-                      ? formatRdvDateTime(decalage.date_nouvelle)
-                      : '-'}
+                    {getDecalageNouvelleHeureDisplay(decalage) ||
+                      (isDecalageSansHeure(decalage)
+                        ? 'Non défini'
+                        : decalage.date_nouvelle
+                          ? formatRdvDateTime(decalage.date_nouvelle)
+                          : '-')}
                   </td>
                   <td data-label="Message:" className="message-cell">
                     <div className="message-content" title={decalage.message}>
