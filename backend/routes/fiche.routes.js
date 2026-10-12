@@ -241,10 +241,29 @@ function isRdvDateBeforeToday(value, now = new Date()) {
   return `${m[1]}-${m[2]}-${m[3]}` < formatLocalYmd(now);
 }
 
+/** Normalise un DATETIME MySQL en `YYYY-MM-DD HH:MM:SS` (local, sans ms / T / Z). */
+function normalizeMysqlDateTimeValue(value) {
+  if (value == null || value === '') return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : toMysqlLocalDateTime(value);
+  }
+  let s = String(value).trim().replace('T', ' ');
+  s = s.replace(/\.\d+Z?$/i, '').replace(/Z$/i, '').trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ ](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return s || null;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${m[1]}-${m[2]}-${m[3]} ${pad(m[4])}:${pad(m[5])}:${pad(m[6] || '0')}`;
+}
+
+function mysqlDateOnlyFromValue(value) {
+  const n = normalizeMysqlDateTimeValue(value);
+  return n ? n.slice(0, 10) : null;
+}
+
 /**
  * Alimente la table confirmations au passage CONFIRMER (7) avec l'heure système locale.
- * Anti-doublon : si une ligne existe déjà pour la même fiche le même jour de confirmation
- * (DATE(date_confirmation)), ou pour le même date_rdv_time → UPDATE uniquement, pas d'INSERT.
+ * Anti-doublon strict : 1 ligne max par (id_fiche, jour de confirmation).
+ * Si une ligne existe déjà (même jour conf, même jour RDV, ou même datetime RDV) → UPDATE.
  */
 async function upsertConfirmationForEtat7({
   id_fiche,
@@ -255,82 +274,131 @@ async function upsertConfirmationForEtat7({
   commentaire,
 }) {
   if (!id_fiche || date_rdv_time == null || date_rdv_time === '') return;
-  const when = date_confirmation || toMysqlLocalDateTime();
-  const rdvNormalized =
-    typeof date_rdv_time === 'string'
-      ? date_rdv_time.trim()
-      : (date_rdv_time instanceof Date
-        ? toMysqlLocalDateTime(date_rdv_time)
-        : String(date_rdv_time));
+
+  const when = normalizeMysqlDateTimeValue(date_confirmation) || toMysqlLocalDateTime();
+  const rdvNormalized = normalizeMysqlDateTimeValue(date_rdv_time);
+  if (!rdvNormalized) return;
+
+  const confDay = mysqlDateOnlyFromValue(when);
   const confId = id_confirmateur != null && Number(id_confirmateur) > 0 ? Number(id_confirmateur) : null;
   const comId = id_commercial != null && Number(id_commercial) > 0 ? Number(id_commercial) : null;
   const comment = commentaire === '' || commentaire === undefined ? null : commentaire;
+  const ficheId = Number(id_fiche);
 
   const applyUpdate = async (existingId) => {
-    await query(
-      `UPDATE confirmations
-       SET date_rdv_time = ?,
-           date_confirmation = ?,
-           date_creation = ?,
-           id_confirmateur = COALESCE(?, id_confirmateur),
-           id_commercial = COALESCE(?, id_commercial),
-           commentaire = COALESCE(?, commentaire)
-       WHERE id = ?`,
-      [rdvNormalized, when, when, confId, comId, comment, existingId]
+    try {
+      await query(
+        `UPDATE confirmations
+         SET date_rdv_time = ?,
+             date_confirmation = ?,
+             date_creation = ?,
+             confirmation_day = ?,
+             id_confirmateur = COALESCE(?, id_confirmateur),
+             id_commercial = COALESCE(?, id_commercial),
+             commentaire = COALESCE(?, commentaire)
+         WHERE id = ?`,
+        [rdvNormalized, when, when, confDay, confId, comId, comment, existingId]
+      );
+    } catch (updErr) {
+      if (updErr && updErr.code === 'ER_BAD_FIELD_ERROR') {
+        await query(
+          `UPDATE confirmations
+           SET date_rdv_time = ?,
+               date_confirmation = ?,
+               date_creation = ?,
+               id_confirmateur = COALESCE(?, id_confirmateur),
+               id_commercial = COALESCE(?, id_commercial),
+               commentaire = COALESCE(?, commentaire)
+           WHERE id = ?`,
+          [rdvNormalized, when, when, confId, comId, comment, existingId]
+        );
+        return;
+      }
+      throw updErr;
+    }
+  };
+
+  const findExistingId = async () => {
+    // Priorité 1 : même fiche + même jour de confirmation (règle métier)
+    if (confDay) {
+      try {
+        const byConfDay = await queryOne(
+          `SELECT id FROM confirmations
+           WHERE id_fiche = ?
+             AND (
+               confirmation_day = ?
+               OR DATE(COALESCE(date_confirmation, date_creation, date_rdv_time)) = ?
+             )
+           ORDER BY id DESC
+           LIMIT 1`,
+          [ficheId, confDay, confDay]
+        );
+        if (byConfDay?.id) return byConfDay.id;
+      } catch (e) {
+        // Colonne confirmation_day absente → fallback sans elle
+        if (e && e.code === 'ER_BAD_FIELD_ERROR') {
+          const byConfDay = await queryOne(
+            `SELECT id FROM confirmations
+             WHERE id_fiche = ?
+               AND DATE(COALESCE(date_confirmation, date_creation, date_rdv_time)) = ?
+             ORDER BY id DESC
+             LIMIT 1`,
+            [ficheId, confDay]
+          );
+          if (byConfDay?.id) return byConfDay.id;
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    // Priorité 2 : même datetime RDV normalisé (évite doublons dus à "14:00" vs "14:00:00")
+    const byExactRdv = await queryOne(
+      `SELECT id FROM confirmations
+       WHERE id_fiche = ?
+         AND DATE_FORMAT(date_rdv_time, '%Y-%m-%d %H:%i:%s') = ?
+       ORDER BY id DESC
+       LIMIT 1`,
+      [ficheId, rdvNormalized]
     );
+    if (byExactRdv?.id) return byExactRdv.id;
+
+    return null;
   };
 
   try {
-    // 1) Même fiche + même jour calendaire de confirmation → update (pas de double)
-    let existing = await queryOne(
-      `SELECT id FROM confirmations
-       WHERE id_fiche = ?
-         AND DATE(COALESCE(date_confirmation, date_creation)) = DATE(?)
-       ORDER BY id DESC
-       LIMIT 1`,
-      [id_fiche, when]
-    );
-
-    // 2) Sinon même fiche + même créneau RDV
-    if (!existing?.id) {
-      existing = await queryOne(
-        `SELECT id FROM confirmations
-         WHERE id_fiche = ?
-           AND date_rdv_time <=> ?
-         ORDER BY id DESC
-         LIMIT 1`,
-        [id_fiche, rdvNormalized]
-      );
-    }
-
-    if (existing?.id) {
-      await applyUpdate(existing.id);
+    const existingId = await findExistingId();
+    if (existingId) {
+      await applyUpdate(existingId);
       return;
     }
 
     try {
-      await query(
-        `INSERT INTO confirmations
-          (id_fiche, date_rdv_time, date_confirmation, id_confirmateur, id_commercial, date_creation, commentaire)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id_fiche, rdvNormalized, when, confId, comId, when, comment]
-      );
-    } catch (insertErr) {
-      // Course / contrainte UNIQUE (id_fiche, date_rdv_time) → update au lieu d'échouer
-      if (insertErr && insertErr.code === 'ER_DUP_ENTRY') {
-        const dup = await queryOne(
-          `SELECT id FROM confirmations
-           WHERE id_fiche = ?
-             AND (
-               date_rdv_time <=> ?
-               OR DATE(COALESCE(date_confirmation, date_creation)) = DATE(?)
-             )
-           ORDER BY id DESC
-           LIMIT 1`,
-          [id_fiche, rdvNormalized, when]
+      try {
+        await query(
+          `INSERT INTO confirmations
+            (id_fiche, date_rdv_time, date_confirmation, confirmation_day, id_confirmateur, id_commercial, date_creation, commentaire)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [ficheId, rdvNormalized, when, confDay, confId, comId, when, comment]
         );
-        if (dup?.id) {
-          await applyUpdate(dup.id);
+      } catch (insColErr) {
+        if (insColErr && insColErr.code === 'ER_BAD_FIELD_ERROR') {
+          await query(
+            `INSERT INTO confirmations
+              (id_fiche, date_rdv_time, date_confirmation, id_confirmateur, id_commercial, date_creation, commentaire)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [ficheId, rdvNormalized, when, confId, comId, when, comment]
+          );
+        } else {
+          throw insColErr;
+        }
+      }
+    } catch (insertErr) {
+      // Course concurrente / UNIQUE (id_fiche, confirmation_day) → update
+      if (insertErr && insertErr.code === 'ER_DUP_ENTRY') {
+        const dupId = await findExistingId();
+        if (dupId) {
+          await applyUpdate(dupId);
           return;
         }
       }
