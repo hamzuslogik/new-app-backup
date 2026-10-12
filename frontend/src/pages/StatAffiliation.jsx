@@ -96,7 +96,7 @@ const StatAffiliation = () => {
           <FaChartPie /> STAT affiliation
         </h1>
         <p>
-          Uniquement fiches état CONFIRMER avec date RDV le jour sélectionné.
+          RDV confirmés du jour (table confirmations), même si l&apos;état actuel a changé (SIGNER, etc.).
           Affilié = présent dans affectations avec commercial et date RDV du jour.
         </p>
       </div>

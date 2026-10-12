@@ -243,7 +243,8 @@ function isRdvDateBeforeToday(value, now = new Date()) {
 
 /**
  * Alimente la table confirmations au passage CONFIRMER (7) avec l'heure système locale.
- * Source historique : scripts SQL copiant fiches_histo.date_creation (souvent écrite en UTC).
+ * Anti-doublon : si une ligne existe déjà pour la même fiche le même jour de confirmation
+ * (DATE(date_confirmation)), ou pour le même date_rdv_time → UPDATE uniquement, pas d'INSERT.
  */
 async function upsertConfirmationForEtat7({
   id_fiche,
@@ -255,33 +256,86 @@ async function upsertConfirmationForEtat7({
 }) {
   if (!id_fiche || date_rdv_time == null || date_rdv_time === '') return;
   const when = date_confirmation || toMysqlLocalDateTime();
+  const rdvNormalized =
+    typeof date_rdv_time === 'string'
+      ? date_rdv_time.trim()
+      : (date_rdv_time instanceof Date
+        ? toMysqlLocalDateTime(date_rdv_time)
+        : String(date_rdv_time));
   const confId = id_confirmateur != null && Number(id_confirmateur) > 0 ? Number(id_confirmateur) : null;
   const comId = id_commercial != null && Number(id_commercial) > 0 ? Number(id_commercial) : null;
   const comment = commentaire === '' || commentaire === undefined ? null : commentaire;
 
-  try {
-    const existing = await queryOne(
-      'SELECT id FROM confirmations WHERE id_fiche = ? AND date_rdv_time <=> ? LIMIT 1',
-      [id_fiche, date_rdv_time]
+  const applyUpdate = async (existingId) => {
+    await query(
+      `UPDATE confirmations
+       SET date_rdv_time = ?,
+           date_confirmation = ?,
+           date_creation = ?,
+           id_confirmateur = COALESCE(?, id_confirmateur),
+           id_commercial = COALESCE(?, id_commercial),
+           commentaire = COALESCE(?, commentaire)
+       WHERE id = ?`,
+      [rdvNormalized, when, when, confId, comId, comment, existingId]
     );
-    if (existing?.id) {
-      await query(
-        `UPDATE confirmations
-         SET date_confirmation = ?, date_creation = ?,
-             id_confirmateur = COALESCE(?, id_confirmateur),
-             id_commercial = COALESCE(?, id_commercial),
-             commentaire = COALESCE(?, commentaire)
-         WHERE id = ?`,
-        [when, when, confId, comId, comment, existing.id]
+  };
+
+  try {
+    // 1) Même fiche + même jour calendaire de confirmation → update (pas de double)
+    let existing = await queryOne(
+      `SELECT id FROM confirmations
+       WHERE id_fiche = ?
+         AND DATE(COALESCE(date_confirmation, date_creation)) = DATE(?)
+       ORDER BY id DESC
+       LIMIT 1`,
+      [id_fiche, when]
+    );
+
+    // 2) Sinon même fiche + même créneau RDV
+    if (!existing?.id) {
+      existing = await queryOne(
+        `SELECT id FROM confirmations
+         WHERE id_fiche = ?
+           AND date_rdv_time <=> ?
+         ORDER BY id DESC
+         LIMIT 1`,
+        [id_fiche, rdvNormalized]
       );
+    }
+
+    if (existing?.id) {
+      await applyUpdate(existing.id);
       return;
     }
-    await query(
-      `INSERT INTO confirmations
-        (id_fiche, date_rdv_time, date_confirmation, id_confirmateur, id_commercial, date_creation, commentaire)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id_fiche, date_rdv_time, when, confId, comId, when, comment]
-    );
+
+    try {
+      await query(
+        `INSERT INTO confirmations
+          (id_fiche, date_rdv_time, date_confirmation, id_confirmateur, id_commercial, date_creation, commentaire)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id_fiche, rdvNormalized, when, confId, comId, when, comment]
+      );
+    } catch (insertErr) {
+      // Course / contrainte UNIQUE (id_fiche, date_rdv_time) → update au lieu d'échouer
+      if (insertErr && insertErr.code === 'ER_DUP_ENTRY') {
+        const dup = await queryOne(
+          `SELECT id FROM confirmations
+           WHERE id_fiche = ?
+             AND (
+               date_rdv_time <=> ?
+               OR DATE(COALESCE(date_confirmation, date_creation)) = DATE(?)
+             )
+           ORDER BY id DESC
+           LIMIT 1`,
+          [id_fiche, rdvNormalized, when]
+        );
+        if (dup?.id) {
+          await applyUpdate(dup.id);
+          return;
+        }
+      }
+      throw insertErr;
+    }
   } catch (err) {
     // Schéma partiel / table absente : ne pas bloquer la confirmation
     if (err && (err.code === 'ER_NO_SUCH_TABLE' || err.code === 'ER_BAD_FIELD_ERROR')) {

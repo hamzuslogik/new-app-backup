@@ -1231,7 +1231,8 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
     if (ficheAvantDesaffectation && ficheAvantDesaffectation.valider > 0) {
       await logModification(compteRendu.id_fiche, user.id, 'valider', ficheAvantDesaffectation.valider, 0, now);
     }
-    // Snapshot affiliation dans affectations AVANT vidage (pour STAT affiliation)
+    // Snapshot affiliation dans affectations AVANT vidage (pour STAT affiliation).
+    // Utiliser la date RDV d'origine (avant rappel CR), pas fiches.date_rdv_time déjà écrasée.
     const comAvant =
       ficheAvantDesaffectation?.id_commercial != null && Number(ficheAvantDesaffectation.id_commercial) > 0
         ? Number(ficheAvantDesaffectation.id_commercial)
@@ -1240,12 +1241,11 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
           : null);
     if (comAvant) {
       try {
-        const ficheRdv = await queryOne('SELECT date_rdv_time FROM fiches WHERE id = ?', [compteRendu.id_fiche]);
         await syncAffectationRecord(
           compteRendu.id_fiche,
           comAvant,
           now,
-          ficheRdv?.date_rdv_time || null
+          ancienneFiche?.date_rdv_time || null
         );
       } catch (affSnapErr) {
         console.error('[compte-rendu][approve] Snapshot affectations ignoré:', affSnapErr?.message);

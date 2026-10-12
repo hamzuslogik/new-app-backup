@@ -2262,9 +2262,11 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
 
 // =====================================================
 // GET /planning/stat-affiliation
-// STAT affiliation : uniquement fiches état CONFIRMER (id_etat_final = 7)
-// avec fiches.date_rdv_time dans la journée sélectionnée — aucun autre état.
-// Affilié = ligne affectations avec id_commercial > 0 ET date_rdv_time le même jour.
+// STAT affiliation : RDV confirmés du jour (table confirmations),
+// indépendamment de l'état actuel de la fiche (SIGNER après CR, etc.).
+// Fallback : fiches encore CONFIRMER (7) absentes de confirmations.
+// Affilié = affectations avec id_commercial > 0 et date_rdv_time du jour
+//           (ou égale à la date RDV figée de la confirmation).
 // Accès : backoffice (fonction 11) uniquement.
 // =====================================================
 router.get('/stat-affiliation', authenticate, async (req, res) => {
@@ -2291,7 +2293,8 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
     const dateStart = `${d} 00:00:00`;
     const dateEnd = `${d} 23:59:59`;
 
-    // Base = fiches actuellement CONFIRMER (7) dont date_rdv_time tombe le jour choisi.
+    // Univers = confirmations (date_rdv figée) + fallback fiches encore en état 7.
+    // L'état actuel de la fiche n'exclut plus le dénombrement.
     const rows = await query(
       `SELECT
           f.id,
@@ -2302,8 +2305,8 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
           f.adresse,
           f.cp,
           f.ville,
-          f.date_rdv_time AS date_rdv_time,
-          f.id_confirmateur AS fiche_id_confirmateur,
+          base.date_rdv_time AS date_rdv_time,
+          COALESCE(base.id_confirmateur, f.id_confirmateur) AS fiche_id_confirmateur,
           f.id_centre,
           ctr.titre AS centre_titre,
           f.produit,
@@ -2318,30 +2321,65 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
             WHEN aff.id_commercial IS NOT NULL AND CAST(aff.id_commercial AS UNSIGNED) > 0 THEN 1
             ELSE 0
           END AS is_affilie
-        FROM fiches f
+        FROM (
+          SELECT
+            c.id_fiche,
+            c.date_rdv_time,
+            c.id_confirmateur
+          FROM confirmations c
+          WHERE c.date_rdv_time IS NOT NULL
+            AND c.date_rdv_time != ''
+            AND c.date_rdv_time >= ?
+            AND c.date_rdv_time <= ?
+
+          UNION
+
+          SELECT
+            f2.id AS id_fiche,
+            f2.date_rdv_time,
+            f2.id_confirmateur
+          FROM fiches f2
+          WHERE CAST(f2.id_etat_final AS UNSIGNED) = 7
+            AND f2.date_rdv_time IS NOT NULL
+            AND f2.date_rdv_time != ''
+            AND f2.date_rdv_time >= ?
+            AND f2.date_rdv_time <= ?
+            AND NOT EXISTS (
+              SELECT 1
+              FROM confirmations c2
+              WHERE c2.id_fiche = f2.id
+                AND c2.date_rdv_time IS NOT NULL
+                AND c2.date_rdv_time != ''
+                AND c2.date_rdv_time >= ?
+                AND c2.date_rdv_time <= ?
+            )
+        ) base
+        INNER JOIN fiches f ON f.id = base.id_fiche
         LEFT JOIN affectations aff
-          ON aff.id_fiche = f.id
+          ON aff.id_fiche = base.id_fiche
           AND aff.date_rdv_time IS NOT NULL
-          AND aff.date_rdv_time >= ?
-          AND aff.date_rdv_time <= ?
           AND CAST(aff.id_commercial AS UNSIGNED) > 0
+          AND (
+            (aff.date_rdv_time >= ? AND aff.date_rdv_time <= ?)
+            OR aff.date_rdv_time <=> base.date_rdv_time
+          )
         LEFT JOIN centres ctr ON ctr.id = f.id_centre
         LEFT JOIN etats e ON e.id = f.id_etat_final
-        LEFT JOIN utilisateurs conf_f ON conf_f.id = f.id_confirmateur
+        LEFT JOIN utilisateurs conf_f ON conf_f.id = COALESCE(base.id_confirmateur, f.id_confirmateur)
         LEFT JOIN utilisateurs com_aff ON com_aff.id = aff.id_commercial
-        WHERE CAST(f.id_etat_final AS UNSIGNED) = 7
-          AND f.date_rdv_time IS NOT NULL
-          AND f.date_rdv_time != ''
-          AND f.date_rdv_time >= ?
-          AND f.date_rdv_time <= ?
-          AND (f.archive = 0 OR f.archive IS NULL)
+        WHERE (f.archive = 0 OR f.archive IS NULL)
           AND (f.ko = 0 OR f.ko IS NULL)
         ORDER BY
           CASE WHEN ctr.titre IS NULL OR ctr.titre = '' THEN 1 ELSE 0 END,
           ctr.titre ASC,
-          f.date_rdv_time ASC,
+          base.date_rdv_time ASC,
           f.id ASC`,
-      [dateStart, dateEnd, dateStart, dateEnd]
+      [
+        dateStart, dateEnd,
+        dateStart, dateEnd,
+        dateStart, dateEnd,
+        dateStart, dateEnd,
+      ]
     );
 
     let result = (rows || []).map((r) => {
