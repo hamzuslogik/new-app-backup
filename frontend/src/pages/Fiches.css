@@ -1108,8 +1108,17 @@ table.fiches-table thead,
   box-shadow: none;
 }
 
-.fiches-table tbody tr:hover td {
+.fiches-table tbody tr:hover:not(.fiche-row-by-etat) td {
   box-shadow: inset 0 0 0 999px rgba(20, 83, 45, 0.12);
+}
+
+.fiches-table tbody tr.fiche-row-by-etat:hover td {
+  box-shadow: none;
+}
+
+.fiches-table tbody tr.fiche-row-by-etat:hover {
+  outline: 2px solid var(--table-hover-bg, #DCFCE7);
+  outline-offset: -2px;
 }
 
 .fiches-table tbody tr.archived {

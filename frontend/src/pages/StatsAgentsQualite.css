@@ -393,8 +393,13 @@
   font-size: 14px;
 }
 
-.fiches-table tbody tr:hover {
+.fiches-table tbody tr:hover:not(.fiche-row-by-etat) {
   background: #f8f9fa;
+}
+
+.fiches-table tbody tr.fiche-row-by-etat:hover {
+  outline: 2px solid var(--table-hover-bg, #DCFCE7);
+  outline-offset: -2px;
 }
 
 .comment-cell {

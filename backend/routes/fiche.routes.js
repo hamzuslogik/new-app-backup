@@ -2671,12 +2671,27 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
         ${commercialDisplaySql('commercial')} as commercial_pseudo,
         ${commercialDisplaySql('commercial2')} as commercial_2_pseudo,
         centre.titre as centre_titre,
+        decale.message as decale_message,
+        decale.id_etat as decale_id_etat,
+        decale.date_prevu as decale_date_prevu,
+        decale.date_nouvelle as decale_date_nouvelle,
+        decale_etat.titre as etat_dec,
         ${qualifSelect}
        FROM fiches fiche
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
        LEFT JOIN utilisateurs commercial ON fiche.id_commercial = commercial.id
        LEFT JOIN utilisateurs commercial2 ON fiche.id_commercial_2 = commercial2.id
        LEFT JOIN centres centre ON fiche.id_centre = centre.id
+       LEFT JOIN (
+         SELECT d.id, d.id_fiche, d.id_etat, d.date_prevu, d.date_nouvelle, d.message
+         FROM decalages d
+         INNER JOIN (
+           SELECT id_fiche, MAX(id) AS max_id
+           FROM decalages
+           GROUP BY id_fiche
+         ) latest_decale ON latest_decale.max_id = d.id
+       ) decale ON fiche.id = decale.id_fiche
+       LEFT JOIN etat_decalage decale_etat ON decale.id_etat = decale_etat.id
        ${qualifJoin}
        WHERE ${whereClause}
        ORDER BY fiche.date_rdv_time ASC

@@ -429,13 +429,20 @@ body.rdv-vue-page .rdv-vue .fiches-table .indicator {
   color: #ffffff !important;
 }
 
-/* Survol : assombrir légèrement les lignes colorées par état */
+/*
+ * Survol lignes fiches colorées par état :
+ * ne pas remplacer le fond (illisibilité) — cadre de la couleur hover actuelle.
+ */
 html body table tbody tr.fiche-row-by-etat:hover,
 html body .fiches-table tbody tr.fiche-row-by-etat:hover,
 html body .cq-table tbody tr.fiche-row-by-etat:hover,
 html body .fiches-detail-table tbody tr.fiche-row-by-etat:hover,
-html body .phase3-table tbody tr.fiche-row-by-etat:hover {
-  filter: brightness(0.96);
+html body .phase3-table tbody tr.fiche-row-by-etat:hover,
+html.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat:hover,
+body.rdv-vue-page .rdv-vue .fiches-table tbody tr.fiche-row-by-etat:hover {
+  filter: none !important;
+  outline: 2px solid var(--table-hover-bg, #DCFCE7) !important;
+  outline-offset: -2px;
 }
 
 /* État en texte (plus de badge coloré sur fond déjà coloré) */

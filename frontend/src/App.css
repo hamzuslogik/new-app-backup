@@ -102,7 +102,7 @@ tbody tr {
   border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
-tbody tr:hover {
+tbody tr:hover:not(.fiche-row-by-etat) {
   background: var(--bg-secondary, #f5f5f5);
 }
 
@@ -273,9 +273,17 @@ input:focus, textarea:focus, select:focus {
   color: var(--label-color, #065F46) !important;
 }
 
-/* Tableaux - hover */
-table tbody tr:hover, .table tbody tr:hover {
+/* Tableaux - hover (sauf lignes fiches colorées par état : cadre uniquement) */
+table tbody tr:hover:not(.fiche-row-by-etat),
+.table tbody tr:hover:not(.fiche-row-by-etat) {
   background-color: var(--table-hover-bg, #DCFCE7) !important;
+}
+
+table tbody tr.fiche-row-by-etat:hover,
+.table tbody tr.fiche-row-by-etat:hover {
+  /* garder le fond inline (couleur état) — cadre uniquement */
+  outline: 2px solid var(--table-hover-bg, #DCFCE7);
+  outline-offset: -2px;
 }
 
 /* Tableaux - header */

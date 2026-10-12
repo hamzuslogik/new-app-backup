@@ -1104,6 +1104,9 @@ const DashboardAdmin = () => {
                     <th onClick={() => handleSort('Commercial')} className="sortable-header">
                       Commercial {getSortIcon('Commercial')}
                     </th>
+                    {showCqColumns ? (
+                      <th className="fiche-col-installateur">Installateur</th>
+                    ) : null}
                     <th onClick={() => handleSort('Validé')} className="sortable-header fiche-col-badge fiche-col-valide" title="Validé">
                       <FaCheck aria-hidden /> {getSortIcon('Validé')}
                     </th>
@@ -1161,6 +1164,11 @@ const DashboardAdmin = () => {
                         <td data-label="CP:">{fiche.cp || ''}</td>
                         <td data-label="Date RDV:" className="fiche-col-date">{formatRdvDateTime(fiche.date_rdv_time)}</td>
                         <td data-label="Commercial:">{getCommercialsFormatted(fiche)}</td>
+                        {showCqColumns ? (
+                          <td data-label="Installateur:" className="fiche-col-installateur">
+                            {fiche.installeur || ''}
+                          </td>
+                        ) : null}
                         <td data-label="Validé:" className="fiche-col-badge fiche-col-valide" style={{ textAlign: 'center' }}>
                           {fiche.valider > 0 ? (
                             <FaCheck

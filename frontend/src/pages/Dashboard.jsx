@@ -2414,6 +2414,9 @@ const Dashboard = () => {
                             Commercial {getSortIcon('Commercial')}
                           </th>
                         ) : null}
+                        {showCqColumns && isColVisible('installateur') ? (
+                          <th className="fiche-col-installateur">Installateur</th>
+                        ) : null}
                         <FicheAdminBadgeHeaders
                           getSortIcon={getSortIcon}
                           onSortValide={() => handleSort('Validé')}
@@ -2489,6 +2492,9 @@ const Dashboard = () => {
                             Commercial {getSortIcon('Commercial')}
                           </th>
                         ) : null}
+                        {showCqColumns && isColVisible('installateur') ? (
+                          <th className="fiche-col-installateur">Installateur</th>
+                        ) : null}
                         {isColVisible('centre') ? (
                           <th onClick={() => handleSort('Centre')} className="sortable-header">
                             Centre {getSortIcon('Centre')}
@@ -2512,7 +2518,7 @@ const Dashboard = () => {
                         ) : null}
                         {isColVisible('action') ? <th>Actions</th> : null}
                         {isColVisible('decalage') ? (
-                          <th className="dashboard-decalage-col">État décalage</th>
+                          <th className="dashboard-decalage-col">Décalage</th>
                         ) : null}
                       </>
                     )}
@@ -2567,6 +2573,11 @@ const Dashboard = () => {
                             ) : null}
                             {isColVisible('commercial') ? (
                               <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
+                            ) : null}
+                            {showCqColumns && isColVisible('installateur') ? (
+                              <td data-label="Installateur:" className="fiche-col-installateur">
+                                {fiche.installeur || ''}
+                              </td>
                             ) : null}
                             <FicheAdminValideCell
                               valider={fiche.valider}
@@ -2676,6 +2687,11 @@ const Dashboard = () => {
                             {isColVisible('commercial') ? (
                               <td data-label="Commercial:">{getCommercialsFormatted(fiche) || ''}</td>
                             ) : null}
+                            {showCqColumns && isColVisible('installateur') ? (
+                              <td data-label="Installateur:" className="fiche-col-installateur">
+                                {fiche.installeur || ''}
+                              </td>
+                            ) : null}
                             {isColVisible('centre') ? (
                               <td data-label="Centre:" className="fiche-col-centre" title={getCentreName(fiche.id_centre) || undefined}>{getCentreDisplay(fiche.id_centre)}</td>
                             ) : null}
@@ -2766,7 +2782,7 @@ const Dashboard = () => {
                               </td>
                             ) : null}
                             {isColVisible('decalage') ? (
-                              <td data-label="État décalage:" className="dashboard-decalage-cell">
+                              <td data-label="Décalage:" className="dashboard-decalage-cell">
                                 {decalageInfo && (
                                   <span className={`dashboard-decalage-mention is-${decalageInfo.status}`}>
                                     {decalageInfo.text}

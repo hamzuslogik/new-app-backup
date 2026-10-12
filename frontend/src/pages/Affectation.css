@@ -275,8 +275,14 @@
   transition: background-color 0.2s;
 }
 
-.affectation-page .fiches-table tbody tr:hover {
+.affectation-page .fiches-table tbody tr:hover:not(.fiche-row-by-etat) {
   filter: brightness(0.97);
+}
+
+.affectation-page .fiches-table tbody tr.fiche-row-by-etat:hover {
+  filter: none;
+  outline: 2px solid var(--table-hover-bg, #DCFCE7);
+  outline-offset: -2px;
 }
 
 .affectation-page .fiches-table tbody tr.selected {

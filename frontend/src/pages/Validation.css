@@ -270,8 +270,13 @@
   transition: background 0.2s;
 }
 
-.fiches-table tbody tr:hover {
+.fiches-table tbody tr:hover:not(.fiche-row-by-etat) {
   background: #f5f5f5;
+}
+
+.fiches-table tbody tr.fiche-row-by-etat:hover {
+  outline: 2px solid var(--table-hover-bg, #DCFCE7);
+  outline-offset: -2px;
 }
 
 .fiches-table td {

@@ -10,7 +10,7 @@ import FicheDetailModal from '../components/FicheDetailModal';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
-import { getFicheTableIndicators } from '../utils/ficheTableIndicators';
+import { getFicheTableIndicators, getDecalageDisplayInfo } from '../utils/ficheTableIndicators';
 import { abbreviateCentreName } from '../utils/tableAbbreviations';
 import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { getEtatTableAbbr, getEtatDisplayWithSousEtat } from '../utils/etatSignerComplet';
@@ -979,6 +979,7 @@ const PlanningCommercial = () => {
                     {isCommercial ? <th>Validé</th> : <th>Centre</th>}
                     {isCommercial && <th className="fiche-col-seul">SEUL</th>}
                     {isCommercial && <th className="fiche-col-r2">R2</th>}
+                    <th className="dashboard-decalage-col">Décalage</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -990,6 +991,11 @@ const PlanningCommercial = () => {
                     const indicators = isCommercial
                       ? getFicheTableIndicators(null, fiche)
                       : null;
+                    const decalageInfo = getDecalageDisplayInfo(fiche);
+                    const showDecalage =
+                      decalageInfo && decalageInfo.status !== 'cancelled'
+                        ? decalageInfo
+                        : null;
                     
                     return (
                       <tr 
@@ -1113,6 +1119,13 @@ const PlanningCommercial = () => {
                             ) : null}
                           </td>
                         )}
+                        <td data-label="Décalage:" className="dashboard-decalage-cell">
+                          {showDecalage ? (
+                            <span className={`dashboard-decalage-mention is-${showDecalage.status}`}>
+                              {showDecalage.text}
+                            </span>
+                          ) : null}
+                        </td>
                         <td data-label="">
                           <button
                             onClick={() => openPlanningFicheDetail({ hash: fiche.hash })}
