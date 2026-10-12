@@ -2262,10 +2262,9 @@ router.get('/rdv-vue', authenticate, async (req, res) => {
 
 // =====================================================
 // GET /planning/stat-affiliation
-// STAT affiliation : RDV CONFIRMER figés via fiches_histo (id_etat=7).
-// Date = fiches_histo.date_rdv_time (pas fiches.date_rdv_time qui change).
-// Affilié = ligne affectations avec id_commercial > 0 ET date_rdv_time le même jour
-// (pas fiches.id_commercial / confirmations, ni une ancienne affectation d'un autre jour).
+// STAT affiliation : uniquement fiches état CONFIRMER (id_etat_final = 7)
+// avec fiches.date_rdv_time dans la journée sélectionnée — aucun autre état.
+// Affilié = ligne affectations avec id_commercial > 0 ET date_rdv_time le même jour.
 // Accès : backoffice (fonction 11) uniquement.
 // =====================================================
 router.get('/stat-affiliation', authenticate, async (req, res) => {
@@ -2289,11 +2288,10 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
       });
     }
 
-    // Plage indexable sur fiches_histo.date_rdv_time / affectations.date_rdv_time
     const dateStart = `${d} 00:00:00`;
     const dateEnd = `${d} 23:59:59`;
 
-    // Base = dernière ligne histo CONFIRMER (7) dont date_rdv_time tombe le jour choisi.
+    // Base = fiches actuellement CONFIRMER (7) dont date_rdv_time tombe le jour choisi.
     const rows = await query(
       `SELECT
           f.id,
@@ -2304,9 +2302,8 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
           f.adresse,
           f.cp,
           f.ville,
-          h.date_rdv_time AS date_rdv_time,
-          h.id AS histo_id,
-          h.id_confirmateur AS histo_id_confirmateur,
+          f.date_rdv_time AS date_rdv_time,
+          f.id_confirmateur AS fiche_id_confirmateur,
           f.id_centre,
           ctr.titre AS centre_titre,
           f.produit,
@@ -2314,27 +2311,14 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
           f.id_etat_final,
           e.titre AS etat_titre,
           e.color AS etat_color,
-          COALESCE(conf_h.pseudo, conf_f.pseudo) AS confirmateur_pseudo,
+          conf_f.pseudo AS confirmateur_pseudo,
           aff.id_commercial AS affectation_id_commercial,
           ${commercialDisplaySql('com_aff')} AS affectation_commercial_pseudo,
           CASE
             WHEN aff.id_commercial IS NOT NULL AND CAST(aff.id_commercial AS UNSIGNED) > 0 THEN 1
             ELSE 0
           END AS is_affilie
-        FROM (
-          SELECT h1.id, h1.id_fiche, h1.date_rdv_time, h1.id_confirmateur
-          FROM fiches_histo h1
-          INNER JOIN (
-            SELECT id_fiche, MAX(id) AS max_id
-            FROM fiches_histo
-            WHERE CAST(id_etat AS UNSIGNED) = 7
-              AND date_rdv_time IS NOT NULL
-              AND date_rdv_time >= ?
-              AND date_rdv_time <= ?
-            GROUP BY id_fiche
-          ) hx ON hx.max_id = h1.id
-        ) h
-        INNER JOIN fiches f ON f.id = h.id_fiche
+        FROM fiches f
         LEFT JOIN affectations aff
           ON aff.id_fiche = f.id
           AND aff.date_rdv_time IS NOT NULL
@@ -2343,15 +2327,19 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
           AND CAST(aff.id_commercial AS UNSIGNED) > 0
         LEFT JOIN centres ctr ON ctr.id = f.id_centre
         LEFT JOIN etats e ON e.id = f.id_etat_final
-        LEFT JOIN utilisateurs conf_h ON conf_h.id = h.id_confirmateur
         LEFT JOIN utilisateurs conf_f ON conf_f.id = f.id_confirmateur
         LEFT JOIN utilisateurs com_aff ON com_aff.id = aff.id_commercial
-        WHERE (f.archive = 0 OR f.archive IS NULL)
+        WHERE CAST(f.id_etat_final AS UNSIGNED) = 7
+          AND f.date_rdv_time IS NOT NULL
+          AND f.date_rdv_time != ''
+          AND f.date_rdv_time >= ?
+          AND f.date_rdv_time <= ?
+          AND (f.archive = 0 OR f.archive IS NULL)
           AND (f.ko = 0 OR f.ko IS NULL)
         ORDER BY
           CASE WHEN ctr.titre IS NULL OR ctr.titre = '' THEN 1 ELSE 0 END,
           ctr.titre ASC,
-          h.date_rdv_time ASC,
+          f.date_rdv_time ASC,
           f.id ASC`,
       [dateStart, dateEnd, dateStart, dateEnd]
     );
@@ -2372,8 +2360,8 @@ router.get('/stat-affiliation', authenticate, async (req, res) => {
         cp: r.cp,
         ville: r.ville,
         date_rdv_time: r.date_rdv_time,
-        histo_id: r.histo_id,
-        id_confirmateur: r.histo_id_confirmateur || null,
+        histo_id: null,
+        id_confirmateur: r.fiche_id_confirmateur || null,
         id_centre: r.id_centre != null ? Number(r.id_centre) : null,
         centre_titre: r.centre_titre || 'Sans centre',
         produit: r.produit,
