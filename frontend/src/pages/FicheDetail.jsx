@@ -3249,11 +3249,8 @@ const FicheDetail = ({
         conf_commentaire_produit: data.conf_commentaire_produit || null
       };
 
-      // Commercial 2 optionnel
-      updateData.id_commercial_2 =
-        data.id_commercial_2 && String(data.id_commercial_2).trim() !== ''
-          ? parseInt(data.id_commercial_2, 10)
-          : null;
+      // Commercial 2 retiré de la création RDV (toutes sessions) — R2 / champs R1 conservés
+      updateData.id_commercial_2 = null;
 
       const r2Payload = buildR2PayloadFromForm(data);
       if (!r2Payload.ok) {
@@ -3680,10 +3677,8 @@ const FicheDetail = ({
         conf_commentaire_produit: confFormData.conf_commentaire_produit || null
       };
 
-      updateData.id_commercial_2 =
-        confFormData.id_commercial_2 && String(confFormData.id_commercial_2).trim() !== ''
-          ? parseInt(confFormData.id_commercial_2, 10)
-          : null;
+      // Commercial 2 retiré de la confirmation RDV (toutes sessions) — R2 / champs R1 conservés
+      updateData.id_commercial_2 = null;
 
       const r2Payload = buildR2PayloadFromForm(confFormData);
       if (!r2Payload.ok) {
@@ -8608,30 +8603,6 @@ const FicheDetail = ({
                       </td>
                     </tr>
                     <tr>
-                      <td>
-                        <label htmlFor="conf_id_commercial_2">Commercial 2 (optionnel)</label>
-                      </td>
-                      <td>
-                        <select
-                          id="conf_id_commercial_2"
-                          className="form-control"
-                          value={confFormData.id_commercial_2 || ''}
-                          onChange={(e) =>
-                            setConfFormData({ ...confFormData, id_commercial_2: e.target.value })
-                          }
-                        >
-                          <option value="">Aucun</option>
-                          {(commerciaux || [])
-                            .filter((u) => u.etat > 0 || u.etat == null)
-                            .map((com) => (
-                              <option key={com.id} value={com.id}>
-                                {formatCommercialDisplayName(com)}
-                              </option>
-                            ))}
-                        </select>
-                      </td>
-                    </tr>
-                    <tr>
                       <td><label htmlFor="conf_id_confirmateur">Confirmateur *</label></td>
                       <td>
                         <select
@@ -12562,30 +12533,6 @@ const CreateRdvModal = ({
                         {produits.length} produit(s) disponible(s)
                       </small>
                     )}
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <label htmlFor="rdv_id_commercial_2">Commercial 2 (optionnel)</label>
-                  </td>
-                  <td>
-                    <select
-                      id="rdv_id_commercial_2"
-                      className="form-control"
-                      value={rdvFormData.id_commercial_2 || ''}
-                      onChange={(e) =>
-                        setRdvFormData({ ...rdvFormData, id_commercial_2: e.target.value })
-                      }
-                    >
-                      <option value="">Aucun</option>
-                      {(commerciaux || [])
-                        .filter((u) => u.etat > 0 || u.etat == null)
-                        .map((com) => (
-                          <option key={com.id} value={com.id}>
-                            {formatCommercialDisplayName(com)}
-                          </option>
-                        ))}
-                    </select>
                   </td>
                 </tr>
                 <tr>

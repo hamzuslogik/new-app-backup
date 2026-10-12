@@ -1,11 +1,11 @@
 /**
  * Validation création / confirmation RDV (état CONFIRMER).
  * Tous les champs sont obligatoires sauf :
- * - Commercial 2
  * - Confirmateur 2 / 3 (ajout facultatif)
  * - Consommation électrique si produit PAC
  * - Consommation chauffage si produit PV
  * - Profession / Type contrat MR ou MME selon Couple/Célibataire + RDV pris avec
+ * Note : Commercial 2 n'est plus proposé à la création/confirmation RDV (R2 OUI/NON + champs R1 restent).
  */
 
 import {
