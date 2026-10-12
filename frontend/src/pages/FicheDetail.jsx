@@ -5894,9 +5894,22 @@ const FicheDetail = ({
                   null,
                 commercial_2_pseudo:
                   formatCommercialDisplayName(commerciaux?.find((c) => c.id === fiche.id_commercial_2)) ||
+                  (normalizeIsR2Value(fiche.is_r2) === 1
+                    ? formatCommercialDisplayName(
+                        commerciaux?.find((c) => c.id === fiche.id_commercial_r1)
+                      )
+                    : null) ||
                   null,
                 id_commercial: fiche.id_commercial != null ? fiche.id_commercial : null,
-                id_commercial_2: fiche.id_commercial_2 != null ? fiche.id_commercial_2 : null,
+                id_commercial_2:
+                  fiche.id_commercial_2 != null && Number(fiche.id_commercial_2) > 0
+                    ? fiche.id_commercial_2
+                    : (normalizeIsR2Value(fiche.is_r2) === 1 &&
+                      fiche.id_commercial_r1 != null &&
+                      Number(fiche.id_commercial_r1) > 0
+                        ? fiche.id_commercial_r1
+                        : null),
+                id_commercial_r1: fiche.id_commercial_r1 != null ? fiche.id_commercial_r1 : null,
                 installeur_nom: installateurs?.find(i => i.id === fiche.ph3_installateur)?.nom || null,
                 // Phase 3
                 ph3_pac: fiche.ph3_pac || null,

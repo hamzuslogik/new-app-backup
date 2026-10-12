@@ -551,12 +551,17 @@ const PlanningCommercial = () => {
     return produitId === 1 ? '#66D5D4' : produitId === 2 ? '#818cf8' : '#cccccc';
   };
 
-  // Obtenir le nom du commercial
+  // Obtenir le nom du commercial (R2 : 2e = id_commercial_r1 via commercial_2_pseudo API)
   const getCommercialName = (fiche) => {
     const names = [];
     if (fiche.commercial_pseudo) names.push(fiche.commercial_pseudo);
-    if (fiche.commercial_2_pseudo) names.push(fiche.commercial_2_pseudo);
-    return names.length > 0 ? names.join(' / ') : '';
+    const second =
+      fiche.commercial_2_pseudo ||
+      ((fiche.is_r2 === 1 || fiche.is_r2 === '1' || fiche.is_r2 === true) && fiche.commercial_r1_pseudo
+        ? fiche.commercial_r1_pseudo
+        : '');
+    if (second) names.push(second);
+    return names.length > 0 ? names.join(' | ') : '';
   };
   
   // Vérifier si c'est un R2 (deuxième commercial assigné)

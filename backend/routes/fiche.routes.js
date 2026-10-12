@@ -2137,7 +2137,11 @@ router.get('/', authenticate, async (req, res) => {
        u2.pseudo as confirmateur_2_pseudo,
        u3.pseudo as confirmateur_3_pseudo,
        ${commercialDisplaySql('com_sort')} as commercial_pseudo,
-       ${commercialDisplaySql('com2_sort')} as commercial_2_pseudo
+       COALESCE(
+         ${commercialDisplaySql('com2_sort')},
+         CASE WHEN CAST(fiche.is_r2 AS UNSIGNED) = 1 THEN ${commercialDisplaySql('com_r1_sort')} ELSE NULL END
+       ) as commercial_2_pseudo,
+       ${commercialDisplaySql('com_r1_sort')} as commercial_r1_pseudo
        ${qualifSelect}
        FROM fiches fiche
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
@@ -2160,6 +2164,7 @@ router.get('/', authenticate, async (req, res) => {
        LEFT JOIN utilisateurs u3 ON fiche.id_confirmateur_3 = u3.id
        LEFT JOIN utilisateurs com_sort ON fiche.id_commercial = com_sort.id
        LEFT JOIN utilisateurs com2_sort ON fiche.id_commercial_2 = com2_sort.id
+       LEFT JOIN utilisateurs com_r1_sort ON fiche.id_commercial_r1 = com_r1_sort.id
        LEFT JOIN utilisateurs agent_sort ON fiche.id_agent = agent_sort.id
        LEFT JOIN centres centre_sort ON fiche.id_centre = centre_sort.id
        ${histoJoinForFichesHisto}
@@ -2782,6 +2787,7 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
         fiche.id_etat_final,
         fiche.id_commercial,
         fiche.id_commercial_2,
+        fiche.id_commercial_r1,
         fiche.id_centre,
         fiche.rdv_urgent,
         fiche.valider,
@@ -2791,7 +2797,11 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
         etat.titre as etat_titre,
         etat.color as etat_color,
         ${commercialDisplaySql('commercial')} as commercial_pseudo,
-        ${commercialDisplaySql('commercial2')} as commercial_2_pseudo,
+        COALESCE(
+          ${commercialDisplaySql('commercial2')},
+          CASE WHEN CAST(fiche.is_r2 AS UNSIGNED) = 1 THEN ${commercialDisplaySql('commercial_r1')} ELSE NULL END
+        ) as commercial_2_pseudo,
+        ${commercialDisplaySql('commercial_r1')} as commercial_r1_pseudo,
         centre.titre as centre_titre,
         decale.message as decale_message,
         decale.id_etat as decale_id_etat,
@@ -2803,6 +2813,7 @@ router.get('/planning-commercial', authenticate, async (req, res) => {
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
        LEFT JOIN utilisateurs commercial ON fiche.id_commercial = commercial.id
        LEFT JOIN utilisateurs commercial2 ON fiche.id_commercial_2 = commercial2.id
+       LEFT JOIN utilisateurs commercial_r1 ON fiche.id_commercial_r1 = commercial_r1.id
        LEFT JOIN centres centre ON fiche.id_centre = centre.id
        LEFT JOIN (
          SELECT d.id, d.id_fiche, d.id_etat, d.date_prevu, d.date_nouvelle, d.message

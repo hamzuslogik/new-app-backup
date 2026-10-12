@@ -103,6 +103,8 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
         f.id_centre,
         f.id_commercial,
         f.id_commercial_2,
+        f.id_commercial_r1,
+        f.is_r2,
         f.id_confirmateur,
         f.id_confirmateur_2,
         f.id_confirmateur_3,
@@ -119,7 +121,11 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
         sous_etat_se.titre as sous_etat_titre,
         c.titre as centre_nom,
         com.pseudo as commercial_nom,
-        com2.pseudo as commercial_2_pseudo,
+        COALESCE(
+          NULLIF(TRIM(com2.pseudo), ''),
+          CASE WHEN CAST(f.is_r2 AS UNSIGNED) = 1 THEN NULLIF(TRIM(com_r1.pseudo), '') ELSE NULL END
+        ) as commercial_2_pseudo,
+        com_r1.pseudo as commercial_r1_pseudo,
         conf.pseudo as confirmateur_nom,
         conf2.pseudo as confirmateur_2_pseudo,
         conf3.pseudo as confirmateur_3_pseudo,
@@ -135,6 +141,7 @@ router.get('/fiches-confirmees', authenticate, async (req, res) => {
       LEFT JOIN centres c ON f.id_centre = c.id
       LEFT JOIN utilisateurs com ON f.id_commercial = com.id
       LEFT JOIN utilisateurs com2 ON f.id_commercial_2 = com2.id
+      LEFT JOIN utilisateurs com_r1 ON f.id_commercial_r1 = com_r1.id
       LEFT JOIN utilisateurs conf ON f.id_confirmateur = conf.id
       LEFT JOIN utilisateurs conf2 ON f.id_confirmateur_2 = conf2.id
       LEFT JOIN utilisateurs conf3 ON f.id_confirmateur_3 = conf3.id
