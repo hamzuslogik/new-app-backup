@@ -1,5 +1,5 @@
 import { ficheHasR2Placed } from './ficheR2Placed';
-import { formatRdvDateTime } from './formatRdvDateTime';
+import { formatRdvDateTime, formatRdvTimeOnly } from './formatRdvDateTime';
 
 const PRESENCE_SEUL = [
   'MME SEULE SANS MR',
@@ -182,6 +182,23 @@ export function getDecalageNouvelleHeureDisplay(ficheOrDecalage) {
   return formatRdvDateTime(dateNouvelle) || null;
 }
 
+/**
+ * Heure demandée au décalage (tableaux) :
+ * — nouvelle heure réelle → HH:mm
+ * — admin sans heure → 1ʳᵉ heure du message (ex. « 14 »)
+ */
+function getDecalageHeureDemandeeTable(fiche) {
+  if (!fiche) return '—';
+  if (isDecalageSansHeureFiche(fiche)) {
+    return extractAdminDecalageFirstRequestedHour(fiche.decale_message) || '—';
+  }
+  return (
+    formatRdvTimeOnly(fiche.decale_date_nouvelle) ||
+    formatRdvDateTime(fiche.decale_date_nouvelle) ||
+    '—'
+  );
+}
+
 /** Libellé / statut décalage pour affichage (tous états). */
 export function getDecalageDisplayInfo(fiche) {
   if (!ficheHasDecalageRequest(fiche)) return null;
@@ -193,22 +210,27 @@ export function getDecalageDisplayInfo(fiche) {
     .replace(/[\u0300-\u036f]/g, '');
 
   let status = 'pending';
-  let text = fiche?.etat_dec || 'En cours';
+  let statusLabel = 'En cours';
 
   if (etatId === 6 || titre.includes('ANNUL')) {
     status = 'cancelled';
-    text = fiche?.etat_dec || 'Annulée';
+    statusLabel = 'Annulée';
   } else if (etatId === 2 || titre.includes('ACCEPT') || titre.includes('VALID')) {
     status = 'accepted';
-    text = 'Acceptée';
+    statusLabel = 'Acceptée';
   } else if (etatId === 3 || etatId === 4 || titre.includes('REFUS')) {
     status = 'refused';
-    text = 'Refusée';
-  } else {
-    // En cours : nouvelle heure, ou 1ʳᵉ heure du message admin si sans heure
-    const heureDisplay = getDecalageNouvelleHeureDisplay(fiche);
-    text = heureDisplay || fiche?.etat_dec || 'En cours';
+    statusLabel = 'Refusée';
   }
+
+  const heurePrevu =
+    formatRdvTimeOnly(fiche.decale_date_prevu) ||
+    formatRdvDateTime(fiche.decale_date_prevu) ||
+    '—';
+  const heureDemandee = getDecalageHeureDemandeeTable(fiche);
+
+  // Ex. « En cours : 14:00 -> 15:30 » ou « En cours : 14:00 -> 14 » (admin sans heure)
+  const text = `${statusLabel} : ${heurePrevu} -> ${heureDemandee}`;
 
   return { status, text };
 }
