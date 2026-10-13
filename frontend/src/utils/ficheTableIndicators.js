@@ -154,6 +154,40 @@ export function ficheHasDecalageRequest(fiche) {
 }
 
 /**
+ * Date RDV dépassée d'au moins un jour calendaire (jour J+1 et après).
+ * Ex. RDV le 12 → masqué à partir du 13.
+ */
+export function isRdvDatePastByAtLeastOneDay(dateRdv) {
+  if (dateRdv == null || dateRdv === '') return false;
+  const raw = String(dateRdv).trim().replace('T', ' ');
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return false;
+  const rdvDay = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  if (Number.isNaN(rdvDay.getTime())) return false;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.floor((today.getTime() - rdvDay.getTime()) / 86400000);
+  return diffDays >= 1;
+}
+
+/**
+ * Afficher les demandes de décalage uniquement si :
+ * - l'état fiche est encore CONFIRMER (7)
+ * - et la date RDV n'est pas dépassée d'un jour ou plus
+ */
+export function shouldDisplayDecalageRequest(fiche) {
+  if (!fiche) return false;
+  if (Number(fiche.id_etat_final) !== 7) return false;
+  if (isRdvDatePastByAtLeastOneDay(fiche.date_rdv_time)) return false;
+  return true;
+}
+
+/** Demande de décalage existante et encore affichable (tableaux / détail). */
+export function ficheHasVisibleDecalageRequest(fiche) {
+  return ficheHasDecalageRequest(fiche) && shouldDisplayDecalageRequest(fiche);
+}
+
+/**
  * Libellé affichable pour « nouvelle heure » / message admin sans heure.
  * Admin sans heure : 1ʳᵉ heure du message (ex. « 14 » depuis « ADMIN : 14-15-… »).
  */
@@ -201,7 +235,7 @@ function getDecalageHeureDemandeeTable(fiche) {
 
 /** Libellé / statut décalage pour affichage (tous états). */
 export function getDecalageDisplayInfo(fiche) {
-  if (!ficheHasDecalageRequest(fiche)) return null;
+  if (!ficheHasVisibleDecalageRequest(fiche)) return null;
 
   const etatId = Number(fiche?.decale_id_etat);
   const titre = String(fiche?.etat_dec || '')

@@ -46,7 +46,7 @@ import FicheTableMobileDetailButton from '../components/FicheTableMobileDetailBu
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import {
   getFicheTableIndicators,
-  ficheHasDecalageRequest,
+  ficheHasVisibleDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
 import { isAdminSession, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
@@ -555,7 +555,7 @@ const RendezVousVue = () => {
   };
 
   const showDecalageColAdmin =
-    isAdminFicheLayout && filteredList.some((f) => ficheHasDecalageRequest(f));
+    isAdminFicheLayout && filteredList.some((f) => ficheHasVisibleDecalageRequest(f));
 
   return (
     <div className="rdv-vue">

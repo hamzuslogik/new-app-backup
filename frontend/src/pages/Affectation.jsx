@@ -10,7 +10,7 @@ import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { generateFicheClientPdf } from '../utils/generateFicheClientPdf';
 import {
   getFicheTableIndicators,
-  ficheHasDecalageRequest,
+  ficheHasVisibleDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
 import { isAdminSession, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
@@ -316,7 +316,7 @@ const Affectation = () => {
   };
 
   const showDecalageColAdmin =
-    isAdminFicheLayout && (fichesData || []).some((f) => ficheHasDecalageRequest(f));
+    isAdminFicheLayout && (fichesData || []).some((f) => ficheHasVisibleDecalageRequest(f));
 
   return (
 

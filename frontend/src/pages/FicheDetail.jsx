@@ -12,6 +12,7 @@ import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime, formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
 import { splitSlotDisplayName } from '../utils/splitSlotDisplayName';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
+import { shouldDisplayDecalageRequest } from '../utils/ficheTableIndicators';
 import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, format, addMonths } from 'date-fns';
 import { fr as frLocale } from 'date-fns/locale';
 import './FicheDetail.css';
@@ -2057,21 +2058,28 @@ const FicheDetail = ({
     return decalagesData.filter(isCurrentFicheDecalage);
   }, [decalagesData, currentFicheId]);
 
+  /** Ne plus afficher les demandes si état ≠ CONFIRMER ou date RDV dépassée d'≥ 1 jour */
+  const shouldShowDecalageDemandes = shouldDisplayDecalageRequest(ficheData);
+  const decalagesAffichables = useMemo(
+    () => (shouldShowDecalageDemandes ? decalagesPourFiche : []),
+    [shouldShowDecalageDemandes, decalagesPourFiche]
+  );
+
   const hasPendingDecalageTabAlert = useMemo(() => {
-    if (!showDecalageTabBadge) return false;
-    return decalagesPourFiche.some(
+    if (!showDecalageTabBadge || !shouldShowDecalageDemandes) return false;
+    return decalagesAffichables.some(
       (d) => d.id_etat == null || Number(d.id_etat) === ID_ETAT_DECALAGE_EN_ATTENTE
     );
-  }, [decalagesPourFiche, showDecalageTabBadge]);
+  }, [decalagesAffichables, showDecalageTabBadge, shouldShowDecalageDemandes]);
 
   const commercialPendingDecalage = useMemo(() => {
-    if (!isCommercial || decalagesPourFiche.length === 0) return null;
-    return decalagesPourFiche.find(
+    if (!shouldShowDecalageDemandes || !isCommercial || decalagesAffichables.length === 0) return null;
+    return decalagesAffichables.find(
       (d) =>
         Number(d.expediteur) === Number(user?.id) &&
         Number(d.id_etat) === ID_ETAT_DECALAGE_EN_ATTENTE
     ) || null;
-  }, [decalagesPourFiche, isCommercial, user?.id]);
+  }, [decalagesAffichables, isCommercial, shouldShowDecalageDemandes, user?.id]);
 
   const hasCommercialPendingDecalage = !!commercialPendingDecalage;
 
@@ -2083,11 +2091,11 @@ const FicheDetail = ({
   const commercialCanCreateDecalage = !commercialAlreadyCreatedDecalage;
 
   const heureRdvAvantDecalage = useMemo(() => {
-    if (decalagesPourFiche.length === 0) return null;
+    if (!shouldShowDecalageDemandes || decalagesAffichables.length === 0) return null;
     const currentNorm = String(ficheData?.date_rdv_time || '').trim();
     if (!currentNorm) return null;
 
-    const candidats = decalagesPourFiche
+    const candidats = decalagesAffichables
       .filter((d) => {
         if (!d.date_prevu) return false;
         if (Number(d.id_etat) === ID_ETAT_DECALAGE_EN_ATTENTE) return false;
@@ -2100,17 +2108,18 @@ const FicheDetail = ({
       });
 
     return candidats[0]?.date_prevu ?? null;
-  }, [decalagesPourFiche, ficheData?.date_rdv_time]);
+  }, [decalagesAffichables, ficheData?.date_rdv_time, shouldShowDecalageDemandes]);
 
   const decalageRdvHistorique = useMemo(() => {
-    return [...decalagesPourFiche]
+    if (!shouldShowDecalageDemandes) return [];
+    return [...decalagesAffichables]
       .filter((d) => d.date_prevu)
       .sort((a, b) => {
         const ta = a.date_creation ? new Date(a.date_creation).getTime() : 0;
         const tb = b.date_creation ? new Date(b.date_creation).getTime() : 0;
         return tb - ta;
       });
-  }, [decalagesPourFiche]);
+  }, [decalagesAffichables, shouldShowDecalageDemandes]);
 
   const prevDecalagesSignatureRef = useRef(null);
   useEffect(() => {
@@ -4947,7 +4956,7 @@ const FicheDetail = ({
             </h2>
             
             {/* Afficher les décalages existants pour cette fiche */}
-            {decalagesPourFiche.length > 0 && (
+            {decalagesAffichables.length > 0 && (
               <div className="decalage-existing-list" style={{ 
                 border: '1px solid #e0e0e0', 
                 borderTop: 'none', 
@@ -4956,10 +4965,10 @@ const FicheDetail = ({
                 marginBottom: '10px'
               }}>
                 <h3 style={{ marginTop: '0', marginBottom: '10px', fontSize: '11.9px', fontWeight: 'bold' }}>
-                  Demande de décalage ({decalagesPourFiche.length})
+                  Demande de décalage ({decalagesAffichables.length})
                 </h3>
                 <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                  {decalagesPourFiche.map((decalage, index) => (
+                  {decalagesAffichables.map((decalage, index) => (
                     <div key={decalage.id || index} className="decalage-existing-item" style={{ 
                       background: '#fff', 
                       padding: '10px', 
@@ -6342,7 +6351,7 @@ const FicheDetail = ({
                                                 {item.value || '-'}
                                               </span>
                                             </span>
-                                            {showDecalageUnderRdv && renderDecalageDemandesUnderRdv(decalagesPourFiche, decalageDemandesActions)}
+                                            {showDecalageUnderRdv && renderDecalageDemandesUnderRdv(decalagesAffichables, decalageDemandesActions)}
                                           </div>
                                         );
                                       })}
@@ -6757,7 +6766,7 @@ const FicheDetail = ({
                                         })()}
                                         {item.label === 'Date RDV' &&
                                           isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
-                                          renderDecalageDemandesUnderRdv(decalagesPourFiche, decalageDemandesActions)}
+                                          renderDecalageDemandesUnderRdv(decalagesAffichables, decalageDemandesActions)}
                                       </>
                                     ) : (
                                       <>
@@ -6908,7 +6917,7 @@ const FicheDetail = ({
                                       {item.label === 'Date RDV' && renderHeureRdvAvantBadge(heureRdvAvantDecalage)}
                                       {item.label === 'Date RDV' &&
                                         isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre) &&
-                                        renderDecalageDemandesUnderRdv(decalagesPourFiche, decalageDemandesActions)}
+                                        renderDecalageDemandesUnderRdv(decalagesAffichables, decalageDemandesActions)}
                                       {item.label === 'Date RDV' && (() => {
                                           const sinceTs = etatActuel.date_creation
                                             ? new Date(etatActuel.date_creation).getTime()
@@ -10207,7 +10216,7 @@ const FicheDetail = ({
               Demande de décalage
             </h2>
             
-            {decalagesPourFiche.length > 0 && (
+            {decalagesAffichables.length > 0 && (
               <div className="decalage-existing-list" style={{ 
                 border: '1px solid #e0e0e0', 
                 borderTop: 'none', 
@@ -10216,10 +10225,10 @@ const FicheDetail = ({
                 marginBottom: '10px'
               }}>
                 <h3 style={{ marginTop: '0', marginBottom: '10px', fontSize: '11.9px', fontWeight: 'bold' }}>
-                  Demande de décalage ({decalagesPourFiche.length})
+                  Demande de décalage ({decalagesAffichables.length})
                 </h3>
                 <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                  {decalagesPourFiche.map((decalage, index) => (
+                  {decalagesAffichables.map((decalage, index) => (
                     <div key={decalage.id || index} className="decalage-existing-item" style={{ 
                       background: '#fff', 
                       padding: '10px', 

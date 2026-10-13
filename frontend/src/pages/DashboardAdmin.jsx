@@ -15,7 +15,7 @@ import { getEtatTableAbbr, getEtatDisplayWithSousEtat, isSignerSearchFilter } fr
 import { cleanObservationCQ } from '../utils/cleanObservationCQ';
 import {
   getFicheTableIndicators,
-  ficheHasDecalageRequest,
+  ficheHasVisibleDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
 import { formatFicheCommercialDisplay } from '../utils/ficheCommercialDisplay';
@@ -650,7 +650,7 @@ const DashboardAdmin = () => {
       });
 
   const fiches = filteredFiches;
-  const showDecalageCol = fiches.some((f) => ficheHasDecalageRequest(f));
+  const showDecalageCol = fiches.some((f) => ficheHasVisibleDecalageRequest(f));
 
   const handleExportResults = async (format) => {
     if (!canExportResults || exportingResults) return;

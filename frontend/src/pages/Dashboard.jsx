@@ -31,7 +31,7 @@ import {
 } from '../utils/dashboardResultsExport';
 import {
   getFicheTableIndicators,
-  ficheHasDecalageRequest,
+  ficheHasVisibleDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
 import {
@@ -1538,7 +1538,7 @@ const Dashboard = () => {
 
   const fiches = filteredFiches;
   const showDecalageColAdmin =
-    useBadgeColumnsLayout && fiches.some((f) => ficheHasDecalageRequest(f));
+    useBadgeColumnsLayout && fiches.some((f) => ficheHasVisibleDecalageRequest(f));
 
   const handleExportResults = async (format) => {
     if (!canExportResults || exportingResults) return;
