@@ -342,10 +342,10 @@ const Dashboard = () => {
   const canCustomizeColumns = canCustomizeFicheTableColumns(user);
   const [showFicheBadges, setShowFicheBadges] = useState(() => getFicheBadgesVisiblePref());
   const [columnVisibility, setColumnVisibility] = useState(() => getFicheTableColumnsPref());
-  /** Layout admin complet (ordre colonnes + ACTION au milieu) : session admin uniquement */
+  /** Layout admin complet (ordre colonnes + ACTION au milieu) : admin, backoffice, RP */
   const useBadgeColumnsLayout = isAdminFicheLayout;
-  /** Sessions non-admin : ajouter SIG/CS/R2/HAS/RF sans changer l’ordre du tableau */
-  const showBadgeColumns = canToggleBadges && showFicheBadges;
+  /** Sessions non-admin (ex. confirmateur) : badges optionnels sans changer l’ordre du tableau */
+  const showBadgeColumns = !useBadgeColumnsLayout && canToggleBadges && showFicheBadges;
   const isColVisible = useCallback(
     (key) => (canCustomizeColumns ? isFicheColumnVisible(columnVisibility, key) : true),
     [canCustomizeColumns, columnVisibility]
@@ -2377,7 +2377,7 @@ const Dashboard = () => {
                   ? `Résultats de la recherche ${pagination.total}` 
                   : `${pagination.total}`}
             </h2>
-            {canToggleBadges && fiches.length > 0 && (
+            {canToggleBadges && !useBadgeColumnsLayout && fiches.length > 0 && (
               <button
                 type="button"
                 className="btn-toggle-fiche-badges"

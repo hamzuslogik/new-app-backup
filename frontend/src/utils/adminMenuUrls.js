@@ -31,15 +31,19 @@ export const isHonoreASuivreBadgeSession = (user) =>
 
 /**
  * Sessions pouvant afficher les colonnes badges (CS, RF, HAS, SIG, R2…)
- * comme l’admin, avec bouton afficher/cacher : Qualité Confirmation (4),
- * Confirmateur (6), Backoffice (11), RP Confirmation (13), RE Confirmation (14).
+ * avec bouton afficher/cacher (hors layout admin complet) :
+ * Qualité Confirmation (4), Confirmateur (6), RE Confirmation (14).
+ * Backoffice (11) / RP (13) utilisent le layout admin (badges toujours visibles).
  */
-export const canToggleFicheBadgeColumns = (user) =>
-  [4, 6, 11, 13, 14].includes(Number(user?.fonction));
+export const canToggleFicheBadgeColumns = (user) => {
+  if (usesAdminFicheLayout(user)) return false;
+  return [4, 6, 14].includes(Number(user?.fonction));
+};
 
 /**
  * Sessions avec sélecteur « Colonnes » (afficher / cacher chaque colonne) :
  * Backoffice (11), RP Confirmation (13), RE Confirmation (14).
+ * Layout badge (admin) ou standard selon usesAdminFicheLayout.
  */
 export const canCustomizeFicheTableColumns = (user) =>
   [11, 13, 14].includes(Number(user?.fonction));
