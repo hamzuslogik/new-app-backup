@@ -21,6 +21,11 @@ import {
 import { formatFicheCommercialDisplay } from '../utils/ficheCommercialDisplay';
 import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
+import {
+  FicheRowIndexHeader,
+  FicheRowIndexCell,
+  getFicheRowNumber,
+} from '../components/fiches/FicheRowIndexColumn';
 import { exportToCSV, exportToExcel } from '../utils/exportUtils';
 import {
   canExportDashboardResults,
@@ -1170,6 +1175,7 @@ const DashboardAdmin = () => {
                 <thead>
                   <tr>
                     <FicheRowSelectHeader />
+                    <FicheRowIndexHeader />
                     <th onClick={() => handleSort('Nom')} className="sortable-header fiche-col-nom">
                       Nom {getSortIcon('Nom')}
                     </th>
@@ -1229,7 +1235,7 @@ const DashboardAdmin = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {fiches.map((fiche) => {
+                  {fiches.map((fiche, rowIndex) => {
                     const indicators = checkIndicators(fiche.id_etat_histo, fiche);
                     const etatColor = getEtatColor(fiche.id_etat_final);
                     const produitColor = getProduitColor(fiche.produit);
@@ -1242,6 +1248,9 @@ const DashboardAdmin = () => {
                         style={{ backgroundColor: etatColor }}
                       >
                         <FicheRowSelectCell />
+                        <FicheRowIndexCell
+                          number={getFicheRowNumber(rowIndex, pagination.page, filters.limit)}
+                        />
                         <td data-label="Nom:" className="fiche-col-nom">{fiche.nom || ''}</td>
                         <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>

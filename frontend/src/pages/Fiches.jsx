@@ -27,6 +27,11 @@ import {
   FicheAdminActionCell,
   FicheAdminIndicatorCells,
 } from '../components/fiches/FicheAdminBadgeColumns';
+import {
+  FicheRowIndexHeader,
+  FicheRowIndexCell,
+  getFicheRowNumber,
+} from '../components/fiches/FicheRowIndexColumn';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import ScrollToTopButton from '../components/common/ScrollToTopButton';
 import KoMotifModal from '../components/KoMotifModal';
@@ -1577,6 +1582,7 @@ const Fiches = () => {
 <table className={`fiches-table${isAdminFicheLayout ? ' fiches-table--admin-layout' : ''}`}>
                 <thead>
                   <tr>
+                    <FicheRowIndexHeader />
                     {renderSortableHeader('Nom')}
                     {renderSortableHeader('Prénom')}
                     {renderSortableHeader('Téléphone')}
@@ -1613,12 +1619,12 @@ const Fiches = () => {
                 <tbody>
                   {sortedFiches.length === 0 ? (
                     <tr>
-                      <td colSpan={isAdminFicheLayout ? 20 : 11} className="header-filter-empty">
+                      <td colSpan={isAdminFicheLayout ? 21 : 12} className="header-filter-empty">
                         Aucune fiche pour ces filtres d&apos;en-tête
                       </td>
                     </tr>
                   ) : null}
-                  {sortedFiches.map((fiche) => {
+                  {sortedFiches.map((fiche, rowIndex) => {
                     const etatColor = getFicheEtatColor(fiche);
                     const produitColor = getProduitColor(fiche.produit);
                     const isArchived = fiche.archive === 1 || fiche.archive === true;
@@ -1633,6 +1639,9 @@ const Fiches = () => {
                         className={getFicheRowByEtatClassName(etatColor, isArchived ? 'archived' : '')}
                         style={{ backgroundColor: etatColor }}
                       >
+                        <FicheRowIndexCell
+                          number={getFicheRowNumber(rowIndex, pagination.page, appliedFilters.limit)}
+                        />
                         <td data-label="Nom:" className="fiche-col-nom">{fiche.nom || ''}</td>
                         <td data-label="Prénom:" className="fiche-col-prenom">{fiche.prenom || ''}</td>
                         <td data-label="Téléphone:">{fiche.tel || ''}</td>

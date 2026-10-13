@@ -53,6 +53,11 @@ import {
 import FicheTableColumnsPicker, { isFicheColumnVisible } from '../components/fiches/FicheTableColumnsPicker';
 import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
 import {
+  FicheRowIndexHeader,
+  FicheRowIndexCell,
+  getFicheRowNumber,
+} from '../components/fiches/FicheRowIndexColumn';
+import {
   applyForceDesktopViewport,
   applyMobileNativeViewport,
   applyDashboardMobileView,
@@ -2472,6 +2477,7 @@ const Dashboard = () => {
                 <thead>
                   <tr>
                     <FicheRowSelectHeader />
+                    <FicheRowIndexHeader />
                     {isColVisible('nom') ? (
                       <th onClick={() => handleSort('Nom')} className="sortable-header fiche-col-nom">
                         Nom {getSortIcon('Nom')}
@@ -2615,7 +2621,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {fiches.map((fiche) => {
+                  {fiches.map((fiche, rowIndex) => {
                     const indicators = checkIndicators(fiche.id_etat_histo, fiche);
                     const etatColor = getEtatColor(fiche.id_etat_final, fiche);
                     const produitColor = getProduitColor(fiche.produit);
@@ -2635,6 +2641,9 @@ const Dashboard = () => {
                         title={getTooltipComment(fiche) || undefined}
                       >
                         <FicheRowSelectCell />
+                        <FicheRowIndexCell
+                          number={getFicheRowNumber(rowIndex, pagination.page, appliedFilters.limit)}
+                        />
                         {isColVisible('nom') ? (
                           <td data-label="" className="fiche-row-lead-cell fiche-col-nom">
                             <div className="fiche-row-lead-cell-inner">

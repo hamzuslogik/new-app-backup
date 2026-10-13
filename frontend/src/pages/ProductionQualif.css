@@ -406,6 +406,10 @@
   min-width: 100%;
 }
 
+.production-qualif table.fiches-table.fiches-table--wrap col.colw-num {
+  width: 2.5ch;
+}
+
 .production-qualif table.fiches-table.fiches-table--wrap col.colw-date {
   width: 7%;
 }

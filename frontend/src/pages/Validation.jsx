@@ -21,6 +21,11 @@ import {
 import { isFicheAuditeeQualiteConfirmation } from '../utils/qualiteConfirmationAudit';
 import { formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
 import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
+import {
+  FicheRowIndexHeader,
+  FicheRowIndexCell,
+  getFicheRowNumber,
+} from '../components/fiches/FicheRowIndexColumn';
 import './Validation.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -306,6 +311,7 @@ const Validation = () => {
               <thead>
                 <tr>
                   <FicheRowSelectHeader />
+                  <FicheRowIndexHeader />
                   <th>Nom</th>
                   <th>Prénom</th>
                   <th className="detail-column">Téléphone</th>
@@ -326,7 +332,7 @@ const Validation = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredFiches.map((fiche) => {
+                {filteredFiches.map((fiche, rowIndex) => {
                   const confirmateurs = [];
                   if (fiche.confirmateur1_pseudo) confirmateurs.push(fiche.confirmateur1_pseudo);
                   if (fiche.confirmateur2_pseudo) confirmateurs.push(fiche.confirmateur2_pseudo);
@@ -337,6 +343,7 @@ const Validation = () => {
                   return (
                     <tr key={fiche.id}>
                       <FicheRowSelectCell />
+                      <FicheRowIndexCell number={getFicheRowNumber(rowIndex)} />
                       <td>{fiche.nom || ''}</td>
                       <td>{fiche.prenom || ''}</td>
                       <td className="detail-column">{fiche.tel || ''}</td>

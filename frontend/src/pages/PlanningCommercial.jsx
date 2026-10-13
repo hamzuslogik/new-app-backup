@@ -17,6 +17,11 @@ import { getEtatTableAbbr, getEtatDisplayWithSousEtat } from '../utils/etatSigne
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
 import {
+  FicheRowIndexHeader,
+  FicheRowIndexCell,
+  getFicheRowNumber,
+} from '../components/fiches/FicheRowIndexColumn';
+import {
   applyForceDesktopViewport,
   applyMobileNativeViewport,
   applyPlanningCommercialMobileView,
@@ -971,6 +976,7 @@ const PlanningCommercial = () => {
                 <thead>
                   <tr>
                     <FicheRowSelectHeader />
+                    <FicheRowIndexHeader />
                     <th className="fiche-col-date">Date RDV</th>
                     <th className="fiche-col-nom">Nom</th>
                     <th className="fiche-col-prenom">Prénom</th>
@@ -989,7 +995,7 @@ const PlanningCommercial = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {fiches.map((fiche) => {
+                  {fiches.map((fiche, rowIndex) => {
                     const etatColor = getEtatColor(fiche.id_etat_final);
                     const produitColor = getProduitColor(fiche.produit);
                     const hasCompteRendu = fiche.has_compte_rendu === 1 || fiche.has_compte_rendu === true;
@@ -1009,6 +1015,7 @@ const PlanningCommercial = () => {
                         style={{ backgroundColor: etatColor }}
                       >
                         <FicheRowSelectCell />
+                        <FicheRowIndexCell number={getFicheRowNumber(rowIndex)} />
                         <td data-label="Date RDV:" className="fiche-col-date">
                           <strong>{formatRdvDateTime(fiche.date_rdv_time)}</strong>
                           {fiche.rdv_urgent === 1 || fiche.qualification_code === 'RDV_URGENT' ? (

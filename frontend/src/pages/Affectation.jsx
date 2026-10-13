@@ -20,6 +20,11 @@ import {
   FicheAdminActionCell,
   FicheAdminIndicatorCells,
 } from '../components/fiches/FicheAdminBadgeColumns';
+import {
+  FicheRowIndexHeader,
+  FicheRowIndexCell,
+  getFicheRowNumber,
+} from '../components/fiches/FicheRowIndexColumn';
 import FicheDetailLink from '../components/FicheDetailLink';
 import './Affectation.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
@@ -485,6 +490,7 @@ const Affectation = () => {
               <thead>
                 <tr>
                   <th className="affectation-select-col"></th>
+                  <FicheRowIndexHeader />
                   {renderSortableTh('Nom', 'nom', 'fiche-col-nom')}
                   {renderSortableTh('Prénom', 'prenom', 'fiche-col-prenom')}
                   {renderSortableTh('Téléphone', 'tel')}
@@ -525,7 +531,7 @@ const Affectation = () => {
                 </tr>
               </thead>
               <tbody>
-                {sortedFiches.map((fiche) => {
+                {sortedFiches.map((fiche, rowIndex) => {
                   const indicators = checkIndicators(fiche.id_etat_histo, fiche);
                   const etatColor = getEtatColor(fiche);
                   const produitColor = getProduitColor(fiche.produit);
@@ -547,6 +553,7 @@ const Affectation = () => {
                           onChange={() => handleSelectFiche(fiche.id)}
                         />
                       </td>
+                      <FicheRowIndexCell number={getFicheRowNumber(rowIndex)} />
                       <td data-label="Nom:" className="fiche-row-lead-cell fiche-col-nom">
                         <span className="fiche-row-lead-label">{fiche.nom || ''}</span>
                       </td>

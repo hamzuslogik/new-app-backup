@@ -12,6 +12,11 @@ import SystemMessageBanner from '../components/SystemMessageBanner';
 import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
 import { getTodayLocal, toDateTimeLocalValue, splitDateTimeLocalValue, formatDateTimeFr } from '../utils/dateUtils';
 import { toggleSortConfig, sortRowsByConfig } from '../utils/tableSort';
+import {
+  FicheRowIndexHeader,
+  FicheRowIndexCell,
+  getFicheRowNumber,
+} from '../components/fiches/FicheRowIndexColumn';
 import './ProductionQualif.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -880,6 +885,7 @@ const ProductionQualif = () => {
                 className={`fiches-table fiches-table--wrap${canSeeCommentaireQualite ? '' : ' fiches-table--no-comment'}`}
               >
                 <colgroup>
+                  <col className="colw-num" />
                   <col className="colw-date" />
                   <col className="colw-agent" />
                   <col className="colw-nom" />
@@ -892,6 +898,7 @@ const ProductionQualif = () => {
                 </colgroup>
                 <thead>
                   <tr>
+                    <FicheRowIndexHeader />
                     <th className="col-date fiche-col-date sortable-th" onClick={() => handleSort('date_insert_time')}>
                       Date création {renderSortIcon('date_insert_time')}
                     </th>
@@ -922,7 +929,7 @@ const ProductionQualif = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedFiches.map((fiche) => {
+                  {sortedFiches.map((fiche, rowIndex) => {
                     const { label: displayEtat, color: displayColor } = getFicheEtatDisplay(fiche);
                     return (
                       <tr
@@ -930,6 +937,7 @@ const ProductionQualif = () => {
                         className={getFicheRowByEtatClassName(displayColor)}
                         style={{ backgroundColor: displayColor }}
                       >
+                        <FicheRowIndexCell number={getFicheRowNumber(rowIndex)} />
                         <td className="col-date fiche-col-date">{formatDateTimeFr(fiche.date_insert_time)}</td>
                         <td className="col-agent">{fiche.agent_pseudo || ''}</td>
                         <td className="col-nom fiche-col-nom">{fiche.nom || ''}</td>

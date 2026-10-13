@@ -42,6 +42,38 @@ function formatMysqlLocalDateTime(value) {
   return String(value);
 }
 
+/**
+ * Extraire date (YYYY-MM-DD) + heure (HH:MM:SS) depuis date_rdv_time
+ * sans passer par new Date() (évite décalage UTC qui sort le RDV du créneau).
+ */
+function extractRdvDateAndTime(value) {
+  const s = formatMysqlLocalDateTime(value);
+  if (!s) return { rdvDate: null, rdvTime: null };
+  const m = String(s)
+    .trim()
+    .replace('T', ' ')
+    .match(/^(\d{4}-\d{2}-\d{2})[ ](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return { rdvDate: null, rdvTime: null };
+  const pad = (n) => String(n).padStart(2, '0');
+  return {
+    rdvDate: m[1],
+    rdvTime: `${pad(m[2])}:${pad(m[3])}:${pad(m[4] || '0')}`,
+  };
+}
+
+/** Minutes depuis minuit pour placer un RDV dans un TIME_SLOTS. */
+function timeToMinutes(hhmmss) {
+  const parts = String(hhmmss || '').split(':').map(Number);
+  if (!Number.isFinite(parts[0])) return null;
+  return parts[0] * 60 + (parts[1] || 0) + ((parts[2] || 0) / 60);
+}
+
+/** Expression SQL : département normalisé depuis CP (aligné dashboard). */
+function sqlNormalizedDepFromCp(alias = 'fiche') {
+  const a = String(alias).replace(/[^a-zA-Z0-9_]/g, '') || 'fiche';
+  return `LPAD(LEFT(REPLACE(REPLACE(TRIM(COALESCE(${a}.cp, '')), ' ', ''), '-', ''), 2), 2, '0')`;
+}
+
 // Helper pour obtenir les jours de la semaine (Lundi à Vendredi)
 function getWeekDays(year, week) {
   const monday = getMondayOfWeek(year, week);
@@ -218,19 +250,20 @@ router.get('/week', authenticate, async (req, res) => {
       : '';
 
     // CONFIRMER (état 7) sur la semaine :
-    // - par défaut : CP dans le département (cp LIKE dep%)
+    // - par défaut : département normalisé depuis CP (comme le lien dashboard)
     // - si ic / id_commercial : tous les RDV du commercial (id_commercial uniquement), tous départements
+    const depNorm = String(dep || '').replace(/\D/g, '').padStart(2, '0').slice(-2);
     const whereCondition = useCommercialWeek
       ? `WHERE fiche.date_rdv_time >= ? AND fiche.date_rdv_time <= ?
        AND fiche.id_etat_final = 7
        AND fiche.id_commercial = ?`
       : `WHERE fiche.date_rdv_time >= ? AND fiche.date_rdv_time <= ?
-       AND fiche.cp LIKE ?
+       AND ${sqlNormalizedDepFromCp('fiche')} = ?
        AND fiche.id_etat_final = 7`;
 
     const fichesParams = useCommercialWeek
       ? [`${weekStart} 00:00:00`, `${weekEnd} 23:59:59`, idCommercialFilter]
-      : [`${weekStart} 00:00:00`, `${weekEnd} 23:59:59`, `${dep}%`];
+      : [`${weekStart} 00:00:00`, `${weekEnd} 23:59:59`, depNorm];
 
     const fiches = await query(
       `SELECT fiche.*, 
@@ -310,82 +343,33 @@ router.get('/week', authenticate, async (req, res) => {
 
     // Assigner les fiches aux créneaux appropriés
     fiches.forEach(fiche => {
-      let rdvDate, rdvTime;
-      
-      // Toujours utiliser date_rdv_time comme source principale
-      // Après acceptation d'un décalage, date_rdv_time est mis à jour avec date_nouvelle
-      // donc on utilise toujours date_rdv_time qui est la source de vérité
-      
-      // Utiliser d'abord date_rdv_date si disponible (extrait avec DATE() dans la requête SQL)
-      // Mais on doit quand même utiliser date_rdv_time pour obtenir la date en heure locale
-      // car DATE() retourne la date selon le fuseau horaire de MySQL, pas nécessairement l'heure locale
-      if (fiche.date_rdv_time) {
-        // Utiliser date_rdv_time complet pour extraire la date en heure locale
-        let dateTimeStr = formatMysqlLocalDateTime(fiche.date_rdv_time);
-        
-        if (dateTimeStr) {
-          // Parser la date/heure complète et extraire la date en heure locale
-          const dateTimeObj = new Date(dateTimeStr);
-          if (!isNaN(dateTimeObj.getTime())) {
-            rdvDate = formatDateLocal(dateTimeObj);
-            // Extraire l'heure
-            const timeParts = dateTimeStr.split(' ')[1] || (dateTimeStr.includes('T') ? dateTimeStr.split('T')[1].substring(0, 8) : null);
-            rdvTime = timeParts || (fiche.date_rdv_time_only ? String(fiche.date_rdv_time_only) : null);
-          } else {
-            // Fallback : utiliser date_rdv_date si disponible
-            if (fiche.date_rdv_date) {
-              rdvDate = String(fiche.date_rdv_date);
-              rdvTime = fiche.date_rdv_time_only ? String(fiche.date_rdv_time_only) : null;
-            }
-          }
-        }
-      } else if (fiche.date_rdv_date) {
-        // Fallback : utiliser date_rdv_date si date_rdv_time n'est pas disponible
-        rdvDate = String(fiche.date_rdv_date);
-        rdvTime = fiche.date_rdv_time_only ? String(fiche.date_rdv_time_only) : null;
-      } else if (fiche.date_rdv_time) {
-        // Fallback : utiliser date_rdv_time si date_rdv_date n'est pas disponible
-        // Convertir en chaîne si nécessaire (peut être un objet Date ou une chaîne)
-        let dateStr = formatMysqlLocalDateTime(fiche.date_rdv_time);
-        
-        if (dateStr) {
-          // Extraire la date et l'heure
-          const parts = dateStr.split(' ')[0] || dateStr.split('T')[0];
-          rdvTime = dateStr.split(' ')[1] || (dateStr.includes('T') ? dateStr.split('T')[1].substring(0, 8) : null);
-          
-          // Utiliser DATE() pour extraire uniquement la partie date, en ignorant l'heure et le fuseau horaire
-          // Si c'est déjà au format YYYY-MM-DD, l'utiliser directement
-          if (parts && parts.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            rdvDate = parts;
-          } else {
-            // Si ce n'est pas au bon format, parser la date en heure locale
-            const dateObj = new Date(dateStr);
-            if (!isNaN(dateObj.getTime())) {
-              rdvDate = formatDateLocal(dateObj);
-            } else {
-              rdvDate = parts;
-            }
-          }
-        }
+      // date_rdv_time = source de vérité (après décalage aussi)
+      let { rdvDate, rdvTime } = extractRdvDateAndTime(fiche.date_rdv_time);
+      if (!rdvDate && fiche.date_rdv_date) {
+        rdvDate = String(fiche.date_rdv_date).slice(0, 10);
+        rdvTime = fiche.date_rdv_time_only
+          ? String(fiche.date_rdv_time_only)
+          : rdvTime;
       }
 
       if (!rdvDate || !rdvTime || !planning[rdvDate]) return;
 
-      // Trouver le créneau approprié
-      const rdvHour = rdvTime.substring(0, 5);
+      // Trouver le créneau par minutes (18:30 → 18:00–19:29)
+      const rdvMinutes = timeToMinutes(rdvTime);
       let slot = null;
-      
-      for (const timeSlot of TIME_SLOTS) {
-        const start = timeSlot.start.substring(0, 5);
-        const end = timeSlot.end.substring(0, 5);
-        if (rdvHour >= start && rdvHour <= end) {
-          slot = timeSlot;
-          break;
+      if (rdvMinutes != null) {
+        for (const timeSlot of TIME_SLOTS) {
+          const startM = timeToMinutes(timeSlot.start);
+          const endM = timeToMinutes(timeSlot.end);
+          if (startM != null && endM != null && rdvMinutes >= startM && rdvMinutes <= endM) {
+            slot = timeSlot;
+            break;
+          }
         }
       }
 
       if (!slot) {
-        console.log(`[Planning] Aucun créneau trouvé pour RDV heure: ${rdvHour}, date: ${rdvDate}`);
+        console.log(`[Planning] Aucun créneau trouvé pour RDV heure: ${rdvTime}, date: ${rdvDate}, fiche: ${fiche.id}`);
         return;
       }
 

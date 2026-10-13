@@ -35,6 +35,11 @@ import KoMotifModal from '../components/KoMotifModal';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import SystemMessageBanner from '../components/SystemMessageBanner';
 import { getFicheRowByEtatClassName } from '../utils/etatColorContrast';
+import {
+  FicheRowIndexHeader,
+  FicheRowIndexCell,
+  getFicheRowNumber,
+} from '../components/fiches/FicheRowIndexColumn';
 import './ControleQualite.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 
@@ -1135,6 +1140,7 @@ const ControleQualite = () => {
             <table className="fiches-table">
               <thead>
                 <tr>
+                  <FicheRowIndexHeader />
                   <th>Nom</th>
                   <th>Prénom</th>
                   <th>Téléphone</th>
@@ -1148,7 +1154,7 @@ const ControleQualite = () => {
                 </tr>
               </thead>
               <tbody>
-                {fiches.map((fiche) => (
+                {fiches.map((fiche, rowIndex) => (
                   <tr
                     key={fiche.hash}
                     className={getFicheRowByEtatClassName(
@@ -1165,6 +1171,7 @@ const ControleQualite = () => {
                     onDoubleClick={(e) => handleRowDoubleClick(e, fiche)}
                     title="Double-clic : sélectionner pour changer l'état · Clic droit : menu d'actions"
                   >
+                    <FicheRowIndexCell number={getFicheRowNumber(rowIndex)} />
                     <td>{fiche.nom || ''}</td>
                     <td>{fiche.prenom || ''}</td>
                     <td>{fiche.tel || ''}</td>

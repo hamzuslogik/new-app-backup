@@ -57,6 +57,11 @@ import {
   FicheAdminIndicatorCells,
 } from '../components/fiches/FicheAdminBadgeColumns';
 import { FicheRowSelectHeader, FicheRowSelectCell } from '../components/fiches/FicheRowSelectColumn';
+import {
+  FicheRowIndexHeader,
+  FicheRowIndexCell,
+  getFicheRowNumber,
+} from '../components/fiches/FicheRowIndexColumn';
 import './RendezVousVue.css';
 
 const RDV_VUE_PAGE_CLASS = 'rdv-vue-page';
@@ -663,6 +668,7 @@ const RendezVousVue = () => {
               <thead>
                 <tr>
                   <FicheRowSelectHeader />
+                  <FicheRowIndexHeader />
                   <th className="sortable-header fiche-col-nom" onClick={() => handleSort('nom')}>Nom {getSortIndicator('nom')}</th>
                   <th className="sortable-header fiche-col-prenom" onClick={() => handleSort('prenom')}>Prénom {getSortIndicator('prenom')}</th>
                   <th className="sortable-header" onClick={() => handleSort('tel')}>Téléphone {getSortIndicator('tel')}</th>
@@ -699,7 +705,7 @@ const RendezVousVue = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredList.map((f) => {
+                {filteredList.map((f, rowIndex) => {
                   const etatColor = getEtatColor(f);
                   const indicators = getFicheTableIndicators(f.id_etat_histo, f, etatsData || []);
                   const decalageInfo = showDecalageColAdmin ? getDecalageDisplayInfo(f) : null;
@@ -711,6 +717,7 @@ const RendezVousVue = () => {
                     style={{ backgroundColor: etatColor }}
                   >
                     <FicheRowSelectCell />
+                    <FicheRowIndexCell number={getFicheRowNumber(rowIndex)} />
                     <td className="fiche-row-lead-cell fiche-col-nom">
                       <div className="fiche-row-lead-cell-inner">
                         <FicheTableMobileDetailButton

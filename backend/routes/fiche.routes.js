@@ -7612,6 +7612,20 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
     delete ficheData.allow_unavailable_slot;
     delete ficheData.slot_bypass_context;
 
+    // Création / maj RDV : si CP absent du payload, retirer espaces avant/après sur le CP existant
+    const incomingEtatId = parseEtatId(ficheData.id_etat_final);
+    const isRdvWrite =
+      ficheData.date_rdv_time !== undefined ||
+      (Number.isFinite(incomingEtatId) && incomingEtatId === 7);
+    if (
+      isRdvWrite &&
+      (ficheData.cp === undefined || ficheData.cp === null || ficheData.cp === '') &&
+      fiche.cp != null &&
+      String(fiche.cp) !== String(fiche.cp).trim()
+    ) {
+      ficheData.cp = String(fiche.cp).trim();
+    }
+
     // Normaliser le code postal (tous les codes postaux doivent être 5 chiffres)
     // Les codes postaux de 4 chiffres sont complétés avec un 0 devant
     if (ficheData.cp !== undefined && ficheData.cp !== null && ficheData.cp !== '') {

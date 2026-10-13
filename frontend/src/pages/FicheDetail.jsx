@@ -3206,6 +3206,10 @@ const FicheDetail = ({
           ? data.date_rdv_time 
           : `${data.date_rdv_time}:00`,
         id_etat_final: 7, // Toujours CONFIRMER (7) - RDV_URGENT est géré via id_qualif
+        // Retirer espaces avant/après le CP (évite ex. " 77600" hors planning)
+        ...(ficheData?.cp != null && String(ficheData.cp).trim() !== ''
+          ? { cp: String(ficheData.cp).trim() }
+          : {}),
         produit: data.produit ? parseInt(data.produit) : null,
         conf_produit: data.produit ? parseInt(data.produit) : null,
         // Affectation confirmateurs → fiches + fiches_histo (via histo_id_*)
@@ -3618,6 +3622,10 @@ const FicheDetail = ({
       const updateData = {
         id_etat_final: 7,
         produit: confFormData.produit ? parseInt(confFormData.produit) : null,
+        // Retirer espaces avant/après le CP (évite ex. " 77600" hors planning)
+        ...(ficheData?.cp != null && String(ficheData.cp).trim() !== ''
+          ? { cp: String(ficheData.cp).trim() }
+          : {}),
         // Affectation confirmateurs → fiches + fiches_histo (via histo_id_*)
         id_confirmateur: conf1Id,
         id_confirmateur_2: conf2Id,
