@@ -14,7 +14,6 @@ export const RP_QUALIF_FONCTION = 12;
  * Les sous-routes fiche détail restent accessibles si /fiches est autorisé.
  */
 export const RP_QUALIF_NAV_PATHS = new Set([
-  '/dashboard',
   '/fiches',
   '/production-qualif',
   '/suivi-agents',
