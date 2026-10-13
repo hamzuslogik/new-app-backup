@@ -830,6 +830,7 @@ const ImportMasse = () => {
                               <div><strong>ID:</strong> {existing.id || 'N/A'}</div>
                               <div><strong>Nom:</strong> {existing.nom || 'N/A'} {existing.prenom || ''}</div>
                               <div><strong>Tél:</strong> {existing.tel || 'N/A'}</div>
+                              <div><strong>Centre:</strong> {existing.centre_nom || 'N/A'}</div>
                               <div><strong>État:</strong> {existing.etat_titre || 'N/A'}</div>
                               <div><strong>Date insertion:</strong> {formatInsertDate(existing.date_insert_time) || 'N/A'}</div>
                               {isArchived && (

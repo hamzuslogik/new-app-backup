@@ -12,7 +12,10 @@ import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime, formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
 import { splitSlotDisplayName } from '../utils/splitSlotDisplayName';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
-import { shouldDisplayDecalageRequest } from '../utils/ficheTableIndicators';
+import {
+  shouldDisplayDecalageRequest,
+  isRdvDatePastByAtLeastOneDay,
+} from '../utils/ficheTableIndicators';
 import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, format, addMonths } from 'date-fns';
 import { fr as frLocale } from 'date-fns/locale';
 import './FicheDetail.css';
@@ -2058,12 +2061,16 @@ const FicheDetail = ({
     return decalagesData.filter(isCurrentFicheDecalage);
   }, [decalagesData, currentFicheId]);
 
-  /** Ne plus afficher les demandes si état ≠ CONFIRMER ou date RDV dépassée d'≥ 1 jour */
+  /** Ne plus afficher si état ≠ CONFIRMER ou jour RDV déjà passé (ex. le 13 → masquer le 12) */
   const shouldShowDecalageDemandes = shouldDisplayDecalageRequest(ficheData);
-  const decalagesAffichables = useMemo(
-    () => (shouldShowDecalageDemandes ? decalagesPourFiche : []),
-    [shouldShowDecalageDemandes, decalagesPourFiche]
-  );
+  const decalagesAffichables = useMemo(() => {
+    if (!shouldShowDecalageDemandes) return [];
+    return decalagesPourFiche.filter((d) => {
+      // Jour calendaire de la demande (date prévue / RDV), sans l'heure
+      const dateRef = d.date_prevu || d.date_nouvelle || ficheData?.date_rdv_time;
+      return !isRdvDatePastByAtLeastOneDay(dateRef);
+    });
+  }, [shouldShowDecalageDemandes, decalagesPourFiche, ficheData?.date_rdv_time]);
 
   const hasPendingDecalageTabAlert = useMemo(() => {
     if (!showDecalageTabBadge || !shouldShowDecalageDemandes) return false;

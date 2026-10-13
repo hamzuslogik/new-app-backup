@@ -154,31 +154,44 @@ export function ficheHasDecalageRequest(fiche) {
 }
 
 /**
- * Date RDV dépassée d'au moins un jour calendaire (jour J+1 et après).
- * Ex. RDV le 12 → masqué à partir du 13.
+ * Extrait YYYY-MM-DD sans tenir compte de l'heure (ni fuseau).
+ * Accepte "2026-10-12 18:30:00", "2026-10-12T18:30:00", "12/10/2026".
+ */
+function extractCalendarYmd(dateValue) {
+  if (dateValue == null || dateValue === '') return null;
+  const raw = String(dateValue).trim();
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return { y: Number(iso[1]), m: Number(iso[2]), d: Number(iso[3]) };
+  const fr = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (fr) return { y: Number(fr[3]), m: Number(fr[2]), d: Number(fr[1]) };
+  return null;
+}
+
+/**
+ * True si le jour calendaire de la date RDV est strictement avant aujourd'hui.
+ * L'heure est ignorée. Ex. : on est le 13 → un RDV du 12 est « passé ».
  */
 export function isRdvDatePastByAtLeastOneDay(dateRdv) {
-  if (dateRdv == null || dateRdv === '') return false;
-  const raw = String(dateRdv).trim().replace('T', ' ');
-  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return false;
-  const rdvDay = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const ymd = extractCalendarYmd(dateRdv);
+  if (!ymd) return false;
+  const rdvDay = new Date(ymd.y, ymd.m - 1, ymd.d);
   if (Number.isNaN(rdvDay.getTime())) return false;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diffDays = Math.floor((today.getTime() - rdvDay.getTime()) / 86400000);
-  return diffDays >= 1;
+  return rdvDay.getTime() < today.getTime();
 }
 
 /**
  * Afficher les demandes de décalage uniquement si :
  * - l'état fiche est encore CONFIRMER (7)
- * - et la date RDV n'est pas dépassée d'un jour ou plus
+ * - et ni la date RDV fiche ni la date prévue du décalage n'est un jour déjà passé
+ *   (comparaison au jour calendaire, sans heure — ex. le 13 masque les demandes du 12)
  */
 export function shouldDisplayDecalageRequest(fiche) {
   if (!fiche) return false;
   if (Number(fiche.id_etat_final) !== 7) return false;
   if (isRdvDatePastByAtLeastOneDay(fiche.date_rdv_time)) return false;
+  if (isRdvDatePastByAtLeastOneDay(fiche.decale_date_prevu)) return false;
   return true;
 }
 

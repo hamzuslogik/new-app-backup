@@ -441,13 +441,15 @@ const checkDuplicates = async (contacts, fileColumns = []) => {
   // Ignorer les fiches archivées (archive = 1 ou archive > 0)
   console.log('📊 Récupération des numéros de téléphone existants dans la base...');
   const existingPhones = await query(`
-    SELECT id, nom, prenom, tel, gsm1, gsm2, id_etat_final, hash, date_insert_time,
-           (SELECT titre FROM etats WHERE id = fiches.id_etat_final) as etat_titre
-    FROM fiches 
-    WHERE (archive = 0 OR archive IS NULL) 
-    AND (tel != '' AND tel IS NOT NULL 
-         OR gsm1 != '' AND gsm1 IS NOT NULL 
-         OR gsm2 != '' AND gsm2 IS NOT NULL)
+    SELECT f.id, f.nom, f.prenom, f.tel, f.gsm1, f.gsm2, f.id_etat_final, f.hash, f.date_insert_time,
+           f.id_centre,
+           (SELECT titre FROM etats WHERE id = f.id_etat_final) as etat_titre,
+           (SELECT titre FROM centres WHERE id = f.id_centre) as centre_nom
+    FROM fiches f
+    WHERE (f.archive = 0 OR f.archive IS NULL) 
+    AND (f.tel != '' AND f.tel IS NOT NULL 
+         OR f.gsm1 != '' AND f.gsm1 IS NOT NULL 
+         OR f.gsm2 != '' AND f.gsm2 IS NOT NULL)
   `);
   
   // Créer un Map pour associer les numéros normalisés aux informations des fiches
@@ -463,6 +465,8 @@ const checkDuplicates = async (contacts, fileColumns = []) => {
       tel: row.tel,
       id_etat_final: row.id_etat_final,
       etat_titre: row.etat_titre,
+      id_centre: row.id_centre || null,
+      centre_nom: row.centre_nom || null,
       date_insert_time: row.date_insert_time || null,
       archive: 0
     };
@@ -753,6 +757,8 @@ const checkDuplicates = async (contacts, fileColumns = []) => {
           tel: duplicateInfo.tel || '',
           id_etat_final: duplicateInfo.id_etat_final || null,
           etat_titre: duplicateInfo.etat_titre || 'Non défini',
+          id_centre: duplicateInfo.id_centre || null,
+          centre_nom: duplicateInfo.centre_nom || '',
           date_insert_time: duplicateInfo.date_insert_time || null,
           archive: 0
         }
