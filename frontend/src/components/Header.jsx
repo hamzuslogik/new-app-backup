@@ -10,7 +10,7 @@ import useUserHomePage from '../hooks/useUserHomePage';
 import { formatRdvDateTime } from '../utils/formatRdvDateTime';
 import { navigateFromNotification } from '../utils/notificationNavigation';
 import { useFicheDetailModal } from '../contexts/FicheDetailModalContext';
-import { isAdminSession, isCommercialSession, usesTopNavLayout } from '../utils/adminMenuUrls';
+import { isCommercialSession, usesAdminTopNav, usesTopNavLayout } from '../utils/adminMenuUrls';
 import AdminTopNav from './AdminTopNav';
 import CommercialTopNav from './CommercialTopNav';
 import './Header.css';
@@ -33,7 +33,7 @@ const Header = () => {
   };
   const queryClient = useQueryClient();
   const topNavLayout = usesTopNavLayout(user);
-  const adminLayout = isAdminSession(user);
+  const adminLayout = usesAdminTopNav(user);
   const commercialLayout = isCommercialSession(user);
   const [now, setNow] = useState(() => new Date());
   const [showNotifications, setShowNotifications] = useState(false);

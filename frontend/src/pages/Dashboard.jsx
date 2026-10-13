@@ -35,7 +35,7 @@ import {
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
 import {
-  isAdminSession,
+  usesAdminFicheLayout,
   isHonoreASuivreBadgeSession,
   canToggleFicheBadgeColumns,
   canCustomizeFicheTableColumns,
@@ -337,7 +337,7 @@ const Dashboard = () => {
   const isRPConfirmation = user?.fonction === 13;
   const isConfirmateurOrRE = isConfirmateur || isREConfirmation;
   const isQualiteConfirmation = Number(user?.fonction) === 4;
-  const isAdminFicheLayout = isAdminSession(user);
+  const isAdminFicheLayout = usesAdminFicheLayout(user);
   const canToggleBadges = canToggleFicheBadgeColumns(user);
   const canCustomizeColumns = canCustomizeFicheTableColumns(user);
   const [showFicheBadges, setShowFicheBadges] = useState(() => getFicheBadgesVisiblePref());

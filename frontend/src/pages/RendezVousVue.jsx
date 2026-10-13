@@ -49,7 +49,7 @@ import {
   ficheHasVisibleDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
-import { isAdminSession, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
+import { usesAdminFicheLayout, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
 import {
   FicheAdminBadgeHeaders,
   FicheAdminValideCell,
@@ -155,7 +155,7 @@ const fetchRdvVue = async (type, date) => {
 
 const RendezVousVue = () => {
   const { user } = useAuth();
-  const isAdminFicheLayout = isAdminSession(user);
+  const isAdminFicheLayout = usesAdminFicheLayout(user);
   const showHasBadge = isHonoreASuivreBadgeSession(user);
   const { closeSidebar } = useSidebar();
   const isRdvVueTouchMobile = isTouchMobileDevice();

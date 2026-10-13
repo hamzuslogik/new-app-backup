@@ -5,7 +5,11 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { FaChevronDown } from 'react-icons/fa';
 import { showTrackingInSidebar } from '../utils/trackingAccess';
-import { adminMenuUrls, isAdminMenuLinkActive } from '../utils/adminMenuUrls';
+import {
+  adminMenuUrls,
+  isAdminMenuLinkActive,
+  isBackofficeOrRpSession,
+} from '../utils/adminMenuUrls';
 import useUserHomePage from '../hooks/useUserHomePage';
 import './AdminTopNav.css';
 
@@ -25,12 +29,10 @@ const EXTRA_PAGES = [
   { path: '/suivi-agents-qualif', label: 'Suivi Agents Qualif', permission: 'suivi_agents_view' },
   { path: '/suivi-agents', label: 'Suivi des Agents', permission: 'suivi_agents_view' },
   { path: '/controle-qualite', label: 'Contrôle Qualité', permission: 'controle_qualite_view' },
-  { path: '/liste-completudes', label: 'Liste des complétudes', customCheck: (u) => [4, 11, 13, 14].includes(Number(u?.fonction)) },
   { path: '/bypass-creneau', label: 'Bypass créneau', customCheck: (u) => [1, 7, 11, 13].includes(Number(u?.fonction)) },
   { path: '/alertes', label: 'Alertes', customCheck: (u, hp) => hp('controle_qualite_view') },
   { path: '/remarques', label: 'Remarques', customCheck: (u, hp) => hp('controle_qualite_view') },
   { path: '/stats-agents-qualite', label: 'Stats Agents Qualité', permission: 'stats_agents_qualite_view' },
-  { path: '/tracking', label: 'Tracking', customCheck: (u) => showTrackingInSidebar(u) },
   { path: '/phase3', label: 'Phase 3', permission: 'phase3_view' },
   { path: '/planning-dep', label: 'Planning Dép', permission: 'planning_dep_view' },
   { path: '/validation', label: 'Validation', permission: 'validation_view' },
@@ -38,6 +40,17 @@ const EXTRA_PAGES = [
   { path: '/import-masse', label: 'Import en Masse', permission: 'import_masse_view' },
   { path: '/demandes-insertion', label: "Demandes d'Insertion", permission: 'demandes_insertion_view' },
   { path: '/notifications', label: 'Notifications' },
+];
+
+/** Pages absentes du menu administrateur (1/7) — menu « Autres » pour backoffice / RP. */
+const AUTRES_PAGES = [
+  { path: '/stat-affiliation', label: 'STAT affiliation', customCheck: (u) => Number(u?.fonction) === 11 },
+  { path: '/mes-rappels', label: 'Mes rappels', customCheck: (u) => Number(u?.fonction) === 13 },
+  { path: '/mon-equipe', label: 'Utilisateurs', customCheck: (u) => Number(u?.fonction) === 13 },
+  { path: '/liste-completudes', label: 'Liste des complétudes', customCheck: (u) => [11, 13].includes(Number(u?.fonction)) },
+  { path: '/tracking', label: 'Tracking', customCheck: (u) => showTrackingInSidebar(u) },
+  { path: '/signatures', label: 'Signatures', permission: 'signatures_view', customCheck: (u) => [11, 13].includes(Number(u?.fonction)) },
+  { path: '/messages', label: 'Messages', permission: 'messages_view', customCheck: (u) => [11, 13].includes(Number(u?.fonction)) },
 ];
 
 function Dropdown({ label, children, open, onOpen, onClose }) {
@@ -129,11 +142,16 @@ const AdminTopNav = () => {
     { enabled: !!user }
   );
 
-  const extraPages = EXTRA_PAGES.filter((item) => {
-    if (item.customCheck) return item.customCheck(user, hasPermission);
-    if (item.permission) return hasPermission(item.permission);
-    return true;
-  });
+  const filterNavPages = (items) =>
+    items.filter((item) => {
+      if (item.customCheck && !item.customCheck(user, hasPermission)) return false;
+      if (item.permission && !hasPermission(item.permission)) return false;
+      return true;
+    });
+
+  const extraPages = filterNavPages(EXTRA_PAGES);
+  const showAutresMenu = isBackofficeOrRpSession(user);
+  const autresPages = showAutresMenu ? filterNavPages(AUTRES_PAGES) : [];
 
   const closeAll = () => {
     setOpenMenu(null);
@@ -264,6 +282,19 @@ const AdminTopNav = () => {
           <NavLink key={p.path} to={p.path} className={classFor(p.path)}>{p.label}</NavLink>
         ))}
       </Dropdown>
+
+      {showAutresMenu && autresPages.length > 0 ? (
+        <Dropdown
+          label="Autres"
+          open={openMenu === 'autres'}
+          onOpen={() => { setOpenMenu('autres'); setOpenFlyout(null); }}
+          onClose={closeAll}
+        >
+          {autresPages.map((p) => (
+            <NavLink key={p.path} to={p.path} className={classFor(p.path)}>{p.label}</NavLink>
+          ))}
+        </Dropdown>
+      ) : null}
     </nav>
   );
 };

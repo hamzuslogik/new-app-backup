@@ -13,7 +13,7 @@ import {
   ficheHasVisibleDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
-import { isAdminSession, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
+import { usesAdminFicheLayout, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
 import {
   FicheAdminBadgeHeaders,
   FicheAdminValideCell,
@@ -60,7 +60,7 @@ function formatCommercials(fiche) {
 const Affectation = () => {
   useForceDesktopViewport('affectation-page');
   const { user } = useAuth();
-  const isAdminFicheLayout = isAdminSession(user);
+  const isAdminFicheLayout = usesAdminFicheLayout(user);
   const showHasBadge = isHonoreASuivreBadgeSession(user);
   const queryClient = useQueryClient();
   const [selectedFiches, setSelectedFiches] = useState([]);

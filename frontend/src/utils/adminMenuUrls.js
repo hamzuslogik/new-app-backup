@@ -2,7 +2,24 @@
  * Helpers d’URL pour le menu admin (Dashboard / Signatures / Affectation).
  */
 
+/** Admin « pur » (1) / RE Confirmation admin (7). */
 export const isAdminSession = (user) => [1, 7].includes(Number(user?.fonction));
+
+/** Backoffice (11) ou RP Confirmation (13). */
+export const isBackofficeOrRpSession = (user) => [11, 13].includes(Number(user?.fonction));
+
+/**
+ * Menu haut + chrome type administrateur :
+ * Admin (1, 7), Backoffice (11), RP Confirmation (13).
+ */
+export const usesAdminTopNav = (user) =>
+  isAdminSession(user) || isBackofficeOrRpSession(user);
+
+/**
+ * Layout tableaux fiches type administrateur (colonnes badges / ordre admin).
+ * Même périmètre que le menu haut admin.
+ */
+export const usesAdminFicheLayout = (user) => usesAdminTopNav(user);
 
 /**
  * Badge HAS (« Honoré à suivre » dans l’historique) :
@@ -138,8 +155,8 @@ export function setFicheTableColumnsPref(visibilityMap) {
 /** Session commercial (fonction 5). */
 export const isCommercialSession = (user) => Number(user?.fonction) === 5;
 
-/** Layout menu en haut (admin ou commercial) — pas de sidebar. */
-export const usesTopNavLayout = (user) => isAdminSession(user) || isCommercialSession(user);
+/** Layout menu en haut (admin / backoffice / RP ou commercial) — pas de sidebar. */
+export const usesTopNavLayout = (user) => usesAdminTopNav(user) || isCommercialSession(user);
 
 function pad2(n) {
   return String(n).padStart(2, '0');

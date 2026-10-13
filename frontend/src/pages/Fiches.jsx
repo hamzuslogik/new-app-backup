@@ -18,7 +18,7 @@ import {
   ficheHasDecalageRequest,
   getDecalageDisplayInfo,
 } from '../utils/ficheTableIndicators';
-import { isAdminSession, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
+import { usesAdminFicheLayout, isHonoreASuivreBadgeSession } from '../utils/adminMenuUrls';
 import { formatFicheCommercialDisplay } from '../utils/ficheCommercialDisplay';
 import { formatCommercialDisplayName } from '../utils/commercialDisplayName';
 import {
@@ -96,7 +96,7 @@ const Fiches = () => {
   const queryClient = useQueryClient();
   const isAgentQualif = user?.fonction === 3;
   const isPartenaire = Number(user?.fonction) === 9;
-  const isAdminFicheLayout = isAdminSession(user);
+  const isAdminFicheLayout = usesAdminFicheLayout(user);
   const showHasBadge = isHonoreASuivreBadgeSession(user);
   /** Superviseur qualification (RE qualif) : chargement auto des fiches du jour (périmètre agents) */
   const isSuperviseurQualif = user?.fonction === 2;
