@@ -1,3 +1,8 @@
+import {
+  getRestrictedBackofficeHomePath,
+  isBackofficeNavAsRpQualif,
+} from './backofficeNavRestriction';
+
 /**
  * Détermine la page d'accueil selon la fonction de l'utilisateur
  * @param {Object} user - L'objet utilisateur avec sa fonction
@@ -8,6 +13,11 @@
 export const getHomePage = (user, fonctionData = null, agentsSousResponsabilite = []) => {
   if (!user || !user.fonction) {
     return '/dashboard';
+  }
+
+  // Backoffice restreint (ex. 4180) : même accueil que RP Qualification
+  if (isBackofficeNavAsRpQualif(user)) {
+    return getRestrictedBackofficeHomePath();
   }
 
   // Si on a les données de la fonction avec page_accueil, utiliser cette valeur

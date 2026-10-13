@@ -2,6 +2,10 @@ import { useQuery } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
 import { getHomePage } from '../utils/getHomePage';
+import {
+  getRestrictedBackofficeHomePath,
+  isBackofficeNavAsRpQualif,
+} from '../utils/backofficeNavRestriction';
 
 /**
  * Renvoie la page d'accueil de l'utilisateur connecté en suivant la même
@@ -28,7 +32,8 @@ const useUserHomePage = () => {
     user.fonction !== 3 &&
     user.fonction !== 4 &&
     user.fonction !== 5 &&
-    user.fonction !== 12;
+    user.fonction !== 12 &&
+    !isBackofficeNavAsRpQualif(user);
 
   const { data: agentsSousResponsabilite } = useQuery(
     'agents-sous-responsabilite-home-shared',
@@ -40,6 +45,10 @@ const useUserHomePage = () => {
   );
 
   if (!user) return '/dashboard';
+  // Backoffice restreint : même accueil que RP Qualification
+  if (isBackofficeNavAsRpQualif(user)) {
+    return getRestrictedBackofficeHomePath();
+  }
   return getHomePage(user, fonctionData, agentsSousResponsabilite || []);
 };
 

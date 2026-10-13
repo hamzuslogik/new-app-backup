@@ -2,6 +2,8 @@
  * Helpers d’URL pour le menu admin (Dashboard / Signatures / Affectation).
  */
 
+import { isBackofficeNavAsRpQualif } from './backofficeNavRestriction';
+
 /** Admin « pur » (1) / RE Confirmation admin (7). */
 export const isAdminSession = (user) => [1, 7].includes(Number(user?.fonction));
 
@@ -11,15 +13,19 @@ export const isBackofficeOrRpSession = (user) => [11, 13].includes(Number(user?.
 /**
  * Menu haut + chrome type administrateur :
  * Admin (1, 7), Backoffice (11), RP Confirmation (13).
+ * Exception : backoffice restreint (ex. id 4180) → sidebar type RP Qualif.
  */
-export const usesAdminTopNav = (user) =>
-  isAdminSession(user) || isBackofficeOrRpSession(user);
+export const usesAdminTopNav = (user) => {
+  if (isBackofficeNavAsRpQualif(user)) return false;
+  return isAdminSession(user) || isBackofficeOrRpSession(user);
+};
 
 /**
  * Layout tableaux fiches type administrateur (colonnes badges / ordre admin).
- * Même périmètre que le menu haut admin.
+ * Backoffice / RP Confirmation (y compris nav restreinte) : contenu backoffice.
  */
-export const usesAdminFicheLayout = (user) => usesAdminTopNav(user);
+export const usesAdminFicheLayout = (user) =>
+  isAdminSession(user) || isBackofficeOrRpSession(user);
 
 /**
  * Badge HAS (« Honoré à suivre » dans l’historique) :

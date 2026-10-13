@@ -40,6 +40,11 @@ import {
 } from 'react-icons/fa';
 import { showTrackingInSidebar } from '../utils/trackingAccess';
 import { adminMenuUrls, isAdminMenuLinkActive } from '../utils/adminMenuUrls';
+import {
+  getNavUser,
+  isBackofficeNavAsRpQualif,
+  isPathAllowedForRestrictedBackofficeNav,
+} from '../utils/backofficeNavRestriction';
 import './Sidebar.css';
 
 const isAdminSession = (user) => [1, 7].includes(Number(user?.fonction));
@@ -527,6 +532,14 @@ const Sidebar = ({ collapsed }) => {
 
   const isItemVisible = (item) => {
     if (item.visible === false) return false;
+    // Backoffice 4180 : menu = pages RP Qualification uniquement
+    if (isBackofficeNavAsRpQualif(user)) {
+      if (!isPathAllowedForRestrictedBackofficeNav(item.path)) return false;
+      const navUser = getNavUser(user);
+      if (item.customCheck) return item.customCheck(item, navUser, hasPermission, isREQualif);
+      if (item.permission) return hasPermission(item.permission);
+      return item.visible;
+    }
     if (item.customCheck) return item.customCheck(item, user, hasPermission, isREQualif);
     if (item.permission) return hasPermission(item.permission);
     return item.visible;

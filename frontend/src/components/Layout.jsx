@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import GlobalKeyboardShortcuts from './common/GlobalKeyboardShortcuts';
@@ -9,6 +9,11 @@ import { FORCE_DESKTOP_VIEWPORT } from '../config/viewport';
 import { isMobileNativeExtranetPage } from '../utils/applyForceDesktopViewport';
 import { useAuth } from '../contexts/AuthContext';
 import { usesTopNavLayout } from '../utils/adminMenuUrls';
+import {
+  getRestrictedBackofficeHomePath,
+  isBackofficeNavAsRpQualif,
+  isPathAllowedForRestrictedBackofficeNav,
+} from '../utils/backofficeNavRestriction';
 import api from '../config/api';
 import './Layout.css';
 
@@ -16,6 +21,7 @@ const LayoutContent = () => {
   const { sidebarCollapsed, isMobile, isTablet, closeSidebar, mobileExtranetActive } = useSidebar();
   const { user } = useAuth();
   const topNavLayout = usesTopNavLayout(user);
+  const location = useLocation();
 
   React.useEffect(() => {
     const root = document.documentElement;
@@ -35,7 +41,6 @@ const LayoutContent = () => {
   const extranetMobile = mobileExtranetActive || isMobileNativeExtranetPage();
   const useMobileSidebar = !FORCE_DESKTOP_VIEWPORT || extranetMobile;
   const mobileLayout = extranetMobile || isMobile || isTablet;
-  const location = useLocation();
   const overlayRef = React.useRef(null);
   const [overlayReady, setOverlayReady] = React.useState(false);
   const prevPathnameRef = React.useRef(location.pathname);
@@ -106,6 +111,14 @@ const LayoutContent = () => {
     }
     closeSidebar();
   };
+
+  // Backoffice restreint : bloquer aussi les routes hors ProtectedRoute
+  if (
+    isBackofficeNavAsRpQualif(user) &&
+    !isPathAllowedForRestrictedBackofficeNav(location.pathname)
+  ) {
+    return <Navigate to={getRestrictedBackofficeHomePath()} replace />;
+  }
 
   return (
     <FicheDetailModalProvider>

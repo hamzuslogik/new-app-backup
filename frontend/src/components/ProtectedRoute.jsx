@@ -1,8 +1,15 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  getNavUser,
+  getRestrictedBackofficeHomePath,
+  isBackofficeNavAsRpQualif,
+  isPathAllowedForRestrictedBackofficeNav,
+} from '../utils/backofficeNavRestriction';
 
 const ProtectedRoute = ({ children, permission, excludeFunctions = [], allowFunctions = [], customCheck }) => {
   const { isAuthenticated, loading, hasPermission, user } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -19,6 +26,14 @@ const ProtectedRoute = ({ children, permission, excludeFunctions = [], allowFunc
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Backoffice restreint (4180) : uniquement les pages du menu RP Qualification
+  if (
+    isBackofficeNavAsRpQualif(user) &&
+    !isPathAllowedForRestrictedBackofficeNav(location.pathname)
+  ) {
+    return <Navigate to={getRestrictedBackofficeHomePath()} replace />;
   }
 
   // Vérifier si l'utilisateur a une fonction exclue
@@ -43,10 +58,11 @@ const ProtectedRoute = ({ children, permission, excludeFunctions = [], allowFunc
   // Admin (1, 7) et Backoffice (11) ont accès aux pages permissions/gestion ; Superviseur qualification (2) uniquement si permission accordée
   const isAdminOrBackoffice = [1, 7, 11].includes(user?.fonction);
   const isPermissionsOrManagementPage = permission === 'config_permissions' || permission === 'management_view';
-  // allowFunctions : accès direct pour certains rôles (ex. Mes rappels pour Confirmateur 6, RE Confirmation 14, RP Confirmation 13)
-  const isAllowedByFunction = allowFunctions.length > 0 && user?.fonction != null && allowFunctions.includes(Number(user.fonction));
+  // allowFunctions : pour le backoffice restreint, évaluer comme RP Qualif (12) sur les pages autorisées
+  const fonctionForAllow = Number(getNavUser(user)?.fonction ?? user?.fonction);
+  const isAllowedByFunction = allowFunctions.length > 0 && allowFunctions.includes(fonctionForAllow);
 
-  if (typeof customCheck === 'function' && !customCheck(null, user)) {
+  if (typeof customCheck === 'function' && !customCheck(null, getNavUser(user))) {
     return (
       <div style={{
         display: 'flex',
@@ -83,7 +99,8 @@ const ProtectedRoute = ({ children, permission, excludeFunctions = [], allowFunc
 
   if (permission && !hasPermission(permission) && !isAllowedByFunction) {
     // Autoriser Admin et Backoffice pour les pages Permissions et Management
-    if (isAdminOrBackoffice && isPermissionsOrManagementPage) {
+    // (sauf backoffice nav restreinte : pas d'accès hors allowlist, déjà filtré plus haut)
+    if (isAdminOrBackoffice && isPermissionsOrManagementPage && !isBackofficeNavAsRpQualif(user)) {
       // Autoriser l'accès
     } else {
       return (
