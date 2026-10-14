@@ -13,6 +13,17 @@ import { useFicheDetailModalVisualViewport } from '../hooks/useFicheDetailModalV
 import { getHomePage } from '../utils/getHomePage';
 import '../pages/Dashboard.css';
 
+function isVeryLightEtatColor(color) {
+  const hex = String(color || '').replace('#', '');
+  if (hex.length !== 6) return false;
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return false;
+  // Seuil haut : seuls les fonds quasi blancs gardent un texte sombre
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.78;
+}
+
 const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -184,7 +195,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
   };
 
   const etatColor = blockArchivedInLockedMode ? '#6c757d' : getEtatColor();
-
+  const bannerTitleIsLightBg = isVeryLightEtatColor(etatColor);
 
   const modalContent = (
     <div
@@ -208,7 +219,7 @@ const FicheDetailModal = ({ ficheHash, onClose, options = {} }) => {
         </button>
         <div className="fiche-detail-modal-zoom-inner">
           <div
-            className="fiche-detail-modal-banner"
+            className={`fiche-detail-modal-banner${bannerTitleIsLightBg ? ' fiche-detail-modal-banner--light-text' : ''}`}
             style={{ height: '72px', minHeight: '72px', maxHeight: '72px', flex: '0 0 72px' }}
           >
             <img src="/logo/logo.png" alt="Logo" className="fiche-detail-modal-banner-logo" />

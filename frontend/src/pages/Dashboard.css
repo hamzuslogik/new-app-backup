@@ -2815,13 +2815,34 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   object-fit: contain;
 }
 
+/* Titre bandeau modal : blanc sur fond couleur état (ex. vert CONFIRMER).
+   Ancienne règle color:#000 rendait le texte illisible sur le vert. */
 .fiche-detail-modal-banner-title {
-  color: #000000;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   font-size: 38px;
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   line-height: 1;
+}
+
+/* Fonds très clairs (NRP / blanc) : texte sombre pour rester lisible */
+.fiche-detail-modal-banner.fiche-detail-modal-banner--light-text .fiche-detail-modal-banner-title {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+
+/* Date dans le badge état actuel : blanc (écrase .historique-date #666 et autres #000) */
+html body .fiche-detail-modal-content .etat-actuel-card .etat-actuel-badge:not(.etat-actuel-badge--dark-text) .etat-actuel-badge-date {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Date en-tête historique : hérite du bandeau (blanc sur vert CONFIRMER) */
+html body .fiche-detail-modal-content .etat-historique-card .historique-header .historique-date {
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
 }
 
 /* Adapter le planning à la largeur du modal */
