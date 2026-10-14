@@ -1534,7 +1534,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 }
 
 .fiches-table th {
-  padding: 6px 6.4px;
+  padding: 5px 3px;
   text-align: left;
   font-weight: 800;
   font-size: 10.2px;
@@ -1565,12 +1565,25 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 }
 
 .fiches-table td {
-  padding: 5px 6.4px;
+  padding: 4px 3px;
   border-bottom: 2px solid #ffffff;
   white-space: nowrap;
   word-break: normal;
   overflow-wrap: normal;
   vertical-align: top;
+}
+
+/* Nom / Prénom : wrap par mot (max 15ch) — écrase le nowrap générique des td */
+.dashboard-page .fiches-table th.fiche-col-nom,
+.dashboard-page .fiches-table td.fiche-col-nom,
+.dashboard-page .fiches-table th.fiche-col-prenom,
+.dashboard-page .fiches-table td.fiche-col-prenom,
+.dashboard-page .fiches-table td.fiche-row-lead-cell,
+.dashboard-page .fiches-table .fiche-row-lead-label {
+  max-width: 15ch !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
 }
 
 /* Une seule ligne : téléphone, CP, dates, validé, actions */
@@ -1597,7 +1610,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   min-width: 0;
 }
 
-/* Largeurs de colonnes : auto ; Nom/Prénom = texte intégral (fiches-table.css) */
+/* Largeurs de colonnes : auto selon contenu */
 .dashboard-page .fiches-table td:nth-child(1),
 .dashboard-page .fiches-table td:nth-child(2),
 .dashboard-page .fiches-table th:nth-child(1),

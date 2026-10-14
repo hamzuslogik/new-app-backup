@@ -178,7 +178,7 @@ html body .fiches-table td.fiche-col-cq-obs {
   word-break: break-word !important;
 }
 
-/* Nom / Prénom : afficher le texte tel quel (pas de plafond 15ch / pas de coupure) */
+/* Nom / Prénom (hors dashboard) : texte intégral, une ligne */
 html body table.fiches-table th.fiche-col-nom,
 html body table.fiches-table td.fiche-col-nom,
 html body table.fiches-table th.fiche-col-prenom,
@@ -211,6 +211,61 @@ html body .fiches-table td.fiche-col-prenom {
   white-space: nowrap !important;
   overflow-wrap: normal !important;
   word-break: keep-all !important;
+}
+
+/* Dashboard : Nom / Prénom limités à ~15 caractères, retour à la ligne par MOT */
+html body.dashboard-page table.fiches-table th.fiche-col-nom,
+html body.dashboard-page table.fiches-table td.fiche-col-nom,
+html body.dashboard-page table.fiches-table th.fiche-col-prenom,
+html body.dashboard-page table.fiches-table td.fiche-col-prenom,
+html body.dashboard-page .fiches-table th.fiche-col-nom,
+html body.dashboard-page .fiches-table td.fiche-col-nom,
+html body.dashboard-page .fiches-table th.fiche-col-prenom,
+html body.dashboard-page .fiches-table td.fiche-col-prenom,
+html body.dashboard-page table.fiches-table td.fiche-row-lead-cell,
+html body.dashboard-page .fiches-table td.fiche-row-lead-cell,
+html body.dashboard-page table.fiches-table td[data-label="Nom:"],
+html body.dashboard-page table.fiches-table td[data-label="Prénom:"],
+html body.dashboard-page .fiches-table td[data-label="Nom:"],
+html body.dashboard-page .fiches-table td[data-label="Prénom:"],
+html body.dashboard-page table.fiches-table .fiche-row-lead-label,
+html body.dashboard-page .fiches-table .fiche-row-lead-label,
+.dashboard-page table.fiches-table th.fiche-col-nom,
+.dashboard-page table.fiches-table td.fiche-col-nom,
+.dashboard-page table.fiches-table th.fiche-col-prenom,
+.dashboard-page table.fiches-table td.fiche-col-prenom,
+.dashboard-page .fiches-table th.fiche-col-nom,
+.dashboard-page .fiches-table td.fiche-col-nom,
+.dashboard-page .fiches-table th.fiche-col-prenom,
+.dashboard-page .fiches-table td.fiche-col-prenom,
+.dashboard-page table.fiches-table td.fiche-row-lead-cell,
+.dashboard-page .fiches-table td.fiche-row-lead-cell,
+.dashboard-page table.fiches-table .fiche-row-lead-label,
+.dashboard-page .fiches-table .fiche-row-lead-label {
+  max-width: 15ch !important;
+  width: auto !important;
+  min-width: 0 !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  hyphens: none !important;
+  line-height: 1.25 !important;
+}
+
+/* Dashboard : padding latéral réduit + largeur au contenu */
+html body.dashboard-page table.fiches-table > thead > tr > th,
+html body.dashboard-page table.fiches-table > tbody > tr > td,
+html body.dashboard-page .fiches-table th,
+html body.dashboard-page .fiches-table td,
+.dashboard-page table.fiches-table th,
+.dashboard-page table.fiches-table td,
+.dashboard-page .fiches-table th,
+.dashboard-page .fiches-table td {
+  padding-left: 3px !important;
+  padding-right: 3px !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 /* État : abrégé, une seule ligne (comme dates / centres) */
@@ -254,13 +309,24 @@ html body .cq-table .cq-produit-indicator {
   letter-spacing: 0.02em;
 }
 
-/* Nom dans .fiche-row-lead-label : texte intégral, une ligne */
+/* Nom dans .fiche-row-lead-label : texte intégral, une ligne (hors dashboard) */
 html body table.fiches-table .fiche-row-lead-label,
 html body .fiches-table .fiche-row-lead-label {
   max-width: none !important;
   white-space: nowrap !important;
   overflow-wrap: normal !important;
   word-break: keep-all !important;
+}
+
+html body.dashboard-page table.fiches-table .fiche-row-lead-label,
+html body.dashboard-page .fiches-table .fiche-row-lead-label,
+.dashboard-page table.fiches-table .fiche-row-lead-label,
+.dashboard-page .fiches-table .fiche-row-lead-label {
+  max-width: 15ch !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  display: inline-block !important;
 }
 
 /* Colonnes sans contrainte de wrap (décalage, sélection, actions) */
