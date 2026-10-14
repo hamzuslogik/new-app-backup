@@ -6318,6 +6318,7 @@ const FicheDetail = ({
                                       className="historique-date"
                                       style={{
                                         color: histoHeaderTextColor,
+                                        WebkitTextFillColor: histoHeaderTextColor,
                                         fontSize: '13px',
                                         marginLeft: 'auto',
                                         fontWeight: 'bold'
@@ -6504,12 +6505,21 @@ const FicheDetail = ({
                           </span>
                         )}
                         <span
+                          className="etat-actuel-badge-date"
                           style={{
                             marginLeft: 'auto',
                             fontSize: '14px',
                             fontWeight: 'bold',
                             textTransform: 'none',
                             letterSpacing: 0,
+                            color:
+                              Number(etatActuel.id_etat) === 1 || Number(etatActuel.id_etat) === 2
+                                ? '#333333'
+                                : '#ffffff',
+                            WebkitTextFillColor:
+                              Number(etatActuel.id_etat) === 1 || Number(etatActuel.id_etat) === 2
+                                ? '#333333'
+                                : '#ffffff',
                           }}
                         >
                           {dateAfficheeEtatActuel

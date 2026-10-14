@@ -780,6 +780,22 @@
   font-size: 11.9px;
 }
 
+/* Date dans l'en-tête coloré : suit la couleur du bandeau (blanc sur vert CONFIRMER) */
+.etat-historique-card .historique-header .historique-date {
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
+}
+
+.etat-actuel-card .etat-actuel-badge:not(.etat-actuel-badge--dark-text) .etat-actuel-badge-date {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.etat-actuel-card span.etat-actuel-badge--dark-text .etat-actuel-badge-date {
+  color: #333333 !important;
+  -webkit-text-fill-color: #333333 !important;
+}
+
 .historique-user {
   color: #666;
   font-size: 11px;
