@@ -130,9 +130,6 @@ const AdminTopNav = () => {
   const location = useLocation();
   const homePage = useUserHomePage();
   const urls = useMemo(() => adminMenuUrls(), []);
-  const todayWeekday = new Date().getDay(); // 0=dim … 1=lun … 4=jeu
-  const signaturesDayLabel = (weekdayNum, fallback) =>
-    todayWeekday === weekdayNum ? "Signatures d'aujourd'hui" : fallback;
   const [openMenu, setOpenMenu] = useState(null);
   const [openFlyout, setOpenFlyout] = useState(null);
 
@@ -308,16 +305,16 @@ const AdminTopNav = () => {
         <NavLink to={urls.signesMois} className={classFor(urls.signesMois)}>Signés du mois</NavLink>
         <NavLink to={urls.cqSignatures} className={classFor(urls.cqSignatures)}>CQ signatures</NavLink>
         <NavLink to={urls.signaturesLundi} className={classFor(urls.signaturesLundi)}>
-          {signaturesDayLabel(1, 'Lundi')}
+          Lundi
         </NavLink>
         <NavLink to={urls.signaturesMardi} className={classFor(urls.signaturesMardi)}>
-          {signaturesDayLabel(2, 'Mardi')}
+          Mardi
         </NavLink>
         <NavLink to={urls.signaturesMercredi} className={classFor(urls.signaturesMercredi)}>
-          {signaturesDayLabel(3, 'Mercredi')}
+          Mercredi
         </NavLink>
         <NavLink to={urls.signaturesJeudi} className={classFor(urls.signaturesJeudi)}>
-          {signaturesDayLabel(4, 'Jeudi')}
+          Jeudi
         </NavLink>
       </Dropdown>
 

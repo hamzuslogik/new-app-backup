@@ -55,9 +55,6 @@ const Sidebar = ({ collapsed }) => {
   const fonctionId = user?.fonction;
   const homePage = useUserHomePage();
   const urls = useMemo(() => adminMenuUrls(), []);
-  const todayWeekday = new Date().getDay(); // 0=dim … 1=lun … 4=jeu
-  const signaturesDayLabel = (weekdayNum, fallback) =>
-    todayWeekday === weekdayNum ? "Signatures d'aujourd'hui" : fallback;
   const [openGroups, setOpenGroups] = useState({
     plannings: true,
     dep: false,
@@ -557,6 +554,7 @@ const Sidebar = ({ collapsed }) => {
     '/rdv-vue',
     '/compte-rendu',
     '/signatures',
+    '/signatures-aujourdhui',
     '/cq-signatures',
     '/decalages',
     '/statistiques',
@@ -769,22 +767,22 @@ const Sidebar = ({ collapsed }) => {
             </li>
             <li>
               <NavLink to={urls.signaturesLundi} className={classFor(urls.signaturesLundi)}>
-                <span>{signaturesDayLabel(1, 'Lundi')}</span>
+                <span>Lundi</span>
               </NavLink>
             </li>
             <li>
               <NavLink to={urls.signaturesMardi} className={classFor(urls.signaturesMardi)}>
-                <span>{signaturesDayLabel(2, 'Mardi')}</span>
+                <span>Mardi</span>
               </NavLink>
             </li>
             <li>
               <NavLink to={urls.signaturesMercredi} className={classFor(urls.signaturesMercredi)}>
-                <span>{signaturesDayLabel(3, 'Mercredi')}</span>
+                <span>Mercredi</span>
               </NavLink>
             </li>
             <li>
               <NavLink to={urls.signaturesJeudi} className={classFor(urls.signaturesJeudi)}>
-                <span>{signaturesDayLabel(4, 'Jeudi')}</span>
+                <span>Jeudi</span>
               </NavLink>
             </li>
           </ul>

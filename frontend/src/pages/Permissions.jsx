@@ -202,6 +202,7 @@ const Permissions = () => {
     { path: '/demandes-insertion', name: 'Demandes Insertion', permission: 'demandes_insertion_view' },
     { path: '/notifications', name: 'Notifications', permission: null },
     { path: '/signatures', name: 'Signatures', permission: 'signatures_view' },
+    { path: '/signatures-aujourdhui', name: "Signatures d'aujourd'hui", permission: 'signatures_view' },
   ];
 
   // Fonction pour obtenir le statut de permission d'une page

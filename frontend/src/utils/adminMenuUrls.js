@@ -207,9 +207,9 @@ export function dashboardSearchUrl(extra = {}) {
   return `/dashboard${qs({ fiche_search: 1, ...extra })}`;
 }
 
-/** CR Signer du jour (pending + approved) → page Compte rendu. */
-export function signaturesAujourdhuiUrl(now = new Date()) {
-  return `/compte-rendu${qs({ signer: 1, statut: 'all', date: toLocalISODate(now) })}`;
+/** Fiches signées aujourd'hui (date_sign_time + CR Signer pending) → page dédiée. */
+export function signaturesAujourdhuiUrl(_now = new Date()) {
+  return '/signatures-aujourdhui';
 }
 
 /** Signés (TOUT SIGNER) pour une journée (date_sign_time) + CR Signer pending. */
@@ -228,8 +228,8 @@ export function signesJourUrl(dateStr) {
 /**
  * Lien Lundi / Mardi / Mercredi / Jeudi du menu Signatures.
  * weekday: 1=lundi … 4=jeudi.
- * Si ce jour = aujourd'hui → Signatures d'aujourd'hui (CR pending+approved),
- * sinon → signés de ce jour (semaine courante).
+ * Le libellé reste le nom du jour ; si ce jour = aujourd'hui → contenu
+ * Signatures d'aujourd'hui, sinon → signés de ce jour (semaine courante).
  */
 export function signaturesWeekdayMenuUrl(weekday, now = new Date()) {
   const dayDate = addDaysLocal(startOfWeekLocal(now), Number(weekday) - 1);
@@ -296,7 +296,7 @@ export function adminMenuUrls(now = new Date()) {
         time_debut: '00:00:00',
         time_fin: '23:59:59',
       }),
-    /** CR Signer du jour : non approuvés + approuvés */
+    /** Tableau fiches signées aujourd'hui (+ CR Signer pending) */
     signaturesAujourdhui: signaturesAujourdhuiUrl(now),
     signesSemaine: dashboardSearchUrl({
       id_etat_final: 't_s',

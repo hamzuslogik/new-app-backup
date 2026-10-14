@@ -1,0 +1,21 @@
+.signatures-aujourdhui-page {
+  padding: 1rem 1.25rem 2rem;
+}
+
+.signatures-aujourdhui-header {
+  margin-bottom: 1rem;
+}
+
+.signatures-aujourdhui-header .page-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.35rem;
+  font-size: 1.45rem;
+}
+
+.signatures-aujourdhui-subtitle {
+  margin: 0;
+  color: #555;
+  font-size: 0.95rem;
+}
