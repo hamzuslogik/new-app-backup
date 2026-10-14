@@ -11822,22 +11822,14 @@ const PlanningViewForModal = ({
                     } else if (totalRdvInSlot > 0) {
                       bgColor = '#e74c3c'; // Rouge si des RDV mais pas de planning
                     }
-                    // Couleur de fond du rectangle: rouge blindé/surplus, jaune partiel, vert aucun RDV
+                    // Fond rouge si blindé/surplus, jaune partiel, vert aucun RDV — texte toujours noir
                     const availabilityBadgeBgColor = (() => {
                       if (totalRdvInSlot <= 0) return '#4caf50';
                       if (!hasPlanning || Number(displayAvailability) <= 0) return '#f44336';
-                      // Rouge seulement en surplus (dépasse), pas à capacité exacte (2/2)
-                      if (totalRdvInSlot > Number(displayAvailability)) return '#f44336';
-                      if (totalRdvInSlot === Number(displayAvailability)) return '#ff9800';
+                      if (totalRdvInSlot >= Number(displayAvailability)) return '#f44336';
                       return '#ffc107';
                     })();
-                    // Texte rouge si blindé (plein exact, ex. 2/2) ou surplus (ex. 3/2 / 0 dispo)
-                    const isBlindOrSurplusText =
-                      totalRdvInSlot > 0 &&
-                      (!hasPlanning ||
-                        Number(displayAvailability) <= 0 ||
-                        totalRdvInSlot >= Number(displayAvailability));
-                    const availabilityTextColor = isBlindOrSurplusText ? '#f44336' : '#000000';
+                    const availabilityTextColor = '#000000';
                     
                     // Note: L'ID est masqué, on ne peut plus comparer directement
                     // On marque simplement le créneau si on a des RDV

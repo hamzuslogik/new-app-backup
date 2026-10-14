@@ -2089,6 +2089,8 @@ button.fiche-badge-pdf svg {
 .fiche-detail-modal-content .availability-text-compact {
   font-size: 9px !important;
   white-space: nowrap !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
 }
 
 /* Permettre le scroll si nÃ©cessaire */

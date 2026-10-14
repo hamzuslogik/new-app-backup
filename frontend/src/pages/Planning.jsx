@@ -786,25 +786,16 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
 // Composant pour la vue Disponibilité
 const AvailabilityView = ({ availability, planning, days, timeSlots, week, year, dep, onUpdate, canEdit, onToggleClosed, isAdmin }) => {
   // Couleur de fond du rectangle pour « rdv/total » (badge disponibilité)
-  // Rouge: blindé/surplus, Jaune: partiel, Vert: aucun RDV
+  // Fond rouge: blindé/surplus, jaune: partiel, vert: aucun RDV — texte toujours noir
   const getAvailabilityBadgeBgColor = (rdvCount, totalAvailability) => {
-    if (rdvCount <= 0) return '#4caf50'; // Vert
-    if (totalAvailability === null || totalAvailability === undefined || Number(totalAvailability) <= 0) {
-      return '#f44336'; // Rouge (surplus / pas de capacité)
-    }
-    if (rdvCount > totalAvailability) return '#f44336'; // Rouge (surplus, ex. 3/2)
-    if (rdvCount === totalAvailability) return '#ff9800'; // Plein exact (2/2)
-    return '#ffc107'; // Jaune (partiellement rempli)
-  };
-  // Texte rouge si blindé (plein exact, ex. 2/2) ou surplus (ex. 3/2 / 0 dispo)
-  const getAvailabilityTextColor = (rdvCount, totalAvailability) => {
-    if (rdvCount <= 0) return '#000000';
+    if (rdvCount <= 0) return '#4caf50';
     if (totalAvailability === null || totalAvailability === undefined || Number(totalAvailability) <= 0) {
       return '#f44336';
     }
     if (rdvCount >= Number(totalAvailability)) return '#f44336';
-    return '#000000';
+    return '#ffc107';
   };
+  const getAvailabilityTextColor = () => '#000000';
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [localAvailabilityOverrides, setLocalAvailabilityOverrides] = useState({});
@@ -968,7 +959,7 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                   
                   // Badge rdv-count / availability-total (affiché même si le créneau est fermé)
                   const renderRdvBadge = () => {
-                    const textColor = getAvailabilityTextColor(rdvCount, currentValue);
+                    const textColor = getAvailabilityTextColor();
                     return (
                       <span
                         className="availability-rdv-info"

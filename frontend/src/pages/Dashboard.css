@@ -3130,6 +3130,8 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
 .fiche-detail-modal-content .availability-text-compact {
   font-size: 9px !important;
   white-space: nowrap !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
 }
 
 /* Contenu fiche : scroll du tableau planning puis du panneau modal (comme dashboard) */
