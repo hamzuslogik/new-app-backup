@@ -6343,14 +6343,14 @@ const FicheDetail = ({
                                           item.label === 'Date RDV' &&
                                           isEtatConfirmerLike(histo.id_etat, histoEtatTitre);
                                         return (
-                                          <div key={idx} style={{ width: '100%', lineHeight: 1.45, color: '#ffffff', fontWeight: 'bold' }}>
+                                          <div key={idx} style={{ width: '100%', lineHeight: 1.45, color: '#ffffff' }}>
                                             <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#ffffff' }}>
-                                              <strong style={{ color: '#ffffff', fontWeight: 'bold' }}>{item.label}:</strong>{' '}
+                                              <span className="etat-detail-label" style={{ color: '#ffffff', fontWeight: 500 }}>{item.label}:</span>{' '}
                                               <span
-                                                className={hi?.className}
+                                                className={`etat-detail-value${hi?.className ? ` ${hi.className}` : ''}`}
                                                 style={{
                                                   color: '#ffffff',
-                                                  fontWeight: 'bold',
+                                                  fontWeight: 700,
                                                   ...(hi?.style || {}),
                                                 }}
                                                 data-confirmer-hl={hi?.dataHl || undefined}
@@ -6580,9 +6580,9 @@ const FicheDetail = ({
                               const heureRdvAvantDecalage =
                                 item.heure_rdv_avant_decalage || etatActuel.heure_rdv_avant_decalage;
                               return (
-                                <div key={idx} style={{ width: '100%', lineHeight: 1.45, color: '#ffffff', fontWeight: 'bold' }}>
+                                <div key={idx} style={{ width: '100%', lineHeight: 1.45, color: '#ffffff' }}>
                                   <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#ffffff' }}>
-                                    <strong style={{ color: '#ffffff', fontWeight: 'bold' }}>{item.label}:</strong>{' '}
+                                    <span className="etat-detail-label" style={{ color: '#ffffff', fontWeight: 500 }}>{item.label}:</span>{' '}
                                     {isEditableDateRdvInline ? (
                                       <>
                                         <span
@@ -6894,10 +6894,10 @@ const FicheDetail = ({
                                         return (
                                           <>
                                       <span
-                                        className={hi?.className}
+                                        className={`etat-detail-value${hi?.className ? ` ${hi.className}` : ''}`}
                                         style={{
                                           color: '#ffffff',
-                                          fontWeight: 'bold',
+                                          fontWeight: 700,
                                           ...(hi?.style || {}),
                                           ...(canEditEtatActuelComment && isCommentItem
                                             ? { cursor: 'text', borderBottom: '1px dashed rgba(255,255,255,0.45)' }
