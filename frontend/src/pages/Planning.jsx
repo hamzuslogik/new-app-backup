@@ -796,6 +796,15 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
     if (rdvCount === totalAvailability) return '#ff9800'; // Plein exact (2/2)
     return '#ffc107'; // Jaune (partiellement rempli)
   };
+  // Texte rouge si blindé (plein exact, ex. 2/2) ou surplus (ex. 3/2 / 0 dispo)
+  const getAvailabilityTextColor = (rdvCount, totalAvailability) => {
+    if (rdvCount <= 0) return '#000000';
+    if (totalAvailability === null || totalAvailability === undefined || Number(totalAvailability) <= 0) {
+      return '#f44336';
+    }
+    if (rdvCount >= Number(totalAvailability)) return '#f44336';
+    return '#000000';
+  };
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [localAvailabilityOverrides, setLocalAvailabilityOverrides] = useState({});
@@ -959,12 +968,13 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                   
                   // Badge rdv-count / availability-total (affiché même si le créneau est fermé)
                   const renderRdvBadge = () => {
+                    const textColor = getAvailabilityTextColor(rdvCount, currentValue);
                     return (
                       <span
                         className="availability-rdv-info"
                         style={{
                           backgroundColor: getAvailabilityBadgeBgColor(rdvCount, currentValue),
-                          color: '#000000',
+                          color: textColor,
                           fontWeight: '700',
                           padding: '2px 6px',
                           borderRadius: '4px',
@@ -983,8 +993,8 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                         <span className="rdv-count">
                           <span
                             style={{
-                              color: '#000000',
-                              WebkitTextFillColor: '#000000',
+                              color: textColor,
+                              WebkitTextFillColor: textColor,
                               fontWeight: 900,
                               fontSize: '14px'
                             }}

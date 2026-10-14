@@ -123,11 +123,11 @@ export function FicheAdminActionCell({
             </button>
           ) : (
             <DetailButtonTag
-              onClick={onDetail}
               className="btn-detail"
               title={detailTitle}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               {...detailButtonProps}
+              {...(typeof onDetail === 'function' ? { onClick: onDetail } : {})}
             >
               {inner}
             </DetailButtonTag>
@@ -207,7 +207,7 @@ export function FicheAdminIndicatorCells({
                 onPdf();
               }}
             >
-              <FaFilePdf aria-hidden />
+              <FaFilePdf aria-hidden size={10} />
             </button>
           ) : null}
         </td>

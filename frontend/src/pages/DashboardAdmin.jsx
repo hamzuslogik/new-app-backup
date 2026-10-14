@@ -1350,7 +1350,7 @@ const DashboardAdmin = () => {
                               handleGeneratePdf(fiche.hash);
                             }}
                           >
-                            <FaFilePdf aria-hidden />
+                            <FaFilePdf aria-hidden size={10} />
                           </button>
                         </td>
                         <td data-label="PROD:" className="fiche-col-badge fiche-col-prod">

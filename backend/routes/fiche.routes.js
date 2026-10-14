@@ -263,7 +263,10 @@ function mysqlDateOnlyFromValue(value) {
 /**
  * Alimente la table confirmations au passage CONFIRMER (7) avec l'heure système locale.
  * Anti-doublon strict : 1 ligne max par (id_fiche, jour de confirmation).
- * Si une ligne existe déjà (même jour conf, même jour RDV, ou même datetime RDV) → UPDATE.
+ * Les schémas ont parfois confirmation_day ET date_confirmation_date (legacy) :
+ * on remplit / matche les deux pour éviter les doublons croisés
+ * (une ligne avec confirmation_day=DATE + date_confirmation_date=0000-00-00,
+ *  une autre l'inverse).
  */
 async function upsertConfirmationForEtat7({
   id_fiche,
@@ -285,67 +288,136 @@ async function upsertConfirmationForEtat7({
   const comment = commentaire === '' || commentaire === undefined ? null : commentaire;
   const ficheId = Number(id_fiche);
 
+  const isZeroDateSql = (col) =>
+    `(${col} IS NULL OR ${col} = '0000-00-00' OR CAST(${col} AS CHAR) IN ('0000-00-00', '0'))`;
+
   const applyUpdate = async (existingId) => {
-    try {
-      await query(
-        `UPDATE confirmations
-         SET date_rdv_time = ?,
-             date_confirmation = ?,
-             date_creation = ?,
-             confirmation_day = ?,
-             id_confirmateur = COALESCE(?, id_confirmateur),
-             id_commercial = COALESCE(?, id_commercial),
-             commentaire = COALESCE(?, commentaire)
-         WHERE id = ?`,
-        [rdvNormalized, when, when, confDay, confId, comId, comment, existingId]
-      );
-    } catch (updErr) {
-      if (updErr && updErr.code === 'ER_BAD_FIELD_ERROR') {
-        await query(
-          `UPDATE confirmations
-           SET date_rdv_time = ?,
-               date_confirmation = ?,
-               date_creation = ?,
-               id_confirmateur = COALESCE(?, id_confirmateur),
-               id_commercial = COALESCE(?, id_commercial),
-               commentaire = COALESCE(?, commentaire)
-           WHERE id = ?`,
-          [rdvNormalized, when, when, confId, comId, comment, existingId]
-        );
+    // Essayer d'abord avec confirmation_day + date_confirmation_date, puis replis colonnes absentes
+    const updateVariants = [
+      {
+        sql: `UPDATE confirmations
+              SET date_rdv_time = ?,
+                  date_confirmation = ?,
+                  date_creation = ?,
+                  confirmation_day = ?,
+                  date_confirmation_date = ?,
+                  id_confirmateur = COALESCE(?, id_confirmateur),
+                  id_commercial = COALESCE(?, id_commercial),
+                  commentaire = COALESCE(?, commentaire)
+              WHERE id = ?`,
+        params: [rdvNormalized, when, when, confDay, confDay, confId, comId, comment, existingId],
+      },
+      {
+        sql: `UPDATE confirmations
+              SET date_rdv_time = ?,
+                  date_confirmation = ?,
+                  date_creation = ?,
+                  confirmation_day = ?,
+                  id_confirmateur = COALESCE(?, id_confirmateur),
+                  id_commercial = COALESCE(?, id_commercial),
+                  commentaire = COALESCE(?, commentaire)
+              WHERE id = ?`,
+        params: [rdvNormalized, when, when, confDay, confId, comId, comment, existingId],
+      },
+      {
+        sql: `UPDATE confirmations
+              SET date_rdv_time = ?,
+                  date_confirmation = ?,
+                  date_creation = ?,
+                  date_confirmation_date = ?,
+                  id_confirmateur = COALESCE(?, id_confirmateur),
+                  id_commercial = COALESCE(?, id_commercial),
+                  commentaire = COALESCE(?, commentaire)
+              WHERE id = ?`,
+        params: [rdvNormalized, when, when, confDay, confId, comId, comment, existingId],
+      },
+      {
+        sql: `UPDATE confirmations
+              SET date_rdv_time = ?,
+                  date_confirmation = ?,
+                  date_creation = ?,
+                  id_confirmateur = COALESCE(?, id_confirmateur),
+                  id_commercial = COALESCE(?, id_commercial),
+                  commentaire = COALESCE(?, commentaire)
+              WHERE id = ?`,
+        params: [rdvNormalized, when, when, confId, comId, comment, existingId],
+      },
+    ];
+    let lastErr = null;
+    for (const variant of updateVariants) {
+      try {
+        await query(variant.sql, variant.params);
         return;
+      } catch (updErr) {
+        lastErr = updErr;
+        if (!(updErr && updErr.code === 'ER_BAD_FIELD_ERROR')) throw updErr;
       }
-      throw updErr;
     }
+    throw lastErr;
   };
 
   const findExistingId = async () => {
-    // Priorité 1 : même fiche + même jour de confirmation (règle métier)
+    // Priorité 1 : même fiche + même jour (confirmation_day OU date_confirmation_date OU DATE(...))
     if (confDay) {
       try {
         const byConfDay = await queryOne(
           `SELECT id FROM confirmations
            WHERE id_fiche = ?
              AND (
-               confirmation_day = ?
-               OR DATE(COALESCE(date_confirmation, date_creation, date_rdv_time)) = ?
+               (confirmation_day = ? AND NOT ${isZeroDateSql('confirmation_day')})
+               OR (date_confirmation_date = ? AND NOT ${isZeroDateSql('date_confirmation_date')})
+               OR DATE(COALESCE(
+                    NULLIF(NULLIF(date_confirmation, '0000-00-00 00:00:00'), '0000-00-00'),
+                    NULLIF(NULLIF(date_creation, '0000-00-00 00:00:00'), '0000-00-00'),
+                    NULLIF(NULLIF(date_rdv_time, '0000-00-00 00:00:00'), '0000-00-00')
+                  )) = ?
              )
            ORDER BY id DESC
            LIMIT 1`,
-          [ficheId, confDay, confDay]
+          [ficheId, confDay, confDay, confDay]
         );
         if (byConfDay?.id) return byConfDay.id;
       } catch (e) {
-        // Colonne confirmation_day absente → fallback sans elle
         if (e && e.code === 'ER_BAD_FIELD_ERROR') {
-          const byConfDay = await queryOne(
-            `SELECT id FROM confirmations
-             WHERE id_fiche = ?
-               AND DATE(COALESCE(date_confirmation, date_creation, date_rdv_time)) = ?
-             ORDER BY id DESC
-             LIMIT 1`,
-            [ficheId, confDay]
-          );
-          if (byConfDay?.id) return byConfDay.id;
+          // Replis selon colonnes présentes
+          const fallbacks = [
+            {
+              sql: `SELECT id FROM confirmations
+                    WHERE id_fiche = ?
+                      AND (
+                        (confirmation_day = ? AND NOT ${isZeroDateSql('confirmation_day')})
+                        OR DATE(COALESCE(date_confirmation, date_creation, date_rdv_time)) = ?
+                      )
+                    ORDER BY id DESC LIMIT 1`,
+              params: [ficheId, confDay, confDay],
+            },
+            {
+              sql: `SELECT id FROM confirmations
+                    WHERE id_fiche = ?
+                      AND (
+                        (date_confirmation_date = ? AND NOT ${isZeroDateSql('date_confirmation_date')})
+                        OR DATE(COALESCE(date_confirmation, date_creation, date_rdv_time)) = ?
+                      )
+                    ORDER BY id DESC LIMIT 1`,
+              params: [ficheId, confDay, confDay],
+            },
+            {
+              sql: `SELECT id FROM confirmations
+                    WHERE id_fiche = ?
+                      AND DATE(COALESCE(date_confirmation, date_creation, date_rdv_time)) = ?
+                    ORDER BY id DESC LIMIT 1`,
+              params: [ficheId, confDay],
+            },
+          ];
+          for (const fb of fallbacks) {
+            try {
+              const row = await queryOne(fb.sql, fb.params);
+              if (row?.id) return row.id;
+              break;
+            } catch (fbErr) {
+              if (!(fbErr && fbErr.code === 'ER_BAD_FIELD_ERROR')) throw fbErr;
+            }
+          }
         } else {
           throw e;
         }
@@ -374,27 +446,50 @@ async function upsertConfirmationForEtat7({
     }
 
     try {
-      try {
-        await query(
-          `INSERT INTO confirmations
-            (id_fiche, date_rdv_time, date_confirmation, confirmation_day, id_confirmateur, id_commercial, date_creation, commentaire)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [ficheId, rdvNormalized, when, confDay, confId, comId, when, comment]
-        );
-      } catch (insColErr) {
-        if (insColErr && insColErr.code === 'ER_BAD_FIELD_ERROR') {
-          await query(
-            `INSERT INTO confirmations
-              (id_fiche, date_rdv_time, date_confirmation, id_confirmateur, id_commercial, date_creation, commentaire)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [ficheId, rdvNormalized, when, confId, comId, when, comment]
-          );
-        } else {
-          throw insColErr;
+      const insertVariants = [
+        {
+          sql: `INSERT INTO confirmations
+                  (id_fiche, date_rdv_time, date_confirmation, confirmation_day, date_confirmation_date,
+                   id_confirmateur, id_commercial, date_creation, commentaire)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          params: [ficheId, rdvNormalized, when, confDay, confDay, confId, comId, when, comment],
+        },
+        {
+          sql: `INSERT INTO confirmations
+                  (id_fiche, date_rdv_time, date_confirmation, confirmation_day,
+                   id_confirmateur, id_commercial, date_creation, commentaire)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          params: [ficheId, rdvNormalized, when, confDay, confId, comId, when, comment],
+        },
+        {
+          sql: `INSERT INTO confirmations
+                  (id_fiche, date_rdv_time, date_confirmation, date_confirmation_date,
+                   id_confirmateur, id_commercial, date_creation, commentaire)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          params: [ficheId, rdvNormalized, when, confDay, confId, comId, when, comment],
+        },
+        {
+          sql: `INSERT INTO confirmations
+                  (id_fiche, date_rdv_time, date_confirmation,
+                   id_confirmateur, id_commercial, date_creation, commentaire)
+                VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          params: [ficheId, rdvNormalized, when, confId, comId, when, comment],
+        },
+      ];
+      let lastInsErr = null;
+      for (const variant of insertVariants) {
+        try {
+          await query(variant.sql, variant.params);
+          lastInsErr = null;
+          break;
+        } catch (insColErr) {
+          lastInsErr = insColErr;
+          if (!(insColErr && insColErr.code === 'ER_BAD_FIELD_ERROR')) throw insColErr;
         }
       }
+      if (lastInsErr) throw lastInsErr;
     } catch (insertErr) {
-      // Course concurrente / UNIQUE (id_fiche, confirmation_day) → update
+      // Course concurrente / UNIQUE → update
       if (insertErr && insertErr.code === 'ER_DUP_ENTRY') {
         const dupId = await findExistingId();
         if (dupId) {
@@ -4786,8 +4881,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           const etatIdNum = Number(histo.id_etat);
           const fromCr =
             histo.from_compte_rendu === 1 ||
-            histo.from_compte_rendu === true ||
-            (etatIdNum === 8 && !histo.id_confirmateur);
+            histo.from_compte_rendu === true;
           // Historique : uniquement le confirmateur auteur du passage d'état.
           // Exception : CONFIRMER + SIGNER + Honoré à suivre (CR) → conf 1/2/3 depuis fiches_histo.
           const isConfirmerEtat = etatIdNum === 7;
@@ -5038,7 +5132,7 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           );
           if (crs && crs.length > 0) {
             historique = historique.map(histo => {
-              if (!(histo.from_compte_rendu === true || (histo.id_etat === 8 && !histo.id_confirmateur))) return histo;
+              if (histo.from_compte_rendu !== true && histo.from_compte_rendu !== 1) return histo;
               const histoDate = histo.date_creation ? new Date(histo.date_creation).getTime() : 0;
               const matching = crs.filter(cr =>
                 Number(cr.id_etat_final) === Number(histo.id_etat) &&
@@ -7503,17 +7597,18 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             });
           }
 
-          // Journaliser uniquement si code retapé + RDV réellement créé/déplacé
-          // Surplus = créneau qui DÉPASSE la capacité (ex. 3/2), pas à égalité (2/2).
-          if (allowUnavailable && incomingRdv !== previousRdv) {
-            const ctx = ficheData.slot_bypass_context && typeof ficheData.slot_bypass_context === 'object'
-              ? ficheData.slot_bypass_context
-              : {};
-            const isFermePolitique = !!policyClosed || !!ctx.policyClosed;
-            const isFermeDb = !!closedSlot || !!ctx.closed;
-            const isZeroDispo = !!ctx.zero;
+          // Journal bypass : uniquement si l'état passe à CONFIRMER, selon l'état réel
+          // du créneau (serveur). Le modal code / slot_bypass_context n'entre pas en compte.
+          const previousEtatForBypass = parseEtatId(fiche?.id_etat_final);
+          const etatChangeToConfirmer =
+            previousEtatForBypass !== 7 && targetEtatForSlotCheck === 7;
+
+          if (etatChangeToConfirmer) {
+            const isFermePolitique = !!policyClosed;
+            const isFermeDb = !!closedSlot;
 
             let isSurplus = false;
+            let isZeroDispo = false;
             try {
               const availRow = await queryOne(
                 `SELECT nbr_com FROM planning_availablity
@@ -7521,7 +7616,16 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
                  LIMIT 1`,
                 [week, year, dep, rdvDate, slotHour]
               );
-              const capacity = availRow?.nbr_com != null ? Number(availRow.nbr_com) : NaN;
+              const rawCapacity = availRow?.nbr_com;
+              const hasCapacityValue =
+                rawCapacity !== undefined && rawCapacity !== null && rawCapacity !== '';
+              const capacity = hasCapacityValue ? Number(rawCapacity) : NaN;
+
+              // 0 dispo ou aucune valeur de disponibilité sur le créneau
+              if (!hasCapacityValue || !Number.isFinite(capacity) || capacity <= 0) {
+                isZeroDispo = true;
+              }
+
               const slotRanges = {
                 '09:00:00': ['09:00:00', '10:59:59'],
                 '11:00:00': ['11:00:00', '12:59:59'],
@@ -7531,7 +7635,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
                 '19:30:00': ['19:30:00', '20:00:00'],
               };
               const range = slotRanges[slotHour];
-              if (range && Number.isFinite(capacity)) {
+              // Surplus = dépassement après insertion (ex. 2/2 → 3/2), pas le plein exact
+              if (range && Number.isFinite(capacity) && capacity > 0) {
                 const countRow = await queryOne(
                   `SELECT COUNT(*) AS nb
                    FROM fiches f
@@ -7545,20 +7650,11 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
                      AND LPAD(LEFT(TRIM(COALESCE(f.cp, '')), 2), 2, '0') = ?`,
                   [`${rdvDate} ${range[0]}`, `${rdvDate} ${range[1]}`, parseInt(id, 10), dep]
                 );
-                // +1 = ce RDV après placement ; surplus seulement si on dépasse (pas 2/2)
                 const countAfter = Number(countRow?.nb || 0) + 1;
-                if (capacity <= 0) {
-                  isSurplus = countAfter > 0;
-                } else {
-                  isSurplus = countAfter > capacity;
-                }
-              } else {
-                // Repli : ne croire le front que s'il affirme déjà un dépassement
-                isSurplus = !!ctx.surplus;
+                isSurplus = countAfter > capacity;
               }
             } catch (surplusErr) {
-              console.warn('[bypass] calcul surplus ignoré:', surplusErr?.message);
-              isSurplus = !!ctx.surplus;
+              console.warn('[bypass] calcul créneau ignoré:', surplusErr?.message);
             }
 
             const motifs = [];
@@ -7567,8 +7663,6 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             if (isSurplus) motifs.push('surplus');
             if (isZeroDispo) motifs.push('zero_dispo');
 
-            // N'écrire dans rdv_creneau_code_bypass que s'il y a un vrai motif
-            // (surplus uniquement en dépassement, ou créneau fermé / 0 dispo)
             if (motifs.length > 0) {
               slotBypassLog = {
                 id_fiche: parseInt(id, 10),

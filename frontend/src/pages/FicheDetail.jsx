@@ -11831,6 +11831,13 @@ const PlanningViewForModal = ({
                       if (totalRdvInSlot === Number(displayAvailability)) return '#ff9800';
                       return '#ffc107';
                     })();
+                    // Texte rouge si blindé (plein exact, ex. 2/2) ou surplus (ex. 3/2 / 0 dispo)
+                    const isBlindOrSurplusText =
+                      totalRdvInSlot > 0 &&
+                      (!hasPlanning ||
+                        Number(displayAvailability) <= 0 ||
+                        totalRdvInSlot >= Number(displayAvailability));
+                    const availabilityTextColor = isBlindOrSurplusText ? '#f44336' : '#000000';
                     
                     // Note: L'ID est masqué, on ne peut plus comparer directement
                     // On marque simplement le créneau si on a des RDV
@@ -11986,8 +11993,8 @@ const PlanningViewForModal = ({
                                 <span
                                   className="availability-text-compact"
                                   style={{
-                                    color: '#000000',
-                                    WebkitTextFillColor: '#000000',
+                                    color: availabilityTextColor,
+                                    WebkitTextFillColor: availabilityTextColor,
                                     fontWeight: 900,
                                     fontSize: '16px'
                                   }}

@@ -321,27 +321,52 @@ html body .fiches-table td.fiche-col-badge {
   font-size: 11px;
 }
 
-.fiche-badge-pdf {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border: none;
-  border-radius: 2px;
-  background: #dc2626;
-  color: #ffffff;
-  cursor: pointer;
-  padding: 0;
+/* PDF colonne : spécificité élevée + !important (écrase règles table/svg globales) */
+html body table.fiches-table button.fiche-badge-pdf,
+html body .fiches-table button.fiche-badge-pdf,
+html body .dashboard-page button.fiche-badge-pdf,
+html body .dashboard-admin-page button.fiche-badge-pdf,
+button.fiche-badge-pdf {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  border: none !important;
+  border-radius: 2px !important;
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  font-size: 9px !important;
+  box-sizing: border-box !important;
 }
 
-.fiche-badge-pdf:hover {
-  background: #b91c1c;
+html body table.fiches-table button.fiche-badge-pdf:hover,
+html body .fiches-table button.fiche-badge-pdf:hover,
+button.fiche-badge-pdf:hover {
+  background: #b91c1c !important;
 }
 
-.fiche-badge-pdf svg {
-  font-size: 10px;
-  color: #ffffff;
+html body table.fiches-table button.fiche-badge-pdf svg,
+html body .fiches-table button.fiche-badge-pdf svg,
+html body .dashboard-page button.fiche-badge-pdf svg,
+html body .dashboard-admin-page button.fiche-badge-pdf svg,
+button.fiche-badge-pdf svg {
+  width: 10px !important;
+  height: 10px !important;
+  min-width: 10px !important;
+  min-height: 10px !important;
+  max-width: 10px !important;
+  max-height: 10px !important;
+  font-size: 10px !important;
+  color: #ffffff !important;
+  fill: #ffffff !important;
 }
 
 .dashboard-decalage-mention.is-cancelled {

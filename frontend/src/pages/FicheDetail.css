@@ -2884,7 +2884,6 @@
   width: 100%;
   margin-top: 4px;
   background: #ffffff;
-  color: #1f2937;
   border-radius: 6px;
   padding: 8px;
   border: 1px solid #d1d5db;
@@ -2895,7 +2894,6 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  color: #1f2937;
 }
 
 .etat-actuel-card .etat-actuel-absence-couple-historique-table th {
@@ -2903,15 +2901,42 @@
   text-align: left;
   border-bottom: 1px solid #d1d5db;
   background: #f3f4f6;
-  color: #111827;
   font-weight: 700;
 }
 
 .etat-actuel-card .etat-actuel-absence-couple-historique-table td {
   padding: 6px 8px;
   border-bottom: 1px solid #f3f4f6;
-  color: #1f2937;
   vertical-align: top;
+}
+
+/* Historique absence couple : texte sombre sur fond blanc
+   (sinon .etat-actuel-card force color:#fff !important) */
+.etat-actuel-card .etat-actuel-absence-couple-historique,
+.etat-actuel-card .etat-actuel-absence-couple-historique *,
+.etat-actuel-card .etat-actuel-absence-couple-historique table,
+.etat-actuel-card .etat-actuel-absence-couple-historique th,
+.etat-actuel-card .etat-actuel-absence-couple-historique td,
+.etat-actuel-card .etat-actuel-absence-couple-historique span,
+.etat-actuel-card .etat-actuel-absence-couple-historique strong,
+.fiche-detail-modal-content .etat-actuel-card .etat-actuel-absence-couple-historique,
+.fiche-detail-modal-content .etat-actuel-card .etat-actuel-absence-couple-historique * {
+  color: #1f2937 !important;
+  -webkit-text-fill-color: #1f2937 !important;
+}
+.etat-actuel-card .etat-actuel-absence-couple-historique,
+.fiche-detail-modal-content .etat-actuel-card .etat-actuel-absence-couple-historique {
+  background-color: #ffffff !important;
+}
+.etat-actuel-card .etat-actuel-absence-couple-historique thead tr,
+.fiche-detail-modal-content .etat-actuel-card .etat-actuel-absence-couple-historique thead tr {
+  background-color: #f3f4f6 !important;
+}
+.etat-actuel-card .etat-actuel-absence-couple-historique th,
+.fiche-detail-modal-content .etat-actuel-card .etat-actuel-absence-couple-historique th {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  font-weight: 700 !important;
 }
 
 .etat-actuel-card .etat-actuel-rdv-seul-row .etat-actuel-modifier-validation-btn {

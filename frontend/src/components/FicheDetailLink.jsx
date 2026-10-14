@@ -21,7 +21,9 @@ const FicheDetailLink = ({ ficheHash, ficheId, className = 'btn-detail', childre
   };
 
   // Extraire les props qui ne doivent pas être passées à l'élément DOM
-  const { target, ...restProps } = props;
+  // onClick externe (ex. onDetail undefined depuis FicheAdminActionCell) ne doit pas
+  // écraser le handler qui ouvre le modal.
+  const { target, onClick: _ignoredOnClick, style: externalStyle, title: externalTitle, ...restProps } = props;
 
   // Si c'est un className de bouton avec icône, utiliser le style du bouton
   if (className && (className.includes('btn-detail') || className.includes('btn-detail-link') || className.includes('btn-icon'))) {
@@ -30,16 +32,16 @@ const FicheDetailLink = ({ ficheHash, ficheId, className = 'btn-detail', childre
       <button
         type="button"
         className={className}
-        onClick={handleClick}
-        title={restProps.title || "Voir les détails"}
+        title={externalTitle || "Voir les détails"}
         style={{ 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
           cursor: 'pointer',
-          ...restProps.style 
+          ...externalStyle 
         }}
         {...restProps}
+        onClick={handleClick}
       >
         <span
           style={{
@@ -78,8 +80,10 @@ const FicheDetailLink = ({ ficheHash, ficheId, className = 'btn-detail', childre
     <a
       href={`/fiches/${hash}`}
       className={className}
-      onClick={handleClick}
+      style={externalStyle}
+      title={externalTitle}
       {...restProps}
+      onClick={handleClick}
     >
       {children || 'Détails'}
     </a>
