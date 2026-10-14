@@ -38,6 +38,7 @@ const {
   commercialDisplaySql,
 } = require('../utils/commercialDisplayName');
 const { deleteDecalagesWhenLeavingConfirmer } = require('../utils/decalageOnEtatChange');
+const { normalizeIsR2Field } = require('../utils/ficheR2Placed');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -5366,13 +5367,16 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
 
     // Ajouter le hash et garder l'ID (nécessaire pour certaines opérations comme les décalages)
     const ficheIdValue = ficheEnrichie.id;
-    
+    // is_r2 normalisé (0|1|null) pour l’affichage du cadre « R2 — Infos R1 »
+    const isR2Normalized = normalizeIsR2Field(ficheEnrichie.is_r2);
+
     res.json({
       success: true,
       data: {
         ...ficheEnrichie,
         id: ficheIdValue, // Garder l'ID pour les opérations backend (décalages, etc.)
         hash: encodeFicheId(ficheIdValue),
+        is_r2: isR2Normalized,
         historique,
         affectations,
         comptes_rendus: comptesRendus
@@ -5656,8 +5660,19 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
         const parsed = parseInt(value, 10);
         dbValue = Number.isFinite(parsed) ? parsed : null;
       }
+    } else if (dbField === 'is_r2') {
+      // Ne pas utiliser `value || null` : 0 est falsy et serait perdu (→ null)
+      if (value === null || value === undefined || value === '') {
+        dbValue = null;
+      } else {
+        const s = String(value).trim().toUpperCase();
+        dbValue =
+          value === true || value === 1 || value === '1' || s === 'OUI' || s === 'TRUE' || s === 'YES'
+            ? 1
+            : 0;
+      }
     } else {
-      dbValue = value || null;
+      dbValue = value === 0 || value === false ? value : (value || null);
     }
 
     // Attribuer id_qualite_confirmation au premier enregistrement d'observation par un agent QC (fonction 4)
@@ -5681,6 +5696,20 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       `UPDATE fiches SET \`${dbField}\` = ?, date_modif_time = ? WHERE id = ?`,
       [dbValue, now, id]
     );
+
+    // is_r2 = 0 (NON) : vider les infos R1 pour ne plus afficher le cadre « R2 — Infos R1 »
+    if (dbField === 'is_r2' && dbValue === 0) {
+      try {
+        await query(
+          `UPDATE fiches
+           SET date_r1 = NULL, id_commercial_r1 = NULL, commentaire_r1 = NULL, date_modif_time = ?
+           WHERE id = ?`,
+          [now, id]
+        );
+      } catch (clearR1Err) {
+        console.error('Erreur clear champs R1 (is_r2=0):', clearR1Err?.message || clearR1Err);
+      }
+    }
 
     // Mode chauffage : garder conf_mode_chauffage et mode_chauffage synchronisés
     // (l'affichage préfère conf_mode_chauffage ; l'ancien champ mode_chauffage reste utilisé ailleurs)
@@ -8203,7 +8232,28 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
     for (const [key, value] of Object.entries(ficheData)) {
       if (value !== undefined && key !== 'id' && allowedFields.includes(key)) {
         fields.push(`\`${key}\` = ?`);
-        values.push(value === '' ? null : value);
+        if (key === 'is_r2') {
+          const n = normalizeIsR2Field(value);
+          values.push(n === null ? null : n);
+        } else {
+          values.push(value === '' ? null : value);
+        }
+      }
+    }
+
+    // is_r2 = 0 → forcer le vidage des infos R1 (cadre détail masqué)
+    if (Object.prototype.hasOwnProperty.call(ficheData, 'is_r2')) {
+      const n = normalizeIsR2Field(ficheData.is_r2);
+      if (n === 0) {
+        for (const r1Key of ['date_r1', 'id_commercial_r1', 'commentaire_r1']) {
+          const idx = fields.findIndex((f) => f === `\`${r1Key}\` = ?`);
+          if (idx >= 0) {
+            values[idx] = null;
+          } else {
+            fields.push(`\`${r1Key}\` = ?`);
+            values.push(null);
+          }
+        }
       }
     }
 

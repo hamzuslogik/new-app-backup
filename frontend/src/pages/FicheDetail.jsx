@@ -11,7 +11,7 @@ import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { getEtatsGroupedByPhase } from '../utils/etatsByPhase';
 import { formatRdvDateTime, formatRdvDateOnly, formatRdvTimeOnly } from '../utils/formatRdvDateTime';
 import { splitSlotDisplayName } from '../utils/splitSlotDisplayName';
-import { ficheHasR2Placed } from '../utils/ficheR2Placed';
+import { ficheHasR2Placed, normalizeIsR2Field } from '../utils/ficheR2Placed';
 import {
   shouldDisplayDecalageRequest,
   isRdvDatePastByAtLeastOneDay,
@@ -602,11 +602,9 @@ const EMPTY_CONF_FORM_BASE = {
   commentaire_r1: '',
 };
 
-/** Normalise is_r2 → 0 | 1 | null */
+/** Normalise is_r2 → 0 | 1 | null (Buffer MySQL, OUI/NON, 0/1, …) */
 function normalizeIsR2Value(v) {
-  if (v === 'OUI' || v === 1 || v === '1' || v === true) return 1;
-  if (v === 'NON' || v === 0 || v === '0' || v === false) return 0;
-  return null;
+  return normalizeIsR2Field(v);
 }
 
 /** datetime-local → MySQL DATETIME */
@@ -938,16 +936,15 @@ function buildConfFormStateFromFiche(ficheData, user) {
           : ''
       )
     ),
-    is_r2:
-      ficheData.is_r2 === 1 || ficheData.is_r2 === '1' || ficheData.is_r2 === true
-        ? 'OUI'
-        : ficheData.is_r2 === 0 || ficheData.is_r2 === '0' || ficheData.is_r2 === false
-          ? 'NON'
-          : lastConf?.is_r2 === 1 || lastConf?.is_r2 === '1' || lastConf?.is_r2 === true
-            ? 'OUI'
-            : lastConf?.is_r2 === 0 || lastConf?.is_r2 === '0' || lastConf?.is_r2 === false
-              ? 'NON'
-              : '',
+    is_r2: (() => {
+      const fromFiche = normalizeIsR2Field(ficheData.is_r2);
+      if (fromFiche === 1) return 'OUI';
+      if (fromFiche === 0) return 'NON';
+      const fromHisto = normalizeIsR2Field(lastConf?.is_r2);
+      if (fromHisto === 1) return 'OUI';
+      if (fromHisto === 0) return 'NON';
+      return '';
+    })(),
     date_r1: mysqlToDatetimeLocal(ficheData.date_r1 || lastConf?.date_r1),
     id_commercial_r1: strOrEmpty(
       pickConfPrefillValue(
@@ -7377,11 +7374,12 @@ const FicheDetail = ({
                         </div>
                       )}
 
-                      {/* Cadre R2 / R1 — bas de l'état actuel CONFIRMER (Admin, Backoffice, RE/RP Confirmation, Commercial) */}
+                      {/* Cadre R2 / R1 — uniquement si is_r2 = 1 (masqué si 0 / NON / null) */}
                       {(() => {
                         const canSeeR2R1Box = [1, 5, 7, 11, 13, 14].includes(Number(user?.fonction));
                         const isConfirmerActuel = isEtatConfirmerLike(etatActuel.id_etat, etatActuel.etat_titre);
-                        const isR2Oui = normalizeIsR2Value(fiche.is_r2) === 1;
+                        // Strict : n'afficher que lorsque le flag fiche est explicitement OUI (1)
+                        const isR2Oui = normalizeIsR2Field(fiche?.is_r2) === 1;
                         if (!canSeeR2R1Box || !isConfirmerActuel || !isR2Oui) return null;
 
                         const hasColor =
