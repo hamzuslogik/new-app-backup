@@ -3319,7 +3319,6 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   line-height: 1.35 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
-  font-weight: 600 !important;
 }
 
 .fiche-detail-modal-content .field-label,
@@ -3359,20 +3358,27 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   line-height: 1 !important;
 }
 
-.fiche-detail-modal-content .field-label {
-  font-weight: 700 !important;
+/* Infos fiche : labels normaux, données en gras */
+.fiche-detail-modal-content .field-label,
+.fiche-detail-modal-content .fiche-details-table .field-label,
+.fiche-detail-modal-content .fiche-detail .field-label {
+  font-weight: 500 !important;
 }
 
-.fiche-detail-modal-content .field-value {
+.fiche-detail-modal-content .field-value,
+.fiche-detail-modal-content .fiche-details-table .field-value,
+.fiche-detail-modal-content .fiche-detail .field-value {
   font-size: 14px !important;
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
   white-space: normal !important;
   max-width: 100% !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
 }
 
-.fiche-detail-modal-content .field-display {
+.fiche-detail-modal-content .field-display,
+.fiche-detail-modal-content .fiche-details-table .field-display,
+.fiche-detail-modal-content .field-value .field-display {
   padding: 0 !important;
   line-height: 1.4 !important;
   font-size: 14px !important;
@@ -3381,7 +3387,12 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
   overflow-wrap: break-word !important;
   white-space: normal !important;
   max-width: 100% !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
+}
+
+.fiche-detail-modal-content .field-value > .field-display,
+.fiche-detail-modal-content .field-value > span:not(.edit-controls):not(.edit-controls-bulk) {
+  font-weight: 700 !important;
 }
 
 .fiche-detail-modal-content .fiche-details-table {
@@ -4039,7 +4050,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
     font-size: 15px !important;
     line-height: 1.4 !important;
     max-height: none !important;
-    font-weight: 700 !important;
+    font-weight: 500 !important;
     margin: 0 !important;
     width: auto !important;
   }
@@ -4054,6 +4065,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
     line-height: 1.4 !important;
     max-height: none !important;
     margin: 0 !important;
+    font-weight: 700 !important;
   }
 
   /* Boutons de modification alignés à droite */
@@ -4198,7 +4210,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
     font-size: 15px !important;
     line-height: 1.4 !important;
     max-height: none !important;
-    font-weight: 700 !important;
+    font-weight: 500 !important;
   }
 
   /* Valeurs au centre avec 30% de largeur */
@@ -4210,7 +4222,7 @@ html.dashboard-page[data-desktop-viewport] .confirmateurs-table {
     font-size: 15px !important;
     line-height: 1.4 !important;
     max-height: none !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
   }
 
   /* Boutons de modification alignés à droite */

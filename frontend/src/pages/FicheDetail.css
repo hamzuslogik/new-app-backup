@@ -2656,15 +2656,24 @@
   line-height: 1.4 !important;
 }
 
-/* Modal : données en gras, labels non gras */
-.fiche-detail-modal-content .field-label {
+/* Modal infos fiche : données en gras, labels non gras */
+.fiche-detail-modal-content .field-label,
+.fiche-detail-modal-content .fiche-details-table .field-label,
+.fiche-detail-modal-content .fiche-detail .field-label,
+.fiche-detail-page .field-label,
+.fiche-detail-page .fiche-details-table .field-label {
   font-weight: 500 !important;
 }
 
 .fiche-detail-modal-content .field-value,
 .fiche-detail-modal-content .field-display,
-.fiche-detail-modal-content .field-value *,
-.fiche-detail-modal-content .field-display * {
+.fiche-detail-modal-content .fiche-details-table .field-value,
+.fiche-detail-modal-content .fiche-details-table .field-display,
+.fiche-detail-modal-content .field-value > .field-display,
+.fiche-detail-page .field-value,
+.fiche-detail-page .field-display,
+.fiche-detail-page .fiche-details-table .field-value,
+.fiche-detail-page .fiche-details-table .field-display {
   font-weight: 700 !important;
 }
 
