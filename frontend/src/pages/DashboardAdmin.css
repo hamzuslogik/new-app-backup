@@ -1456,10 +1456,10 @@ body.dashboard-admin-page {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 18px;
+  height: 18px;
   border: none;
-  border-radius: 3px;
+  border-radius: 2px;
   background: #dc2626;
   color: #ffffff;
   cursor: pointer;
@@ -1471,7 +1471,7 @@ body.dashboard-admin-page {
 }
 
 .fiche-badge-pdf svg {
-  font-size: 13px;
+  font-size: 10px;
   color: #ffffff;
 }
 
