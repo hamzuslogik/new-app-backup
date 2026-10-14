@@ -261,6 +261,50 @@ function mysqlDateOnlyFromValue(value) {
 }
 
 /**
+ * Fiches avec CR Signer encore pending dont la date de signature (mods.date_sign_time,
+ * sinon date_creation du CR) tombe dans [startDatetime, endDatetime].
+ */
+async function getPendingSignerFicheIdsInDateRange(startDatetime, endDatetime) {
+  if (!startDatetime || !endDatetime) return [];
+  let rows;
+  try {
+    rows = await query(
+      `SELECT id_fiche, modifications, date_creation
+       FROM compte_rendu_pending
+       WHERE statut = 'pending'
+         AND id_etat_final IN (13, 44, 45)`
+    );
+  } catch (err) {
+    console.warn('[fiches] pending signer CR ignorés:', err?.message);
+    return [];
+  }
+  const startTs = new Date(String(startDatetime).replace(' ', 'T')).getTime();
+  const endTs = new Date(String(endDatetime).replace(' ', 'T')).getTime();
+  if (!Number.isFinite(startTs) || !Number.isFinite(endTs)) return [];
+
+  const ids = new Set();
+  for (const row of rows || []) {
+    let mods = row.modifications;
+    if (typeof mods === 'string') {
+      try {
+        mods = JSON.parse(mods);
+      } catch (_) {
+        mods = {};
+      }
+    }
+    const signNorm =
+      normalizeMysqlDateTimeValue(mods?.date_sign_time) ||
+      normalizeMysqlDateTimeValue(row.date_creation);
+    if (!signNorm) continue;
+    const t = new Date(signNorm.replace(' ', 'T')).getTime();
+    if (!Number.isFinite(t) || t < startTs || t > endTs) continue;
+    const ficheId = Number(row.id_fiche);
+    if (Number.isFinite(ficheId) && ficheId > 0) ids.add(ficheId);
+  }
+  return [...ids];
+}
+
+/**
  * Alimente la table confirmations au passage CONFIRMER (7) avec l'heure système locale.
  * Anti-doublon strict : 1 ligne max par (id_fiche, jour de confirmation).
  * Les schémas ont parfois confirmation_day ET date_confirmation_date (legacy) :
@@ -1260,12 +1304,24 @@ router.get('/', authenticate, async (req, res) => {
       rdv_non_affilie,
       sgn_week,
       sgn_month,
+      sgn_include_pending,
       yesterday,
       tomorrow,
       include_ko,
       sort_by,
       sort_dir
     } = req.query;
+
+    const includePendingSignatures =
+      sgn_include_pending === 1 ||
+      sgn_include_pending === '1' ||
+      sgn_include_pending === true ||
+      sgn_include_pending === 'true';
+    /** Signés semaine/mois : TOUT SIGNER + CR Signer pending (même plage date_sign). */
+    const deferToutSignerWithPending =
+      includePendingSignatures &&
+      String(id_etat_final ?? '').trim() === 't_s' &&
+      String(date_champ || '') === 'date_sign_time';
 
     /** Variantes de recherche téléphone (avec/sans 0, espaces, +33) — aligné Dashboard / URL */
     const buildPhoneSearchVariants = (raw) => {
@@ -1631,12 +1687,16 @@ router.get('/', authenticate, async (req, res) => {
     if (!statsDrillHandled && idEtatFinalForWhere !== undefined && idEtatFinalForWhere !== null && idEtatFinalForWhere !== '') {
       const etatFinalRaw = String(idEtatFinalForWhere).trim();
       if (etatFinalRaw === 't_s') {
-        // TOUT SIGNER : tous les états de la phase 3 (groupe Signer)
-        whereConditions.push(`EXISTS (
-          SELECT 1 FROM etats e_ts
-          WHERE e_ts.id = fiche.id_etat_final
-          AND (CAST(e_ts.groupe AS CHAR) = '3' OR e_ts.groupe = 3)
-        )`);
+        if (deferToutSignerWithPending) {
+          // Combiné plus bas avec date_sign_time (approuvés groupe 3 OU CR Signer pending)
+        } else {
+          // TOUT SIGNER : tous les états de la phase 3 (groupe Signer)
+          whereConditions.push(`EXISTS (
+            SELECT 1 FROM etats e_ts
+            WHERE e_ts.id = fiche.id_etat_final
+            AND (CAST(e_ts.groupe AS CHAR) = '3' OR e_ts.groupe = 3)
+          )`);
+        }
       } else {
         const etatFinal = Array.isArray(idEtatFinalForWhere) ? idEtatFinalForWhere : [idEtatFinalForWhere];
         const etatIds = etatFinal.map(e => parseInt(e, 10)).filter(n => !Number.isNaN(n));
@@ -2063,6 +2123,29 @@ router.get('/', authenticate, async (req, res) => {
             )`);
             params.push(endTimestamp, histoDate);
           }
+        } else if (deferToutSignerWithPending && date_champ === 'date_sign_time') {
+          // Signés semaine/mois : SIGNER (date_sign_time) OU CR Signer pending dans la plage
+          const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
+          const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
+          const pendingIds = await getPendingSignerFicheIdsInDateRange(startDatetime, endDatetime);
+          const pendingSql = pendingIds.length > 0
+            ? `fiche.id IN (${pendingIds.map(() => '?').join(',')})`
+            : '0';
+          whereConditions.push(`(
+            (
+              EXISTS (
+                SELECT 1 FROM etats e_ts
+                WHERE e_ts.id = fiche.id_etat_final
+                  AND (CAST(e_ts.groupe AS CHAR) = '3' OR e_ts.groupe = 3)
+              )
+              AND fiche.date_sign_time IS NOT NULL
+              AND fiche.date_sign_time != ''
+              AND fiche.date_sign_time >= ?
+              AND fiche.date_sign_time <= ?
+            )
+            OR ${pendingSql}
+          )`);
+          params.push(startDatetime, endDatetime, ...pendingIds);
         } else {
           // Pour les autres champs de date (datetime)
           // S'assurer que la colonne de date n'est pas NULL ou vide
@@ -2418,6 +2501,52 @@ router.get('/', authenticate, async (req, res) => {
           fiche.commercial_signature_pseudo = row.commercial_signature_pseudo || null;
           fiche.commercial_2_signature_pseudo = row.commercial_2_signature_pseudo || null;
         });
+      }
+
+      // CR Signer pending : flag + date_sign_time affichée depuis le CR (fiche encore hors état SIGNER)
+      if (includePendingSignatures && fiches.length > 0) {
+        try {
+          const ficheIds = fiches.map((f) => Number(f.id)).filter((id) => id > 0);
+          const pendingByFiche = new Map();
+          for (const chunk of chunkArray(ficheIds, FICHE_IDS_IN_CHUNK)) {
+            const placeholders = chunk.map(() => '?').join(',');
+            const pendingRows = await query(
+              `SELECT id_fiche, modifications, date_creation
+               FROM compte_rendu_pending
+               WHERE statut = 'pending'
+                 AND id_etat_final IN (13, 44, 45)
+                 AND id_fiche IN (${placeholders})`,
+              chunk
+            );
+            for (const row of pendingRows || []) {
+              let mods = row.modifications;
+              if (typeof mods === 'string') {
+                try {
+                  mods = JSON.parse(mods);
+                } catch (_) {
+                  mods = {};
+                }
+              }
+              const signNorm =
+                normalizeMysqlDateTimeValue(mods?.date_sign_time) ||
+                normalizeMysqlDateTimeValue(row.date_creation);
+              pendingByFiche.set(Number(row.id_fiche), signNorm);
+            }
+          }
+          fiches.forEach((fiche) => {
+            const pendingSign = pendingByFiche.get(Number(fiche.id));
+            if (pendingSign == null) {
+              fiche.signature_cr_pending = false;
+              return;
+            }
+            fiche.signature_cr_pending = true;
+            if (!fiche.date_sign_time) {
+              fiche.date_sign_time = toLocalDatetimeString(pendingSign);
+            }
+          });
+        } catch (pendingEnrichErr) {
+          console.warn('[fiches] enrichissement CR signer pending ignoré:', pendingEnrichErr?.message);
+        }
       }
     }
 

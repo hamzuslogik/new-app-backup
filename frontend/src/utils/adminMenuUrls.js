@@ -207,12 +207,51 @@ export function dashboardSearchUrl(extra = {}) {
   return `/dashboard${qs({ fiche_search: 1, ...extra })}`;
 }
 
+/** CR Signer du jour (pending + approved) → page Compte rendu. */
+export function signaturesAujourdhuiUrl(now = new Date()) {
+  return `/compte-rendu${qs({ signer: 1, statut: 'all', date: toLocalISODate(now) })}`;
+}
+
+/** Signés (TOUT SIGNER) pour une journée (date_sign_time) + CR Signer pending. */
+export function signesJourUrl(dateStr) {
+  return dashboardSearchUrl({
+    id_etat_final: 't_s',
+    date_champ: 'date_sign_time',
+    date_debut: dateStr,
+    date_fin: dateStr,
+    time_debut: '00:00:00',
+    time_fin: '23:59:59',
+    sgn_include_pending: 1,
+  });
+}
+
+/**
+ * Lien Lundi / Mardi / Mercredi / Jeudi du menu Signatures.
+ * weekday: 1=lundi … 4=jeudi.
+ * Si ce jour = aujourd'hui → Signatures d'aujourd'hui (CR pending+approved),
+ * sinon → signés de ce jour (semaine courante).
+ */
+export function signaturesWeekdayMenuUrl(weekday, now = new Date()) {
+  const dayDate = addDaysLocal(startOfWeekLocal(now), Number(weekday) - 1);
+  const dayStr = toLocalISODate(dayDate);
+  if (dayStr === toLocalISODate(now)) return signaturesAujourdhuiUrl(now);
+  return signesJourUrl(dayStr);
+}
+
 export function adminMenuUrls(now = new Date()) {
   const today = toLocalISODate(now);
   const yesterday = toLocalISODate(addDaysLocal(now, -1));
   const tomorrow = toLocalISODate(addDaysLocal(now, 1));
-  const weekStart = toLocalISODate(startOfWeekLocal(now));
+  const weekStartDate = startOfWeekLocal(now);
+  const weekStart = toLocalISODate(weekStartDate);
   const monthStart = toLocalISODate(startOfMonthLocal(now));
+  const isSunday = now.getDay() === 0;
+  // Dimanche → semaine passée (lundi→dimanche de la semaine ISO qui se termine aujourd'hui)
+  // Sinon → lundi de la semaine → aujourd'hui
+  const signesSemaineDebut = weekStart;
+  const signesSemaineFin = today;
+  const prevWeekStart = toLocalISODate(addDaysLocal(weekStartDate, -7));
+  const prevWeekEnd = toLocalISODate(addDaysLocal(weekStartDate, -1));
 
   return {
     dashboard: '/dashboard',
@@ -257,13 +296,26 @@ export function adminMenuUrls(now = new Date()) {
         time_debut: '00:00:00',
         time_fin: '23:59:59',
       }),
+    /** CR Signer du jour : non approuvés + approuvés */
+    signaturesAujourdhui: signaturesAujourdhuiUrl(now),
     signesSemaine: dashboardSearchUrl({
       id_etat_final: 't_s',
       date_champ: 'date_sign_time',
-      date_debut: weekStart,
-      date_fin: today,
+      // Dimanche : lundi→dimanche de la semaine écoulée (= weekStart→today)
+      date_debut: signesSemaineDebut,
+      date_fin: signesSemaineFin,
       time_debut: '00:00:00',
       time_fin: '23:59:59',
+      sgn_include_pending: 1,
+    }),
+    signesSemainePrecedente: dashboardSearchUrl({
+      id_etat_final: 't_s',
+      date_champ: 'date_sign_time',
+      date_debut: prevWeekStart,
+      date_fin: prevWeekEnd,
+      time_debut: '00:00:00',
+      time_fin: '23:59:59',
+      sgn_include_pending: 1,
     }),
     signesMois: dashboardSearchUrl({
       id_etat_final: 't_s',
@@ -272,7 +324,12 @@ export function adminMenuUrls(now = new Date()) {
       date_fin: today,
       time_debut: '00:00:00',
       time_fin: '23:59:59',
+      sgn_include_pending: 1,
     }),
+    signaturesLundi: signaturesWeekdayMenuUrl(1, now),
+    signaturesMardi: signaturesWeekdayMenuUrl(2, now),
+    signaturesMercredi: signaturesWeekdayMenuUrl(3, now),
+    signaturesJeudi: signaturesWeekdayMenuUrl(4, now),
     cqSignatures: '/cq-signatures',
     decalages: '/decalages',
     rdvJourNonValides: dashboardSearchUrl({
@@ -302,7 +359,18 @@ export function adminMenuUrls(now = new Date()) {
     systemMessages: '/system-messages',
     envoyerMessage: '/messages?compose=1',
     // utilisé for labels / tests
-    _dates: { today, yesterday, tomorrow, weekStart, monthStart },
+    _dates: {
+      today,
+      yesterday,
+      tomorrow,
+      weekStart,
+      monthStart,
+      prevWeekStart,
+      prevWeekEnd,
+      isSunday,
+      signesSemaineDebut,
+      signesSemaineFin,
+    },
   };
 }
 

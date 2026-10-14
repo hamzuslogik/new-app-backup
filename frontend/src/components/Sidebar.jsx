@@ -55,6 +55,9 @@ const Sidebar = ({ collapsed }) => {
   const fonctionId = user?.fonction;
   const homePage = useUserHomePage();
   const urls = useMemo(() => adminMenuUrls(), []);
+  const todayWeekday = new Date().getDay(); // 0=dim … 1=lun … 4=jeu
+  const signaturesDayLabel = (weekdayNum, fallback) =>
+    todayWeekday === weekdayNum ? "Signatures d'aujourd'hui" : fallback;
   const [openGroups, setOpenGroups] = useState({
     plannings: true,
     dep: false,
@@ -740,8 +743,18 @@ const Sidebar = ({ collapsed }) => {
         {openGroups.signatures && !collapsed && (
           <ul className="sidebar-submenu">
             <li>
+              <NavLink to={urls.signaturesAujourdhui} className={classFor(urls.signaturesAujourdhui)}>
+                <span>Signatures d&apos;aujourd&apos;hui</span>
+              </NavLink>
+            </li>
+            <li>
               <NavLink to={urls.signesSemaine} className={classFor(urls.signesSemaine)}>
                 <span>Signés de la semaine</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.signesSemainePrecedente} className={classFor(urls.signesSemainePrecedente)}>
+                <span>Signés semaine précédente</span>
               </NavLink>
             </li>
             <li>
@@ -752,6 +765,26 @@ const Sidebar = ({ collapsed }) => {
             <li>
               <NavLink to={urls.cqSignatures} className={nestedLinkClass}>
                 <span>CQ signatures</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.signaturesLundi} className={classFor(urls.signaturesLundi)}>
+                <span>{signaturesDayLabel(1, 'Lundi')}</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.signaturesMardi} className={classFor(urls.signaturesMardi)}>
+                <span>{signaturesDayLabel(2, 'Mardi')}</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.signaturesMercredi} className={classFor(urls.signaturesMercredi)}>
+                <span>{signaturesDayLabel(3, 'Mercredi')}</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to={urls.signaturesJeudi} className={classFor(urls.signaturesJeudi)}>
+                <span>{signaturesDayLabel(4, 'Jeudi')}</span>
               </NavLink>
             </li>
           </ul>

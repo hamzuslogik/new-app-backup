@@ -130,6 +130,7 @@ function dashboardUrlHasNarrowingCriteria(params) {
     q('rdv_non_affilie') ||
     q('sgn_week') ||
     q('sgn_month') ||
+    q('sgn_include_pending') ||
     q('prof_ret') ||
     q('prof_celib') ||
     q('include_ko') ||
