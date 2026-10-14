@@ -13,7 +13,11 @@ import './Planning.css';
 import useForceDesktopViewport from '../hooks/useForceDesktopViewport';
 import { splitSlotDisplayName } from '../utils/splitSlotDisplayName';
 import { ficheHasR2Placed } from '../utils/ficheR2Placed';
-import { isPolicyClosedSlot } from '../utils/planningSlotPolicy';
+import {
+  isPolicyClosedSlot,
+  isSlotVisuallyClosed,
+  isDbClosedAvailabilityCell,
+} from '../utils/planningSlotPolicy';
 
 // Helper pour obtenir le numéro de semaine ISO
 function getWeekNumber(date = new Date()) {
@@ -685,7 +689,14 @@ const PlanningView = ({ planning, days, timeSlots, getUserColor, getUserName, ge
                     const isBlocked = availabilityValue === 0;
                     // Vérifier si le créneau est fermé
                     const availData = availability?.[day.date]?.[slot.hour];
-                    const isClosed = availData?.is_closed === 1 || isPolicyClosedSlot(dep, day.date, slot.hour);
+                    const policyClosed = isPolicyClosedSlot(dep, day.date, slot.hour)
+                      || Number(availData?.is_policy_closed) === 1;
+                    const dbClosed = isDbClosedAvailabilityCell(availData, policyClosed);
+                    const isClosed = isSlotVisuallyClosed({
+                      policyClosed,
+                      dbClosed,
+                      availabilityCount: hasPlanning ? availabilityValue : (availData?.nbr_com ?? null),
+                    });
                     const bgColor = hasPlanning && availabilityValue > 0 ? getAvailabilityColor(rdvs.length, availabilityValue) : '#cccccc';
                     
                     return (
@@ -946,7 +957,14 @@ const AvailabilityView = ({ availability, planning, days, timeSlots, week, year,
                   const currentValue = hasLocalOverride
                     ? localAvailabilityOverrides[cellKey]
                     : (availData?.nbr_com ?? null); // null si pas de planning créé
-                  const isClosed = availData?.is_closed === 1 || isPolicyClosedSlot(dep, day.date, slot.hour);
+                  const policyClosed = isPolicyClosedSlot(dep, day.date, slot.hour)
+                    || Number(availData?.is_policy_closed) === 1;
+                  const dbClosed = isDbClosedAvailabilityCell(availData, policyClosed);
+                  const isClosed = isSlotVisuallyClosed({
+                    policyClosed,
+                    dbClosed,
+                    availabilityCount: currentValue,
+                  });
                   const isZero = currentValue === 0 || currentValue === '0';
                   
                   // Récupérer le nombre de RDV pris pour ce créneau

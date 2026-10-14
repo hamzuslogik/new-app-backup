@@ -90,9 +90,25 @@ function canCreateRdvOnPolicyClosedSlot(fonction) {
   return POLICY_CLOSED_CREATE_ALLOWED_FONCTIONS.has(Number(fonction));
 }
 
+/**
+ * Affichage noir « fermé » :
+ * - fermeture manuelle (DB) → toujours noir ;
+ * - fermeture par obligation (policy) → noir seulement sans disponibilité (> 0).
+ */
+function isSlotVisuallyClosed({ policyClosed = false, dbClosed = false, availabilityCount = null } = {}) {
+  const hasOpenAvailability =
+    availabilityCount != null &&
+    availabilityCount !== '' &&
+    Number.isFinite(Number(availabilityCount)) &&
+    Number(availabilityCount) > 0;
+  if (policyClosed) return !hasOpenAvailability;
+  return !!dbClosed;
+}
+
 module.exports = {
   isPolicyClosedSlot,
   canCreateRdvOnPolicyClosedSlot,
+  isSlotVisuallyClosed,
   normalizeDep,
   normalizeSlotHour,
   POLICY_CLOSED_CREATE_ALLOWED_FONCTIONS,

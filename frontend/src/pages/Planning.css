@@ -1031,6 +1031,18 @@ div.availability-view table.availability-table tbody tr td.time-slot-header span
   justify-content: center;
   gap: 4px;
   margin-top: 0;
+  position: relative;
+  z-index: 12;
+}
+
+/* Admin : champ dispo lisible sur créneaux noirs (policy / fermés) */
+.availability-cell.closed-slot .availability-input,
+.availability-cell.zero-slot .availability-input {
+  background: #ffffff !important;
+  color: #064E3B !important;
+  border-color: #86EFAC !important;
+  position: relative;
+  z-index: 12;
 }
 
 .availability-input {

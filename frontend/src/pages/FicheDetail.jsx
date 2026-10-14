@@ -41,7 +41,12 @@ import CompteRenduEarlyVerification from '../components/CompteRenduEarlyVerifica
 import CodeVerificationModal from '../components/CodeVerificationModal';
 import { isBeforeRdvDateTime, isRdvDateBeforeToday, formatLocalYmd } from '../utils/compteRenduEarlyVerification';
 import { resolveConfRevenuAfterTypeContratChange } from '../utils/revenuTypeContrat';
-import { isPolicyClosedSlot, canCreateRdvOnPolicyClosedSlot } from '../utils/planningSlotPolicy';
+import {
+  isPolicyClosedSlot,
+  canCreateRdvOnPolicyClosedSlot,
+  isSlotVisuallyClosed,
+  isDbClosedAvailabilityCell,
+} from '../utils/planningSlotPolicy';
 import { formatCommercialDisplayName } from '../utils/commercialDisplayName';
 import {
   normalizeSituationConjugaleForm,
@@ -11803,15 +11808,27 @@ const PlanningViewForModal = ({
                     const availabilityFromPlanning = dayPlanning?.av ?? null;
                     const availData = availability?.[day.date]?.[slot.hour];
                     const policyClosed = isPolicyClosedAvailabilityCell(availData, dep, day.date, slot.hour);
-                    const isClosed = availData?.is_closed === 1 || policyClosed;
                     const isPastCalendarDay = isRdvDateBeforeToday(day.date);
                     const canCreateOnThisClosedSlot = !policyClosed || canCreateRdvOnPolicyClosedSlot(user?.fonction);
                     const availabilityCount = availabilityFromPlanning !== null ? availabilityFromPlanning : (availData?.nbr_com ?? null);
                     // availability peut être null (pas de planning créé), 0 (bloqué), ou > 0 (disponible)
                     const hasPlanning = availabilityCount !== null && availabilityCount !== undefined;
                     const isBlocked = availabilityCount === 0;
+                    const dbClosed = isDbClosedAvailabilityCell(availData, policyClosed);
+                    const isClosed = isSlotVisuallyClosed({
+                      policyClosed,
+                      dbClosed,
+                      availabilityCount: hasPlanning ? availabilityCount : null,
+                    });
                     // Un créneau est disponible s'il a un planning avec disponibilité > 0, OU s'il n'a pas de planning mais n'est pas bloqué
                     const isAvailable = (hasPlanning && availabilityCount > 0) || (!hasPlanning && !isBlocked);
+                    // Confirmateur (et rôles autorisés) : bouton + même sur créneau policy fermé (noir) → warning + code
+                    const showCreateRdvBtn =
+                      !!onSelectSlot &&
+                      !canEdit &&
+                      !isPastCalendarDay &&
+                      canCreateOnThisClosedSlot &&
+                      (hasPlanning || policyClosed || (isAvailable && !isBlocked && !isClosed));
                     
                     // Total RDV dans le créneau = même liste que l’API (toutes les fiches du slot, toutes heures confondues)
                     const totalRdvInSlot = rdvs.length;
@@ -12014,7 +12031,7 @@ const PlanningViewForModal = ({
                                 </span>
                               )}
                             </div>
-                            {onSelectSlot && hasPlanning && !canEditThis && !isPastCalendarDay && canCreateOnThisClosedSlot && (
+                            {showCreateRdvBtn && (
                               <button
                                 type="button"
                                 className="planning-create-btn"
@@ -12023,7 +12040,11 @@ const PlanningViewForModal = ({
                                   e.stopPropagation();
                                   onSelectSlot(day.date, slot.hour);
                                 }}
-                                title={`Créer un rendez-vous le ${day.dayName} à ${slot.name}`}
+                                title={
+                                  policyClosed
+                                    ? `Créneau fermé par obligation — créer un RDV le ${day.dayName} à ${slot.name} (code requis)`
+                                    : `Créer un rendez-vous le ${day.dayName} à ${slot.name}`
+                                }
                                 aria-label="Créer un rendez-vous"
                                 style={{
                                   position: 'absolute',
@@ -12039,7 +12060,7 @@ const PlanningViewForModal = ({
                                   fontWeight: 900,
                                   lineHeight: 1,
                                   cursor: 'pointer',
-                                  zIndex: 12,
+                                  zIndex: 14,
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -12059,7 +12080,7 @@ const PlanningViewForModal = ({
                                   left: '50%',
                                   top: '50%',
                                   transform: 'translate(-50%, -50%)',
-                                  zIndex: 10,
+                                  zIndex: 14,
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: '3px'
@@ -12075,7 +12096,11 @@ const PlanningViewForModal = ({
                                     : ''}
                                   onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, String(e.target.value || '').replace(/\D/g, ''))}
                                   placeholder=""
-                                  title="Saisir la valeur puis cliquer sur Valider"
+                                  title={
+                                    policyClosed
+                                      ? 'Créneau fermé par obligation — admin : saisir une disponibilité pour ouvrir'
+                                      : 'Saisir la valeur puis cliquer sur Valider'
+                                  }
                                   style={{ width: '36px', minWidth: '36px', maxWidth: '36px', height: '22px', padding: '0 3px', fontSize: '11.5px', lineHeight: 1 }}
                                 />
                                 {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (
@@ -12107,9 +12132,9 @@ const PlanningViewForModal = ({
                               </div>
                             )}
                           </>
-                        ) : isAvailable && !isBlocked && !isClosed ? (
+                        ) : (isAvailable && !isBlocked && !isClosed) || (canEditThis && (policyClosed || isClosed)) || showCreateRdvBtn ? (
                           <>
-                            {onSelectSlot && !isPastCalendarDay && canCreateOnThisClosedSlot && (
+                            {showCreateRdvBtn && (
                               <button
                                 type="button"
                                 className="planning-create-btn"
@@ -12118,7 +12143,11 @@ const PlanningViewForModal = ({
                                   e.stopPropagation();
                                   onSelectSlot(day.date, slot.hour);
                                 }}
-                                title={`Créer un rendez-vous le ${day.dayName} à ${slot.name}`}
+                                title={
+                                  policyClosed
+                                    ? `Créneau fermé par obligation — créer un RDV le ${day.dayName} à ${slot.name} (code requis)`
+                                    : `Créer un rendez-vous le ${day.dayName} à ${slot.name}`
+                                }
                                 aria-label="Créer un rendez-vous"
                                 style={{
                                   position: 'absolute',
@@ -12134,7 +12163,7 @@ const PlanningViewForModal = ({
                                   fontWeight: 900,
                                   lineHeight: 1,
                                   cursor: 'pointer',
-                                  zIndex: 12,
+                                  zIndex: 14,
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -12154,7 +12183,7 @@ const PlanningViewForModal = ({
                                   left: '50%',
                                   top: '50%',
                                   transform: 'translate(-50%, -50%)',
-                                  zIndex: 10,
+                                  zIndex: 14,
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: '3px'
@@ -12170,7 +12199,11 @@ const PlanningViewForModal = ({
                                     : ''}
                                   onChange={(e) => handleCellAvailabilityChange(day.date, slot.hour, String(e.target.value || '').replace(/\D/g, ''))}
                                   placeholder=""
-                                  title="Saisir la valeur puis cliquer sur Valider"
+                                  title={
+                                    policyClosed
+                                      ? 'Créneau fermé par obligation — admin : saisir une disponibilité pour ouvrir'
+                                      : 'Saisir la valeur puis cliquer sur Valider'
+                                  }
                                   style={{ width: '36px', minWidth: '36px', maxWidth: '36px', height: '22px', padding: '0 3px', fontSize: '11.5px', lineHeight: 1 }}
                                 />
                                 {pendingAvailabilityEdits[`${day.date}-${slot.hour}`] !== undefined && (

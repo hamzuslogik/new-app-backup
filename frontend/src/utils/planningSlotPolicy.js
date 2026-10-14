@@ -75,3 +75,30 @@ export function isPolicyClosedSlot(dep, dateStr, hour) {
 export function canCreateRdvOnPolicyClosedSlot(fonction) {
   return POLICY_CLOSED_CREATE_ALLOWED_FONCTIONS.has(Number(fonction));
 }
+
+/**
+ * Affichage noir « fermé » :
+ * - fermeture manuelle (DB) → toujours noir ;
+ * - fermeture par obligation (policy) → noir seulement s'il n'y a pas de disponibilité (> 0).
+ * Dès qu'un admin saisit une disponibilité sur un créneau policy, le noir disparaît.
+ */
+export function isSlotVisuallyClosed({ policyClosed = false, dbClosed = false, availabilityCount = null } = {}) {
+  const hasOpenAvailability =
+    availabilityCount != null &&
+    availabilityCount !== '' &&
+    Number.isFinite(Number(availabilityCount)) &&
+    Number(availabilityCount) > 0;
+  if (policyClosed) return !hasOpenAvailability;
+  return !!dbClosed;
+}
+
+/** true si is_closed DB (sans confluer avec la policy). */
+export function isDbClosedAvailabilityCell(cell, policyClosed = false) {
+  if (!cell) return false;
+  if (cell.is_db_closed === 1 || cell.is_db_closed === true || cell.is_db_closed === '1') return true;
+  const closedFlag =
+    Number(cell.is_closed) === 1 || cell.is_closed === true || cell.is_closed === '1';
+  if (!closedFlag) return false;
+  // API historique : is_closed = db OR policy → ne compter DB que si pas policy
+  return !policyClosed;
+}

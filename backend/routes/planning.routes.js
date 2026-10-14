@@ -591,7 +591,8 @@ router.get('/availability', authenticate, async (req, res) => {
           nbr_com: av?.nbr_com ?? null, // null si pas de planning créé, 0 si bloqué
           force_crenaux: av?.force_crenaux || 0,
           is_closed: dbClosed || policyClosed, // fermé DB ou règle départementale
-          is_policy_closed: policyClosed
+          is_policy_closed: policyClosed,
+          is_db_closed: dbClosed,
         };
       });
     });
@@ -880,14 +881,26 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7, 11), async (r
         [week, year, dep, date, hour]
       );
 
+      const nbrComVal = parseInt(value, 10);
+      // Disponibilité > 0 : rouvrir en DB (le noir policy disparaît côté UI dès qu'il y a une dispo)
+      const reopenClosed = Number.isFinite(nbrComVal) && nbrComVal > 0 ? 0 : null;
       if (existing) {
         // Mettre à jour si existe
-        await query(
-          `UPDATE planning_availablity 
-           SET force_crenaux = 1, nbr_com = ?, date_modif = ?, date_modif_time = ?
-           WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
-          [parseInt(value), timestamp, dateModifTime, week, year, dep, date, hour]
-        );
+        if (reopenClosed === 0) {
+          await query(
+            `UPDATE planning_availablity 
+             SET force_crenaux = 1, nbr_com = ?, is_closed = 0, date_modif = ?, date_modif_time = ?
+             WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
+            [nbrComVal, timestamp, dateModifTime, week, year, dep, date, hour]
+          );
+        } else {
+          await query(
+            `UPDATE planning_availablity 
+             SET force_crenaux = 1, nbr_com = ?, date_modif = ?, date_modif_time = ?
+             WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
+            [nbrComVal, timestamp, dateModifTime, week, year, dep, date, hour]
+          );
+        }
         updatedAtLeastOne = true;
       } else {
         // Créer si n'existe pas
@@ -895,7 +908,7 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7, 11), async (r
           `INSERT INTO planning_availablity 
            (week, year, dep, date_day, hour, force_crenaux, nbr_com, is_closed, date_modif, date_modif_time)
            VALUES (?, ?, ?, ?, ?, 1, ?, 0, ?, ?)`,
-          [week, year, dep, date, hour, parseInt(value), timestamp, dateModifTime]
+          [week, year, dep, date, hour, nbrComVal, timestamp, dateModifTime]
         );
         createdAtLeastOne = true;
       }
@@ -922,6 +935,8 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7, 11), async (r
       });
     } else if (type === 'day') {
       // Modifier tous les créneaux d'un jour
+      const nbrComDay = parseInt(value, 10);
+      const reopenDay = Number.isFinite(nbrComDay) && nbrComDay > 0;
       // Pour chaque créneau horaire, mettre à jour ou créer
       for (const slot of TIME_SLOTS) {
         const existing = await queryOne(
@@ -931,19 +946,28 @@ router.put('/availability', authenticate, checkPermission(1, 2, 7, 11), async (r
         );
 
         if (existing) {
-          await query(
-            `UPDATE planning_availablity 
-             SET nbr_com = ?, date_modif = ?, date_modif_time = ?
-             WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
-            [parseInt(value), timestamp, dateModifTime, week, year, dep, date, slot.hour]
-          );
+          if (reopenDay) {
+            await query(
+              `UPDATE planning_availablity 
+               SET nbr_com = ?, is_closed = 0, force_crenaux = 1, date_modif = ?, date_modif_time = ?
+               WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
+              [nbrComDay, timestamp, dateModifTime, week, year, dep, date, slot.hour]
+            );
+          } else {
+            await query(
+              `UPDATE planning_availablity 
+               SET nbr_com = ?, date_modif = ?, date_modif_time = ?
+               WHERE week = ? AND year = ? AND dep = ? AND date_day = ? AND hour = ?`,
+              [nbrComDay, timestamp, dateModifTime, week, year, dep, date, slot.hour]
+            );
+          }
           updatedAtLeastOne = true;
         } else {
           await query(
             `INSERT INTO planning_availablity 
              (week, year, dep, date_day, hour, force_crenaux, nbr_com, is_closed, date_modif, date_modif_time)
              VALUES (?, ?, ?, ?, ?, 0, ?, 0, ?, ?)`,
-            [week, year, dep, date, slot.hour, parseInt(value), timestamp, dateModifTime]
+            [week, year, dep, date, slot.hour, nbrComDay, timestamp, dateModifTime]
           );
           createdAtLeastOne = true;
         }
