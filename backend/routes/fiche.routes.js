@@ -37,6 +37,7 @@ const {
   formatCommercialDisplayName,
   commercialDisplaySql,
 } = require('../utils/commercialDisplayName');
+const { deleteDecalagesWhenLeavingConfirmer } = require('../utils/decalageOnEtatChange');
 
 // Clé secrète pour encoder/décoder les IDs (à mettre dans .env en production)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
@@ -5534,6 +5535,7 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       const newEtatId = parseInt(value);
       
       if (oldEtatId === 7 && newEtatId !== 7) {
+        await deleteDecalagesWhenLeavingConfirmer(id, oldEtatId, newEtatId);
         // Récupérer le groupe du nouvel état
         const newEtat = await queryOne(
           'SELECT groupe FROM etats WHERE id = ?',
@@ -6480,6 +6482,8 @@ router.put('/:id/etat-rapide', hashToIdMiddleware, authenticate, triggerWorkflow
     const newEtatId = parseInt(id_etat_final);
     const now = toMysqlLocalDateTime();
 
+    await deleteDecalagesWhenLeavingConfirmer(id, oldEtatId, newEtatId);
+
     // Attribuer id_qualite au nouvel agent qualité qui modifie l'état (fiche non verrouillée)
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
     if (isQualiteUser) {
@@ -6714,6 +6718,8 @@ router.put('/:hash/valider-qualite', authenticate, hashToIdMiddleware, triggerWo
     const newEtatId = etatEnAttente.id;
     const now = toMysqlLocalDateTime();
 
+    await deleteDecalagesWhenLeavingConfirmer(id, oldEtatId, newEtatId);
+
     // Attribuer id_qualite au nouvel agent qualité qui modifie l'état (fiche non verrouillée)
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
     if (isQualiteUser) {
@@ -6902,6 +6908,7 @@ router.put('/:hash/valider-qualite-ko', authenticate, hashToIdMiddleware, trigge
     const oldSousEtatId = fiche.id_sous_etat;
     const newEtatId = etatEnAttente.id;
     const now = toMysqlLocalDateTime();
+    await deleteDecalagesWhenLeavingConfirmer(id, oldEtatId, newEtatId);
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
     if (isQualiteUser) {
       await query('UPDATE fiches SET id_qualite = ? WHERE id = ?', [req.user.id, id]);
@@ -7100,6 +7107,7 @@ router.put('/:hash/valider-qualite-hc', authenticate, hashToIdMiddleware, trigge
     const oldSousEtatId = fiche.id_sous_etat;
     const newEtatId = ID_ETAT_HC;
     const now = toMysqlLocalDateTime();
+    await deleteDecalagesWhenLeavingConfirmer(id, oldEtatId, newEtatId);
     const isQualiteUser = req.user.fonction === 2 || req.user.fonction === 8 || req.user.fonction === 12;
     if (isQualiteUser) {
       await query('UPDATE fiches SET id_qualite = ? WHERE id = ?', [req.user.id, id]);
@@ -7922,8 +7930,9 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       // Retirer du payload fiches pour éviter toute mise à jour de fiches.date_appel_time
       delete ficheData.date_appel_time;
 
-      // Si on passe de l'état CONFIRMER (7) à un état du groupe 2, supprimer la date du RDV
+      // Si on passe de l'état CONFIRMER (7) à un autre état : supprimer décalages + date RDV si groupe 2
       if (oldEtatId === 7 && newEtatId !== 7) {
+        await deleteDecalagesWhenLeavingConfirmer(id, oldEtatId, newEtatId);
         const newEtat = await queryOne(
           'SELECT groupe FROM etats WHERE id = ?',
           [newEtatId]

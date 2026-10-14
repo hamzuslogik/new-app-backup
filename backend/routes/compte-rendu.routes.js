@@ -5,6 +5,7 @@ const { checkPermissionCode, hasPermission } = require('../middleware/permission
 const { triggerWorkflowOnCompteRenduCreated, triggerWorkflowOnCompteRenduApproved } = require('../middleware/workflow.middleware');
 const { query, queryOne } = require('../config/database');
 const { syncAffectationRecord } = require('../utils/affectationSync');
+const { deleteDecalagesWhenLeavingConfirmer } = require('../utils/decalageOnEtatChange');
 
 /**
  * Ajoute N jours ouvrés (lundi-vendredi) à une date
@@ -1194,6 +1195,13 @@ router.post('/:id/approve', authenticate, triggerWorkflowOnCompteRenduApproved, 
         values
       );
     }
+
+    // Sortie de CONFIRMER via approbation CR → supprimer les demandes de décalage
+    await deleteDecalagesWhenLeavingConfirmer(
+      compteRendu.id_fiche,
+      ancienEtat,
+      nouveauEtat
+    );
 
     // Snapshot confirmateurs + commerciaux AVANT désaffectation (propriétaire signature / historique SIGNER)
     // Inclure un commercial éventuellement saisi dans le CR (modifications) pour l'historique.
