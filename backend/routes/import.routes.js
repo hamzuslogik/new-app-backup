@@ -9,9 +9,47 @@ const crypto = require('crypto');
 const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = require('../middleware/auth.middleware');
 const { checkPermissionCode } = require('../middleware/permissions.middleware');
 const { query, queryOne } = require('../config/database');
+const { toMysqlLocalDateTime } = require('../utils/mysqlLocalDateTime');
 
 // Clé secrète pour encoder les IDs (doit correspondre à celle dans fiche.routes.js)
 const HASH_SECRET = process.env.FICHE_HASH_SECRET || 'your-secret-key-change-in-production';
+
+/**
+ * Normalise une date importée en DATETIME MySQL local (sans conversion UTC).
+ * Évite le décalage d'1h de `toISOString()` sur "YYYY-MM-DD HH:mm:ss".
+ */
+function normalizeImportDateTime(value) {
+  if (value == null || value === '' || value === 'null' || value === 'undefined') return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : toMysqlLocalDateTime(value);
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const ms = value > 1e12 ? value : value * 1000;
+    const d = new Date(ms);
+    return Number.isNaN(d.getTime()) ? null : toMysqlLocalDateTime(d);
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const hasTimezone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(raw);
+  // Déjà au format MySQL / ISO local sans fuseau → garder tel quel
+  if (!hasTimezone) {
+    const localMatch = raw
+      .replace('T', ' ')
+      .replace(/\.\d+$/, '')
+      .match(/^(\d{4})-(\d{2})-(\d{2})[ ](\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (localMatch) {
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${localMatch[1]}-${localMatch[2]}-${localMatch[3]} ${pad(localMatch[4])}:${pad(localMatch[5])}:${pad(localMatch[6] || '0')}`;
+    }
+  }
+
+  // ISO avec Z / offset ou autre format → heure locale du serveur
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return null;
+  return toMysqlLocalDateTime(d);
+}
 
 // Store des jobs d'import en cours (progression visible même après navigation)
 const importJobs = new Map();
@@ -986,7 +1024,8 @@ const insertFiche = async (contact, mapping, userId, idCentre, produitId = null,
   }
   
   const now = Math.floor(Date.now() / 1000);
-  const nowTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  // Heure locale (ne pas utiliser toISOString → UTC = -1h)
+  const nowTime = toMysqlLocalDateTime();
   
   // Filtrer le mapping pour enlever les colonnes problématiques
   const filteredMapping = { ...mapping };
@@ -1121,21 +1160,9 @@ const insertFiche = async (contact, mapping, userId, idCentre, produitId = null,
           }
         }
         
-        // Colonnes datetime (date_*_time) : convertir chaîne -> format MySQL datetime
+        // Colonnes datetime (date_*_time) : format MySQL local (sans UTC)
         if (dbField.includes('date_') && dbField.endsWith('_time')) {
-          if (value && typeof value === 'string' && value !== '' && value !== 'null' && value !== 'undefined') {
-            const date = new Date(value);
-            if (!isNaN(date.getTime())) {
-              value = date.toISOString().slice(0, 19).replace('T', ' ');
-            } else {
-              value = null;
-            }
-          } else if (value && typeof value === 'number') {
-            const date = new Date(value * 1000);
-            value = date.toISOString().slice(0, 19).replace('T', ' ');
-          } else {
-            value = null;
-          }
+          value = normalizeImportDateTime(value);
         }
         
         if (dbField.includes('date_') && !dbField.includes('_time')) {
