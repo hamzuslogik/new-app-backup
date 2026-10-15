@@ -308,12 +308,9 @@ async function getPendingSignerFicheIdsInDateRange(startDatetime, endDatetime) {
 
 /**
  * Alimente la table confirmations au passage CONFIRMER (7) avec l'heure système locale.
- * Anti-doublon : 1 ligne max par (id_fiche, jour de confirmation).
- *
- * Fiabilité : beaucoup de lignes ont date_confirmation_date rempli mais confirmation_day
- * vide / 0000-00-00. Si le SELECT ne regarde que confirmation_day, le doublon n'est pas vu.
- * → on matche d'abord DATE(date_confirmation_date), puis confirmation_day, puis DATETIME.
- * → à l'écriture on remplit toujours les deux colonnes jour quand elles existent.
+ * Anti-doublon strict : 1 ligne max par (id_fiche, JOUR de confirmation) — l'heure ne compte pas.
+ * Si une ligne existe déjà le même jour → UPDATE (et suppression des éventuels doublons du jour).
+ * Pas de match sur date_rdv_time seul (évite de fusionner deux confirms de jours différents).
  */
 async function upsertConfirmationForEtat7({
   id_fiche,
@@ -342,8 +339,50 @@ async function upsertConfirmationForEtat7({
   const isZeroDateSql = (col) =>
     `(${col} IS NULL OR ${col} = '0000-00-00' OR CAST(${col} AS CHAR) IN ('0000-00-00', '0'))`;
 
+  /** Jour logique = DATE uniquement (pas d'heure). */
+  const findSameDayIds = async () => {
+    const idSet = new Set();
+    const dayLookups = [
+      {
+        sql: `SELECT id FROM confirmations
+              WHERE id_fiche = ?
+                AND NOT ${isZeroDateSql('date_confirmation_date')}
+                AND DATE(date_confirmation_date) = ?`,
+        params: [ficheId, confDay],
+      },
+      {
+        sql: `SELECT id FROM confirmations
+              WHERE id_fiche = ?
+                AND NOT ${isZeroDateSql('confirmation_day')}
+                AND DATE(confirmation_day) = ?`,
+        params: [ficheId, confDay],
+      },
+      {
+        sql: `SELECT id FROM confirmations
+              WHERE id_fiche = ?
+                AND DATE(COALESCE(
+                      NULLIF(NULLIF(date_confirmation, '0000-00-00 00:00:00'), '0000-00-00'),
+                      NULLIF(NULLIF(date_creation, '0000-00-00 00:00:00'), '0000-00-00')
+                    )) = ?`,
+        params: [ficheId, confDay],
+      },
+    ];
+
+    for (const lookup of dayLookups) {
+      try {
+        const rows = await query(lookup.sql, lookup.params);
+        for (const row of rows || []) {
+          if (row?.id != null) idSet.add(Number(row.id));
+        }
+      } catch (e) {
+        if (!(e && e.code === 'ER_BAD_FIELD_ERROR')) throw e;
+      }
+    }
+    return [...idSet].filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => b - a);
+  };
+
   const applyUpdate = async (existingId) => {
-    // Toujours resynchroniser confirmation_day + date_confirmation_date
+    // Remplacement complet des champs (réinsertion même jour = nouvelles valeurs)
     const updateVariants = [
       {
         sql: `UPDATE confirmations
@@ -352,9 +391,9 @@ async function upsertConfirmationForEtat7({
                   date_creation = ?,
                   confirmation_day = ?,
                   date_confirmation_date = ?,
-                  id_confirmateur = COALESCE(?, id_confirmateur),
-                  id_commercial = COALESCE(?, id_commercial),
-                  commentaire = COALESCE(?, commentaire)
+                  id_confirmateur = ?,
+                  id_commercial = ?,
+                  commentaire = ?
               WHERE id = ?`,
         params: [rdvNormalized, when, when, confDay, confDay, confId, comId, comment, existingId],
       },
@@ -364,9 +403,9 @@ async function upsertConfirmationForEtat7({
                   date_confirmation = ?,
                   date_creation = ?,
                   date_confirmation_date = ?,
-                  id_confirmateur = COALESCE(?, id_confirmateur),
-                  id_commercial = COALESCE(?, id_commercial),
-                  commentaire = COALESCE(?, commentaire)
+                  id_confirmateur = ?,
+                  id_commercial = ?,
+                  commentaire = ?
               WHERE id = ?`,
         params: [rdvNormalized, when, when, confDay, confId, comId, comment, existingId],
       },
@@ -376,9 +415,9 @@ async function upsertConfirmationForEtat7({
                   date_confirmation = ?,
                   date_creation = ?,
                   confirmation_day = ?,
-                  id_confirmateur = COALESCE(?, id_confirmateur),
-                  id_commercial = COALESCE(?, id_commercial),
-                  commentaire = COALESCE(?, commentaire)
+                  id_confirmateur = ?,
+                  id_commercial = ?,
+                  commentaire = ?
               WHERE id = ?`,
         params: [rdvNormalized, when, when, confDay, confId, comId, comment, existingId],
       },
@@ -387,9 +426,9 @@ async function upsertConfirmationForEtat7({
               SET date_rdv_time = ?,
                   date_confirmation = ?,
                   date_creation = ?,
-                  id_confirmateur = COALESCE(?, id_confirmateur),
-                  id_commercial = COALESCE(?, id_commercial),
-                  commentaire = COALESCE(?, commentaire)
+                  id_confirmateur = ?,
+                  id_commercial = ?,
+                  commentaire = ?
               WHERE id = ?`,
         params: [rdvNormalized, when, when, confId, comId, comment, existingId],
       },
@@ -407,128 +446,89 @@ async function upsertConfirmationForEtat7({
     throw lastErr;
   };
 
-  const findExistingId = async () => {
-    // Requêtes séparées (pas un seul OR) : si confirmation_day est vide sur les lignes
-    // existantes, on trouve quand même via date_confirmation_date.
-    const dayLookups = [
+  const deleteIds = async (ids) => {
+    if (!ids.length) return;
+    const placeholders = ids.map(() => '?').join(', ');
+    await query(`DELETE FROM confirmations WHERE id IN (${placeholders})`, ids);
+  };
+
+  const insertNew = async () => {
+    const insertVariants = [
       {
-        // Priorité 1 : date_confirmation_date (souvent rempli alors que confirmation_day est vide)
-        sql: `SELECT id FROM confirmations
-              WHERE id_fiche = ?
-                AND NOT ${isZeroDateSql('date_confirmation_date')}
-                AND DATE(date_confirmation_date) = ?
-              ORDER BY id DESC LIMIT 1`,
-        params: [ficheId, confDay],
+        sql: `INSERT INTO confirmations
+                (id_fiche, date_rdv_time, date_confirmation, confirmation_day, date_confirmation_date,
+                 id_confirmateur, id_commercial, date_creation, commentaire)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        params: [ficheId, rdvNormalized, when, confDay, confDay, confId, comId, when, comment],
       },
       {
-        sql: `SELECT id FROM confirmations
-              WHERE id_fiche = ?
-                AND NOT ${isZeroDateSql('confirmation_day')}
-                AND DATE(confirmation_day) = ?
-              ORDER BY id DESC LIMIT 1`,
-        params: [ficheId, confDay],
+        sql: `INSERT INTO confirmations
+                (id_fiche, date_rdv_time, date_confirmation, date_confirmation_date,
+                 id_confirmateur, id_commercial, date_creation, commentaire)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        params: [ficheId, rdvNormalized, when, confDay, confId, comId, when, comment],
       },
       {
-        sql: `SELECT id FROM confirmations
-              WHERE id_fiche = ?
-                AND DATE(COALESCE(
-                      NULLIF(NULLIF(date_confirmation, '0000-00-00 00:00:00'), '0000-00-00'),
-                      NULLIF(NULLIF(date_creation, '0000-00-00 00:00:00'), '0000-00-00')
-                    )) = ?
-              ORDER BY id DESC LIMIT 1`,
-        params: [ficheId, confDay],
+        sql: `INSERT INTO confirmations
+                (id_fiche, date_rdv_time, date_confirmation, confirmation_day,
+                 id_confirmateur, id_commercial, date_creation, commentaire)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        params: [ficheId, rdvNormalized, when, confDay, confId, comId, when, comment],
+      },
+      {
+        sql: `INSERT INTO confirmations
+                (id_fiche, date_rdv_time, date_confirmation,
+                 id_confirmateur, id_commercial, date_creation, commentaire)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        params: [ficheId, rdvNormalized, when, confId, comId, when, comment],
       },
     ];
-
-    for (const lookup of dayLookups) {
+    let lastInsErr = null;
+    for (const variant of insertVariants) {
       try {
-        const row = await queryOne(lookup.sql, lookup.params);
-        if (row?.id) return row.id;
-      } catch (e) {
-        if (!(e && e.code === 'ER_BAD_FIELD_ERROR')) throw e;
-        // Colonne absente → essayer la suivante
+        await query(variant.sql, variant.params);
+        return;
+      } catch (insColErr) {
+        lastInsErr = insColErr;
+        if (!(insColErr && insColErr.code === 'ER_BAD_FIELD_ERROR')) throw insColErr;
       }
     }
+    throw lastInsErr;
+  };
 
-    // Repli : même datetime RDV (évite "14:00" vs "14:00:00")
-    try {
-      const byExactRdv = await queryOne(
-        `SELECT id FROM confirmations
-         WHERE id_fiche = ?
-           AND DATE_FORMAT(date_rdv_time, '%Y-%m-%d %H:%i:%s') = ?
-         ORDER BY id DESC
-         LIMIT 1`,
-        [ficheId, rdvNormalized]
-      );
-      if (byExactRdv?.id) return byExactRdv.id;
-    } catch (e) {
-      if (!(e && e.code === 'ER_BAD_FIELD_ERROR')) throw e;
-    }
-
-    return null;
+  /** Garde 1 ligne pour le jour : UPDATE la plus récente, DELETE les autres. */
+  const replaceSameDay = async (sameDayIds) => {
+    const keepId = sameDayIds[0];
+    const toDelete = sameDayIds.slice(1);
+    await applyUpdate(keepId);
+    if (toDelete.length) await deleteIds(toDelete);
   };
 
   try {
-    const existingId = await findExistingId();
-    if (existingId) {
-      await applyUpdate(existingId);
+    const sameDayIds = await findSameDayIds();
+    if (sameDayIds.length > 0) {
+      await replaceSameDay(sameDayIds);
       return;
     }
 
     try {
-      // Ordre : les deux colonnes jour, puis date_confirmation_date seule, puis confirmation_day
-      const insertVariants = [
-        {
-          sql: `INSERT INTO confirmations
-                  (id_fiche, date_rdv_time, date_confirmation, confirmation_day, date_confirmation_date,
-                   id_confirmateur, id_commercial, date_creation, commentaire)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          params: [ficheId, rdvNormalized, when, confDay, confDay, confId, comId, when, comment],
-        },
-        {
-          sql: `INSERT INTO confirmations
-                  (id_fiche, date_rdv_time, date_confirmation, date_confirmation_date,
-                   id_confirmateur, id_commercial, date_creation, commentaire)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          params: [ficheId, rdvNormalized, when, confDay, confId, comId, when, comment],
-        },
-        {
-          sql: `INSERT INTO confirmations
-                  (id_fiche, date_rdv_time, date_confirmation, confirmation_day,
-                   id_confirmateur, id_commercial, date_creation, commentaire)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          params: [ficheId, rdvNormalized, when, confDay, confId, comId, when, comment],
-        },
-        {
-          sql: `INSERT INTO confirmations
-                  (id_fiche, date_rdv_time, date_confirmation,
-                   id_confirmateur, id_commercial, date_creation, commentaire)
-                VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          params: [ficheId, rdvNormalized, when, confId, comId, when, comment],
-        },
-      ];
-      let lastInsErr = null;
-      for (const variant of insertVariants) {
-        try {
-          await query(variant.sql, variant.params);
-          lastInsErr = null;
-          break;
-        } catch (insColErr) {
-          lastInsErr = insColErr;
-          if (!(insColErr && insColErr.code === 'ER_BAD_FIELD_ERROR')) throw insColErr;
-        }
-      }
-      if (lastInsErr) throw lastInsErr;
+      await insertNew();
     } catch (insertErr) {
-      // Course concurrente / UNIQUE → update
+      // Course concurrente / UNIQUE → retrouver le jour et remplacer
       if (insertErr && insertErr.code === 'ER_DUP_ENTRY') {
-        const dupId = await findExistingId();
-        if (dupId) {
-          await applyUpdate(dupId);
+        const afterDup = await findSameDayIds();
+        if (afterDup.length > 0) {
+          await replaceSameDay(afterDup);
           return;
         }
       }
       throw insertErr;
+    }
+
+    // Filet anti-course : 2 INSERT parallèles le même jour → ne garder qu'une ligne
+    const afterInsert = await findSameDayIds();
+    if (afterInsert.length > 1) {
+      await replaceSameDay(afterInsert);
     }
   } catch (err) {
     // Schéma partiel / table absente : ne pas bloquer la confirmation

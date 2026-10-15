@@ -1298,6 +1298,8 @@ const FicheDetail = ({
   const [showRdvModal, setShowRdvModal] = useState(false);
   const [rdvSubmitting, setRdvSubmitting] = useState(false);
   const [etatSubmitting, setEtatSubmitting] = useState(false);
+  const [confirmSubmitting, setConfirmSubmitting] = useState(false);
+  const confirmSubmittingRef = useRef(false);
   const [selectedSlot, setSelectedSlot] = useState(null); // { date, hour }
   const [slotCodeModal, setSlotCodeModal] = useState(null);
   const slotCodeVerifiedRef = useRef(false);
@@ -3608,6 +3610,9 @@ const FicheDetail = ({
 
   // Soumettre la confirmation (état 7)
   const handleConfirmSubmit = async () => {
+    if (confirmSubmittingRef.current) return;
+    confirmSubmittingRef.current = true;
+    setConfirmSubmitting(true);
     try {
       const confValidation = validateCreateRdvForm({
         formData: {
@@ -3783,6 +3788,9 @@ const FicheDetail = ({
         return;
       }
       alert('Erreur lors de la confirmation de la fiche: ' + (error.response?.data?.message || error.message));
+    } finally {
+      confirmSubmittingRef.current = false;
+      setConfirmSubmitting(false);
     }
   };
 
@@ -9306,8 +9314,9 @@ const FicheDetail = ({
                   <button
                     className="btn-confirm"
                     onClick={handleConfirmSubmit}
+                    disabled={confirmSubmitting}
                   >
-                    Confirmer
+                    {confirmSubmitting ? 'Confirmation…' : 'Confirmer'}
                   </button>
                   <button
                     className="btn-cancel"
