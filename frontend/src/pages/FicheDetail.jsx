@@ -1154,7 +1154,7 @@ function isSansDispoAvailabilityCell(cell) {
   return cell.nbr_com === null || cell.nbr_com === undefined || cell.nbr_com === '';
 }
 
-/** Créneau en surplus : nb RDV > capacité (ex. 3/2). Exactement plein (2/2) n'est pas un surplus. */
+/** Créneau blindé / surplus : plein exact (2/2) ou dépassé (3/2) → warning. */
 function isBlindOrSurplusSlot(planningWeekData, dateStr, slotHour, availCell) {
   if (!dateStr || !slotHour) return false;
   const timeKey = hourToTimeKey(slotHour);
@@ -1167,8 +1167,9 @@ function isBlindOrSurplusSlot(planningWeekData, dateStr, slotHour, availCell) {
   if (rawAv === undefined || rawAv === null || rawAv === '') return false;
   const avail = Number(rawAv);
   if (!Number.isFinite(avail)) return false;
-  if (avail <= 0) return rdvCount > 0; // 0 dispo déjà couvert par zero ; surplus si RDV présents
-  return rdvCount > avail;
+  if (avail <= 0) return rdvCount > 0; // 0 dispo déjà couvert par zero
+  // Blindé dès le plein (2/2), pas seulement après dépassement (3/2)
+  return rdvCount >= avail;
 }
 
 function isPlanningSlotClosedError(error) {
@@ -10646,9 +10647,9 @@ const FicheDetail = ({
             <>
               <strong>Attention :</strong>{' '}
               {slotCodeModal.surplus && (slotCodeModal.closed || slotCodeModal.policyClosed)
-                ? 'ce créneau est fermé et déjà blindé / en surplus.'
+                ? 'ce créneau est fermé et déjà blindé (plein, ex. 2/2) ou en surplus.'
                 : slotCodeModal.surplus
-                  ? 'ce créneau est déjà blindé ou contient un surplus de RDV.'
+                  ? 'ce créneau est déjà blindé (plein, ex. 2/2) ou en surplus de RDV.'
                   : slotCodeModal.closed && slotCodeModal.zero
                     ? 'ce créneau est fermé et sa disponibilité est à 0.'
                     : slotCodeModal.closed || slotCodeModal.policyClosed

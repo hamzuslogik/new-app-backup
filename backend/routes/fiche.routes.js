@@ -7809,7 +7809,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
                 '19:30:00': ['19:30:00', '20:00:00'],
               };
               const range = slotRanges[slotHour];
-              // Surplus = dépassement après insertion (ex. 2/2 → 3/2), pas le plein exact
+              // Blindé / surplus : créneau déjà plein avant insertion (2/2) ou dépassé après (3/2)
               if (range && Number.isFinite(capacity) && capacity > 0) {
                 const countRow = await queryOne(
                   `SELECT COUNT(*) AS nb
@@ -7824,8 +7824,9 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
                      AND LPAD(LEFT(TRIM(COALESCE(f.cp, '')), 2), 2, '0') = ?`,
                   [`${rdvDate} ${range[0]}`, `${rdvDate} ${range[1]}`, parseInt(id, 10), dep]
                 );
-                const countAfter = Number(countRow?.nb || 0) + 1;
-                isSurplus = countAfter > capacity;
+                const countBefore = Number(countRow?.nb || 0);
+                const countAfter = countBefore + 1;
+                isSurplus = countBefore >= capacity || countAfter > capacity;
               }
             } catch (surplusErr) {
               console.warn('[bypass] calcul créneau ignoré:', surplusErr?.message);
