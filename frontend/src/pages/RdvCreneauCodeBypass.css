@@ -236,6 +236,11 @@
   color: #92400e;
 }
 
+.motif-badge.badge-sans {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
 .motif-badge.badge-motif {
   background: #e0e7ff;
   color: #3730a3;

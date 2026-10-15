@@ -47,7 +47,10 @@ function motifBadges(row) {
   if (Number(row.is_surplus)) badges.push({ key: 'surplus', label: 'Surplus', className: 'badge-surplus' });
   if (Number(row.is_ferme_politique)) badges.push({ key: 'pol', label: 'Fermé pol.', className: 'badge-ferme' });
   if (Number(row.is_ferme_db)) badges.push({ key: 'db', label: 'Fermé DB', className: 'badge-ferme' });
-  if (Number(row.is_zero_dispo)) badges.push({ key: 'zero', label: '0 dispo', className: 'badge-zero' });
+  // null / sans valeur inclus dans « 0 dispo »
+  if (Number(row.is_zero_dispo) || Number(row.is_sans_dispo)) {
+    badges.push({ key: 'zero', label: '0 dispo', className: 'badge-zero' });
+  }
   if (!badges.length && row.motif) {
     badges.push({ key: 'motif', label: row.motif, className: 'badge-motif' });
   }
@@ -122,7 +125,7 @@ const RdvCreneauCodeBypass = () => {
           <FaUnlockAlt /> Bypass créneau (code retapé)
         </h1>
         <p className="page-subtitle">
-          RDV placés en CONFIRMER malgré un créneau fermé, blindé ou en surplus, après validation du code.
+          RDV placés en CONFIRMER malgré un créneau fermé, à 0 disponibilité, blindé ou en surplus, après validation du code.
         </p>
       </div>
 

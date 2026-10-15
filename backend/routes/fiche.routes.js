@@ -7775,6 +7775,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
 
             let isSurplus = false;
             let isZeroDispo = false;
+            // is_sans_dispo : détail (null) ; catégorie affichée = 0 disponibilité
+            let isSansDispo = false;
             try {
               const availRow = await queryOne(
                 `SELECT nbr_com FROM planning_availablity
@@ -7784,11 +7786,17 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
               );
               const rawCapacity = availRow?.nbr_com;
               const hasCapacityValue =
-                rawCapacity !== undefined && rawCapacity !== null && rawCapacity !== '';
+                availRow != null &&
+                rawCapacity !== undefined &&
+                rawCapacity !== null &&
+                rawCapacity !== '';
               const capacity = hasCapacityValue ? Number(rawCapacity) : NaN;
 
-              // 0 dispo ou aucune valeur de disponibilité sur le créneau
-              if (!hasCapacityValue || !Number.isFinite(capacity) || capacity <= 0) {
+              if (!availRow || !hasCapacityValue || !Number.isFinite(capacity)) {
+                // Pas de ligne / nbr_com null → catégorie « 0 disponibilité »
+                isSansDispo = true;
+                isZeroDispo = true;
+              } else if (capacity === 0) {
                 isZeroDispo = true;
               }
 
@@ -7827,6 +7835,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             if (isFermePolitique) motifs.push('ferme_politique');
             if (isFermeDb) motifs.push('ferme_db');
             if (isSurplus) motifs.push('surplus');
+            // null / sans valeur et nbr_com = 0 → même motif « 0 disponibilité »
             if (isZeroDispo) motifs.push('zero_dispo');
 
             if (motifs.length > 0) {
@@ -7843,6 +7852,7 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
                 is_ferme_db: isFermeDb ? 1 : 0,
                 is_surplus: isSurplus ? 1 : 0,
                 is_zero_dispo: isZeroDispo ? 1 : 0,
+                is_sans_dispo: isSansDispo ? 1 : 0,
                 motif: motifs.join(',')
               };
             }
@@ -8570,14 +8580,14 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
       }
     }
 
-    // Journaliser le bypass code (créneau fermé / surplus) uniquement après création réussie
+    // Journaliser le bypass code (créneau fermé / surplus / sans dispo) uniquement après création réussie
     if (slotBypassLog) {
       try {
         await query(
           `INSERT INTO rdv_creneau_code_bypass
             (id_fiche, id_utilisateur, id_fonction, date_rdv, dep, slot_hour, week, year,
-             is_ferme_politique, is_ferme_db, is_surplus, is_zero_dispo, motif, date_creation)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             is_ferme_politique, is_ferme_db, is_surplus, is_zero_dispo, is_sans_dispo, motif, date_creation)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             slotBypassLog.id_fiche,
             slotBypassLog.id_utilisateur,
@@ -8591,12 +8601,44 @@ router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches
             slotBypassLog.is_ferme_db,
             slotBypassLog.is_surplus,
             slotBypassLog.is_zero_dispo,
+            slotBypassLog.is_sans_dispo || 0,
             slotBypassLog.motif,
             now
           ]
         );
       } catch (bypassLogErr) {
-        console.error('Erreur journalisation rdv_creneau_code_bypass:', bypassLogErr);
+        // Compat : table sans colonne is_sans_dispo
+        if (bypassLogErr && bypassLogErr.code === 'ER_BAD_FIELD_ERROR') {
+          try {
+            await query(
+              `INSERT INTO rdv_creneau_code_bypass
+                (id_fiche, id_utilisateur, id_fonction, date_rdv, dep, slot_hour, week, year,
+                 is_ferme_politique, is_ferme_db, is_surplus, is_zero_dispo, motif, date_creation)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                slotBypassLog.id_fiche,
+                slotBypassLog.id_utilisateur,
+                slotBypassLog.id_fonction,
+                slotBypassLog.date_rdv,
+                slotBypassLog.dep,
+                slotBypassLog.slot_hour,
+                slotBypassLog.week,
+                slotBypassLog.year,
+                slotBypassLog.is_ferme_politique,
+                slotBypassLog.is_ferme_db,
+                slotBypassLog.is_surplus,
+                // Ancienne colonne : regrouper 0 + sans valeur
+                (slotBypassLog.is_zero_dispo || slotBypassLog.is_sans_dispo) ? 1 : 0,
+                slotBypassLog.motif,
+                now
+              ]
+            );
+          } catch (fallbackErr) {
+            console.error('Erreur journalisation rdv_creneau_code_bypass (fallback):', fallbackErr);
+          }
+        } else {
+          console.error('Erreur journalisation rdv_creneau_code_bypass:', bypassLogErr);
+        }
       }
     }
 

@@ -10,7 +10,7 @@ function canViewBypassPage(fonction) {
   return ALLOWED_FONCTIONS.has(Number(fonction));
 }
 
-function buildWhere(filters) {
+function buildWhere(filters, { hasSansDispoCol = false } = {}) {
   const where = ['1=1'];
   const params = [];
 
@@ -41,7 +41,12 @@ function buildWhere(filters) {
   } else if (filters.motif === 'ferme_db') {
     where.push('b.is_ferme_db = 1');
   } else if (filters.motif === 'zero_dispo') {
-    where.push('b.is_zero_dispo = 1');
+    // Catégorie « 0 disponibilité » : nbr_com = 0 ou null / sans valeur
+    where.push(
+      hasSansDispoCol
+        ? '(b.is_zero_dispo = 1 OR b.is_sans_dispo = 1)'
+        : 'b.is_zero_dispo = 1'
+    );
   }
 
   return { whereSql: where.join(' AND '), params };
@@ -73,13 +78,32 @@ router.get('/', authenticate, async (req, res) => {
       motif: req.query.motif || null,
     };
 
-    const { whereSql, params } = buildWhere(filters);
+    // Détecter si la colonne is_sans_dispo existe (migration optionnelle)
+    let hasSansDispoCol = true;
+    try {
+      const col = await queryOne(
+        `SELECT COUNT(*) AS c FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'rdv_creneau_code_bypass'
+           AND COLUMN_NAME = 'is_sans_dispo'`
+      );
+      hasSansDispoCol = Number(col?.c || 0) > 0;
+    } catch (_) {
+      hasSansDispoCol = false;
+    }
+
+    const { whereSql, params } = buildWhere(filters, { hasSansDispoCol });
 
     const countRow = await queryOne(
       `SELECT COUNT(*) AS total FROM rdv_creneau_code_bypass b WHERE ${whereSql}`,
       params
     );
     const total = Number(countRow?.total || 0);
+
+    const sansSelect = hasSansDispoCol ? 'b.is_sans_dispo,' : '0 AS is_sans_dispo,';
+    const zeroSumExpr = hasSansDispoCol
+      ? 'SUM(CASE WHEN b.is_zero_dispo = 1 OR b.is_sans_dispo = 1 THEN 1 ELSE 0 END) AS nb_zero_dispo'
+      : 'SUM(CASE WHEN b.is_zero_dispo = 1 THEN 1 ELSE 0 END) AS nb_zero_dispo';
 
     const rows = await query(
       `SELECT
@@ -96,6 +120,7 @@ router.get('/', authenticate, async (req, res) => {
          b.is_ferme_db,
          b.is_surplus,
          b.is_zero_dispo,
+         ${sansSelect}
          b.motif,
          b.date_creation,
          u.pseudo AS utilisateur_pseudo,
@@ -125,7 +150,7 @@ router.get('/', authenticate, async (req, res) => {
          SUM(CASE WHEN b.is_surplus = 1 THEN 1 ELSE 0 END) AS nb_surplus,
          SUM(CASE WHEN b.is_ferme_politique = 1 THEN 1 ELSE 0 END) AS nb_ferme_politique,
          SUM(CASE WHEN b.is_ferme_db = 1 THEN 1 ELSE 0 END) AS nb_ferme_db,
-         SUM(CASE WHEN b.is_zero_dispo = 1 THEN 1 ELSE 0 END) AS nb_zero_dispo
+         ${zeroSumExpr}
        FROM rdv_creneau_code_bypass b
        LEFT JOIN utilisateurs u ON u.id = b.id_utilisateur
        LEFT JOIN fonctions fn ON fn.id = b.id_fonction
@@ -143,6 +168,7 @@ router.get('/', authenticate, async (req, res) => {
         nb_surplus: Number(row.nb_surplus || 0),
         nb_ferme_politique: Number(row.nb_ferme_politique || 0),
         nb_ferme_db: Number(row.nb_ferme_db || 0),
+        // Inclut déjà null / sans valeur (via SQL zeroSumExpr)
         nb_zero_dispo: Number(row.nb_zero_dispo || 0),
         part_pct: total > 0 ? Math.round((n * 1000) / total) / 10 : 0,
       };

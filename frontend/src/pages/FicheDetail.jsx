@@ -1148,6 +1148,12 @@ function isZeroAvailabilityCell(cell) {
   return cell.nbr_com === 0 || cell.nbr_com === '0';
 }
 
+/** Créneau sans disponibilité saisie (null / vide) — ni 0 ni > 0 */
+function isSansDispoAvailabilityCell(cell) {
+  if (!cell) return false;
+  return cell.nbr_com === null || cell.nbr_com === undefined || cell.nbr_com === '';
+}
+
 /** Créneau en surplus : nb RDV > capacité (ex. 3/2). Exactement plein (2/2) n'est pas un surplus. */
 function isBlindOrSurplusSlot(planningWeekData, dateStr, slotHour, availCell) {
   if (!dateStr || !slotHour) return false;
@@ -2856,13 +2862,20 @@ const FicheDetail = ({
       return;
     }
 
+    const slotHour = timeToSlotHour(timeStr) || timeStr;
     const slotCell = lookupAvailabilityCell(availabilityData, dateStr, timeStr)
-      || lookupAvailabilityCell(availabilityData, dateStr, timeToSlotHour(timeStr));
+      || lookupAvailabilityCell(availabilityData, dateStr, slotHour);
+    const planningCached = getPlanningWeekDataCached();
+    const policyClosed = isPolicyClosedAvailabilityCell(slotCell, planningDep, dateStr, slotHour);
     pendingKnownSlotStatusRef.current = {
       date: dateStr,
-      hour: timeToSlotHour(timeStr) || timeStr,
-      closed: isClosedAvailabilityCell(slotCell),
-      zero: isZeroAvailabilityCell(slotCell)
+      hour: slotHour,
+      closed: isClosedAvailabilityCell(slotCell) || policyClosed,
+      // Catégorie « 0 disponibilité » : 0 ou null
+      zero: isZeroAvailabilityCell(slotCell) || isSansDispoAvailabilityCell(slotCell),
+      sansDispo: isSansDispoAvailabilityCell(slotCell),
+      policyClosed,
+      surplus: isBlindOrSurplusSlot(planningCached, dateStr, slotHour, slotCell),
     };
     
     // Initialiser le formulaire avec toutes les données de confirmation déjà saisies
@@ -2926,7 +2939,8 @@ const FicheDetail = ({
       date: dateStr,
       hour: slotHour,
       closed: isClosedAvailabilityCell(slotCell) || policyClosed,
-      zero: isZeroAvailabilityCell(slotCell),
+      zero: isZeroAvailabilityCell(slotCell) || isSansDispoAvailabilityCell(slotCell),
+      sansDispo: isSansDispoAvailabilityCell(slotCell),
       policyClosed,
       surplus: isBlindOrSurplusSlot(planningCached, dateStr, slotHour, slotCell)
     };
@@ -2990,6 +3004,7 @@ const FicheDetail = ({
     const empty = {
       closed: policyClosedFallback,
       zero: false,
+      sansDispo: false,
       surplus: false,
       date: dateStr,
       hour: slotHour,
@@ -2999,7 +3014,7 @@ const FicheDetail = ({
     if (!dateStr) return empty;
 
     const known = pendingKnownSlotStatusRef.current;
-    if (known && known.date === dateStr && (known.closed || known.zero || known.policyClosed || known.surplus)) {
+    if (known && known.date === dateStr && (known.closed || known.zero || known.sansDispo || known.policyClosed || known.surplus)) {
       const policyClosed = known.policyClosed || isPolicyClosedSlot(dep, dateStr, slotHour || known.hour);
       return {
         ...known,
@@ -3007,7 +3022,8 @@ const FicheDetail = ({
         dep,
         closed: known.closed || policyClosed,
         policyClosed,
-        surplus: !!known.surplus
+        surplus: !!known.surplus,
+        sansDispo: !!known.sansDispo,
       };
     }
 
@@ -3015,9 +3031,12 @@ const FicheDetail = ({
     const readCell = (map) => lookupAvailabilityCell(map, dateStr, slotHour);
     const buildStatus = (cell, weekData = planningWeekData) => {
       const policyClosed = isPolicyClosedAvailabilityCell(cell, dep, dateStr, slotHour);
+      const sansDispo = isSansDispoAvailabilityCell(cell);
       return {
         closed: isClosedAvailabilityCell(cell) || policyClosed,
-        zero: isZeroAvailabilityCell(cell),
+        // Catégorie « 0 disponibilité »
+        zero: isZeroAvailabilityCell(cell) || sansDispo,
+        sansDispo,
         surplus: isBlindOrSurplusSlot(weekData, dateStr, slotHour, cell),
         date: dateStr,
         hour: slotHour,
@@ -3093,12 +3112,20 @@ const FicheDetail = ({
       alert('Ce créneau est fermé pour ce département. Vous ne pouvez pas y créer de RDV.');
       return false;
     }
-    // Fermé / 0 dispo / blindé / surplus → warning + code (confirmateur, RE, RP, BO, …)
-    if (!status.closed && !status.zero && !policyClosed && !status.surplus) return true;
+    // Toutes sessions : warning + code si 0 dispo / null / surplus (ou créneau fermé)
+    const needsWarning = !!(
+      status.zero ||
+      status.sansDispo ||
+      status.surplus ||
+      status.closed ||
+      policyClosed
+    );
+    if (!needsWarning) return true;
     pendingAfterSlotCodeRef.current = thenFn;
     const bypassCtx = {
       closed: !!(status.closed || policyClosed),
-      zero: !!status.zero,
+      zero: !!(status.zero || status.sansDispo),
+      sansDispo: !!status.sansDispo,
       policyClosed: !!policyClosed,
       surplus: !!status.surplus
     };
@@ -3290,6 +3317,7 @@ const FicheDetail = ({
             surplus: !!known.surplus,
             closed: !!known.closed,
             zero: !!known.zero,
+            sansDispo: !!known.sansDispo,
             policyClosed: !!known.policyClosed
           };
         }
@@ -3722,6 +3750,7 @@ const FicheDetail = ({
             surplus: !!known.surplus,
             closed: !!known.closed,
             zero: !!known.zero,
+            sansDispo: !!known.sansDispo,
             policyClosed: !!known.policyClosed
           };
         }
@@ -10624,7 +10653,7 @@ const FicheDetail = ({
                     ? 'ce créneau est fermé et sa disponibilité est à 0.'
                     : slotCodeModal.closed || slotCodeModal.policyClosed
                       ? 'ce créneau du planning est fermé.'
-                      : 'ce créneau a une disponibilité à 0.'}
+                      : 'ce créneau a une disponibilité à 0 (ou non saisie).'}
               {' '}L&apos;insertion d&apos;un rendez-vous n&apos;est pas recommandée.
               Pour continuer, reproduisez le code à 4 chiffres ci-dessous.
             </>
@@ -11820,7 +11849,7 @@ const PlanningViewForModal = ({
                     });
                     // Un créneau est disponible s'il a un planning avec disponibilité > 0, OU s'il n'a pas de planning mais n'est pas bloqué
                     const isAvailable = (hasPlanning && availabilityCount > 0) || (!hasPlanning && !isBlocked);
-                    // Confirmateur (et rôles autorisés) : bouton + même sur créneau policy fermé (noir) → warning + code
+                    // Confirmateur / RE / RP : bouton + (même sur créneau fermé / 0 dispo / surplus) → warning + code
                     const showCreateRdvBtn =
                       !!onSelectSlot &&
                       !canEdit &&
