@@ -308,11 +308,12 @@ async function getPendingSignerFicheIdsInDateRange(startDatetime, endDatetime) {
 
 /**
  * Alimente la table confirmations au passage CONFIRMER (7) avec l'heure système locale.
- * Anti-doublon strict : 1 ligne max par (id_fiche, jour de confirmation).
- * Les schémas ont parfois confirmation_day ET date_confirmation_date (legacy) :
- * on remplit / matche les deux pour éviter les doublons croisés
- * (une ligne avec confirmation_day=DATE + date_confirmation_date=0000-00-00,
- *  une autre l'inverse).
+ * Anti-doublon : 1 ligne max par (id_fiche, jour de confirmation).
+ *
+ * Fiabilité : beaucoup de lignes ont date_confirmation_date rempli mais confirmation_day
+ * vide / 0000-00-00. Si le SELECT ne regarde que confirmation_day, le doublon n'est pas vu.
+ * → on matche d'abord DATE(date_confirmation_date), puis confirmation_day, puis DATETIME.
+ * → à l'écriture on remplit toujours les deux colonnes jour quand elles existent.
  */
 async function upsertConfirmationForEtat7({
   id_fiche,
@@ -329,6 +330,10 @@ async function upsertConfirmationForEtat7({
   if (!rdvNormalized) return;
 
   const confDay = mysqlDateOnlyFromValue(when);
+  if (!confDay) {
+    console.warn('[confirmations] upsert ignoré: jour de confirmation introuvable', { id_fiche, when });
+    return;
+  }
   const confId = id_confirmateur != null && Number(id_confirmateur) > 0 ? Number(id_confirmateur) : null;
   const comId = id_commercial != null && Number(id_commercial) > 0 ? Number(id_commercial) : null;
   const comment = commentaire === '' || commentaire === undefined ? null : commentaire;
@@ -338,7 +343,7 @@ async function upsertConfirmationForEtat7({
     `(${col} IS NULL OR ${col} = '0000-00-00' OR CAST(${col} AS CHAR) IN ('0000-00-00', '0'))`;
 
   const applyUpdate = async (existingId) => {
-    // Essayer d'abord avec confirmation_day + date_confirmation_date, puis replis colonnes absentes
+    // Toujours resynchroniser confirmation_day + date_confirmation_date
     const updateVariants = [
       {
         sql: `UPDATE confirmations
@@ -358,7 +363,7 @@ async function upsertConfirmationForEtat7({
               SET date_rdv_time = ?,
                   date_confirmation = ?,
                   date_creation = ?,
-                  confirmation_day = ?,
+                  date_confirmation_date = ?,
                   id_confirmateur = COALESCE(?, id_confirmateur),
                   id_commercial = COALESCE(?, id_commercial),
                   commentaire = COALESCE(?, commentaire)
@@ -370,7 +375,7 @@ async function upsertConfirmationForEtat7({
               SET date_rdv_time = ?,
                   date_confirmation = ?,
                   date_creation = ?,
-                  date_confirmation_date = ?,
+                  confirmation_day = ?,
                   id_confirmateur = COALESCE(?, id_confirmateur),
                   id_commercial = COALESCE(?, id_commercial),
                   commentaire = COALESCE(?, commentaire)
@@ -403,83 +408,62 @@ async function upsertConfirmationForEtat7({
   };
 
   const findExistingId = async () => {
-    // Priorité 1 : même fiche + même jour (confirmation_day OU date_confirmation_date OU DATE(...))
-    if (confDay) {
+    // Requêtes séparées (pas un seul OR) : si confirmation_day est vide sur les lignes
+    // existantes, on trouve quand même via date_confirmation_date.
+    const dayLookups = [
+      {
+        // Priorité 1 : date_confirmation_date (souvent rempli alors que confirmation_day est vide)
+        sql: `SELECT id FROM confirmations
+              WHERE id_fiche = ?
+                AND NOT ${isZeroDateSql('date_confirmation_date')}
+                AND DATE(date_confirmation_date) = ?
+              ORDER BY id DESC LIMIT 1`,
+        params: [ficheId, confDay],
+      },
+      {
+        sql: `SELECT id FROM confirmations
+              WHERE id_fiche = ?
+                AND NOT ${isZeroDateSql('confirmation_day')}
+                AND DATE(confirmation_day) = ?
+              ORDER BY id DESC LIMIT 1`,
+        params: [ficheId, confDay],
+      },
+      {
+        sql: `SELECT id FROM confirmations
+              WHERE id_fiche = ?
+                AND DATE(COALESCE(
+                      NULLIF(NULLIF(date_confirmation, '0000-00-00 00:00:00'), '0000-00-00'),
+                      NULLIF(NULLIF(date_creation, '0000-00-00 00:00:00'), '0000-00-00')
+                    )) = ?
+              ORDER BY id DESC LIMIT 1`,
+        params: [ficheId, confDay],
+      },
+    ];
+
+    for (const lookup of dayLookups) {
       try {
-        const byConfDay = await queryOne(
-          `SELECT id FROM confirmations
-           WHERE id_fiche = ?
-             AND (
-               (confirmation_day = ? AND NOT ${isZeroDateSql('confirmation_day')})
-               OR (date_confirmation_date = ? AND NOT ${isZeroDateSql('date_confirmation_date')})
-               OR DATE(COALESCE(
-                    NULLIF(NULLIF(date_confirmation, '0000-00-00 00:00:00'), '0000-00-00'),
-                    NULLIF(NULLIF(date_creation, '0000-00-00 00:00:00'), '0000-00-00'),
-                    NULLIF(NULLIF(date_rdv_time, '0000-00-00 00:00:00'), '0000-00-00')
-                  )) = ?
-             )
-           ORDER BY id DESC
-           LIMIT 1`,
-          [ficheId, confDay, confDay, confDay]
-        );
-        if (byConfDay?.id) return byConfDay.id;
+        const row = await queryOne(lookup.sql, lookup.params);
+        if (row?.id) return row.id;
       } catch (e) {
-        if (e && e.code === 'ER_BAD_FIELD_ERROR') {
-          // Replis selon colonnes présentes
-          const fallbacks = [
-            {
-              sql: `SELECT id FROM confirmations
-                    WHERE id_fiche = ?
-                      AND (
-                        (confirmation_day = ? AND NOT ${isZeroDateSql('confirmation_day')})
-                        OR DATE(COALESCE(date_confirmation, date_creation, date_rdv_time)) = ?
-                      )
-                    ORDER BY id DESC LIMIT 1`,
-              params: [ficheId, confDay, confDay],
-            },
-            {
-              sql: `SELECT id FROM confirmations
-                    WHERE id_fiche = ?
-                      AND (
-                        (date_confirmation_date = ? AND NOT ${isZeroDateSql('date_confirmation_date')})
-                        OR DATE(COALESCE(date_confirmation, date_creation, date_rdv_time)) = ?
-                      )
-                    ORDER BY id DESC LIMIT 1`,
-              params: [ficheId, confDay, confDay],
-            },
-            {
-              sql: `SELECT id FROM confirmations
-                    WHERE id_fiche = ?
-                      AND DATE(COALESCE(date_confirmation, date_creation, date_rdv_time)) = ?
-                    ORDER BY id DESC LIMIT 1`,
-              params: [ficheId, confDay],
-            },
-          ];
-          for (const fb of fallbacks) {
-            try {
-              const row = await queryOne(fb.sql, fb.params);
-              if (row?.id) return row.id;
-              break;
-            } catch (fbErr) {
-              if (!(fbErr && fbErr.code === 'ER_BAD_FIELD_ERROR')) throw fbErr;
-            }
-          }
-        } else {
-          throw e;
-        }
+        if (!(e && e.code === 'ER_BAD_FIELD_ERROR')) throw e;
+        // Colonne absente → essayer la suivante
       }
     }
 
-    // Priorité 2 : même datetime RDV normalisé (évite doublons dus à "14:00" vs "14:00:00")
-    const byExactRdv = await queryOne(
-      `SELECT id FROM confirmations
-       WHERE id_fiche = ?
-         AND DATE_FORMAT(date_rdv_time, '%Y-%m-%d %H:%i:%s') = ?
-       ORDER BY id DESC
-       LIMIT 1`,
-      [ficheId, rdvNormalized]
-    );
-    if (byExactRdv?.id) return byExactRdv.id;
+    // Repli : même datetime RDV (évite "14:00" vs "14:00:00")
+    try {
+      const byExactRdv = await queryOne(
+        `SELECT id FROM confirmations
+         WHERE id_fiche = ?
+           AND DATE_FORMAT(date_rdv_time, '%Y-%m-%d %H:%i:%s') = ?
+         ORDER BY id DESC
+         LIMIT 1`,
+        [ficheId, rdvNormalized]
+      );
+      if (byExactRdv?.id) return byExactRdv.id;
+    } catch (e) {
+      if (!(e && e.code === 'ER_BAD_FIELD_ERROR')) throw e;
+    }
 
     return null;
   };
@@ -492,6 +476,7 @@ async function upsertConfirmationForEtat7({
     }
 
     try {
+      // Ordre : les deux colonnes jour, puis date_confirmation_date seule, puis confirmation_day
       const insertVariants = [
         {
           sql: `INSERT INTO confirmations
@@ -502,14 +487,14 @@ async function upsertConfirmationForEtat7({
         },
         {
           sql: `INSERT INTO confirmations
-                  (id_fiche, date_rdv_time, date_confirmation, confirmation_day,
+                  (id_fiche, date_rdv_time, date_confirmation, date_confirmation_date,
                    id_confirmateur, id_commercial, date_creation, commentaire)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           params: [ficheId, rdvNormalized, when, confDay, confId, comId, when, comment],
         },
         {
           sql: `INSERT INTO confirmations
-                  (id_fiche, date_rdv_time, date_confirmation, date_confirmation_date,
+                  (id_fiche, date_rdv_time, date_confirmation, confirmation_day,
                    id_confirmateur, id_commercial, date_creation, commentaire)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           params: [ficheId, rdvNormalized, when, confDay, confId, comId, when, comment],
