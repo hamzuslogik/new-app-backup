@@ -2261,6 +2261,10 @@ router.get('/fournisseurs-sms', authenticate, async (req, res) => {
 router.post('/fournisseurs-sms', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
   try {
     const { nom, login, api_key, api_url, actif = 1 } = req.body;
+    const fromSender =
+      req.body.from != null && String(req.body.from).trim() !== ''
+        ? String(req.body.from).trim()
+        : 'RAPPEL';
     
     if (!nom || !login || !api_key || !api_url) {
       return res.status(400).json({ 
@@ -2270,8 +2274,8 @@ router.post('/fournisseurs-sms', authenticate, checkPermission(1, 2, 7, 11), asy
     }
 
     const result = await query(
-      'INSERT INTO fournisseurs_sms (nom, login, api_key, api_url, actif, date_creation) VALUES (?, ?, ?, ?, ?, NOW())',
-      [nom, login, api_key, api_url, actif]
+      'INSERT INTO fournisseurs_sms (nom, login, api_key, api_url, `from`, actif, date_creation) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+      [nom, login, api_key, api_url, fromSender, actif]
     );
 
     res.status(201).json({
@@ -2281,6 +2285,23 @@ router.post('/fournisseurs-sms', authenticate, checkPermission(1, 2, 7, 11), asy
     });
   } catch (error) {
     console.error('Erreur:', error);
+    // Colonne `from` absente : fallback sans ce champ
+    if (error && error.code === 'ER_BAD_FIELD_ERROR') {
+      try {
+        const { nom, login, api_key, api_url, actif = 1 } = req.body;
+        const result = await query(
+          'INSERT INTO fournisseurs_sms (nom, login, api_key, api_url, actif, date_creation) VALUES (?, ?, ?, ?, ?, NOW())',
+          [nom, login, api_key, api_url, actif]
+        );
+        return res.status(201).json({
+          success: true,
+          message: 'Fournisseur SMS créé avec succès (colonne from absente)',
+          data: { id: result.insertId }
+        });
+      } catch (e2) {
+        console.error('Erreur fallback création fournisseur SMS:', e2);
+      }
+    }
     res.status(500).json({ success: false, message: 'Erreur lors de la création du fournisseur SMS' });
   }
 });
@@ -2290,6 +2311,10 @@ router.put('/fournisseurs-sms/:id', authenticate, checkPermission(1, 2, 7, 11), 
   try {
     const { id } = req.params;
     const { nom, login, api_key, api_url, actif } = req.body;
+    const fromSender =
+      req.body.from != null && String(req.body.from).trim() !== ''
+        ? String(req.body.from).trim()
+        : 'RAPPEL';
     
     if (!nom || !login || !api_url) {
       return res.status(400).json({ 
@@ -2299,18 +2324,38 @@ router.put('/fournisseurs-sms/:id', authenticate, checkPermission(1, 2, 7, 11), 
     }
 
     // Si api_key est fournie, la mettre à jour, sinon garder l'ancienne
-    let queryStr = 'UPDATE fournisseurs_sms SET nom = ?, login = ?, api_url = ?, actif = ?, date_modification = NOW()';
-    const params = [nom, login, api_url, actif !== undefined ? actif : 1];
+    let queryStr =
+      'UPDATE fournisseurs_sms SET nom = ?, login = ?, api_url = ?, `from` = ?, actif = ?, date_modification = NOW()';
+    const params = [nom, login, api_url, fromSender, actif !== undefined ? actif : 1];
     
     if (api_key && api_key.trim() !== '') {
-      queryStr = 'UPDATE fournisseurs_sms SET nom = ?, login = ?, api_key = ?, api_url = ?, actif = ?, date_modification = NOW()';
+      queryStr =
+        'UPDATE fournisseurs_sms SET nom = ?, login = ?, api_key = ?, api_url = ?, `from` = ?, actif = ?, date_modification = NOW()';
       params.splice(2, 0, api_key); // Insérer api_key après login
     }
     
     queryStr += ' WHERE id = ?';
     params.push(id);
 
-    await query(queryStr, params);
+    try {
+      await query(queryStr, params);
+    } catch (updErr) {
+      if (updErr && updErr.code === 'ER_BAD_FIELD_ERROR') {
+        // Colonne `from` absente : mise à jour sans ce champ
+        let fallbackSql = 'UPDATE fournisseurs_sms SET nom = ?, login = ?, api_url = ?, actif = ?, date_modification = NOW()';
+        const fallbackParams = [nom, login, api_url, actif !== undefined ? actif : 1];
+        if (api_key && api_key.trim() !== '') {
+          fallbackSql =
+            'UPDATE fournisseurs_sms SET nom = ?, login = ?, api_key = ?, api_url = ?, actif = ?, date_modification = NOW()';
+          fallbackParams.splice(2, 0, api_key);
+        }
+        fallbackSql += ' WHERE id = ?';
+        fallbackParams.push(id);
+        await query(fallbackSql, fallbackParams);
+      } else {
+        throw updErr;
+      }
+    }
 
     res.json({
       success: true,

@@ -1295,7 +1295,7 @@ async function executeSMSAction(config, eventData) {
     last_name: fiche.nom || '',
     param3: civ
   };
-  const result = await sendSMSViaProvider(provider, tel, processedMessage, 'RAPPEL', ficheData);
+  const result = await sendSMSViaProvider(provider, tel, processedMessage, null, ficheData);
   
   return { success: result.success, message: result.message };
 }

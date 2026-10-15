@@ -134,16 +134,38 @@ async function getDefaultSMSProvider() {
 }
 
 /**
+ * Expéditeur SMS : priorité au champ `from` du fournisseur, sinon override, sinon RAPPEL.
+ * @param {Object|null} provider
+ * @param {string|null|undefined} fromOverride
+ * @returns {string}
+ */
+function resolveSmsSender(provider, fromOverride) {
+  const fromProvider =
+    provider?.from != null && String(provider.from).trim() !== ''
+      ? String(provider.from).trim()
+      : '';
+  if (fromProvider) return fromProvider;
+  const fromArg =
+    fromOverride != null && String(fromOverride).trim() !== ''
+      ? String(fromOverride).trim()
+      : '';
+  if (fromArg) return fromArg;
+  return 'RAPPEL';
+}
+
+/**
  * Envoie un SMS via un fournisseur
  * @param {Object} provider - Le fournisseur SMS
  * @param {string} tel - Le numéro de téléphone (format: +33XXXXXXXXX, 0033XXXXXXXXX ou 0XXXXXXXXX)
  * @param {string} message - Le message à envoyer
- * @param {string} from - L'expéditeur (optionnel)
+ * @param {string} from - L'expéditeur (optionnel ; sinon fournisseurs_sms.from)
  * @param {Object} ficheData - Données optionnelles de la fiche (nom, prenom, etc.)
  * @returns {Promise<Object>} Résultat de l'envoi
  */
-async function sendSMSViaProvider(provider, tel, message, from = 'RAPPEL', ficheData = null) {
+async function sendSMSViaProvider(provider, tel, message, from = null, ficheData = null) {
   try {
+    from = resolveSmsSender(provider, from);
+
     // Formater le numéro de téléphone en format international +33
     let formattedTel = tel;
     if (tel.startsWith('0')) {
@@ -637,6 +659,7 @@ async function sendViaGenericAPI(provider, tel, message, from) {
 
 module.exports = {
   getDefaultSMSProvider,
-  sendSMSViaProvider
+  sendSMSViaProvider,
+  resolveSmsSender,
 };
 

@@ -14,13 +14,15 @@ import './ManagementTab.css';
 const FournisseursSMSTab = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ 
-    nom: '', 
-    login: '', 
-    api_key: '', 
+  const emptyForm = {
+    nom: '',
+    login: '',
+    api_key: '',
     api_url: 'https://api.octopush.com/v1/public',
-    actif: 1 
-  });
+    from: 'RAPPEL',
+    actif: 1,
+  };
+  const [formData, setFormData] = useState({ ...emptyForm });
   const [showApiKey, setShowApiKey] = useState({});
   const [searchTerm, setSearchTerm] = useLocalStorage('management_fournisseurs_sms_search', '');
   const [currentPage, setCurrentPage] = useState(1);
@@ -87,6 +89,7 @@ const FournisseursSMSTab = () => {
       item?.nom?.toLowerCase().includes(term) ||
       item?.login?.toLowerCase().includes(term) ||
       item?.api_url?.toLowerCase().includes(term) ||
+      item?.from?.toLowerCase().includes(term) ||
       item?.id?.toString().includes(term)
     );
   }, [data, searchTerm]);
@@ -111,6 +114,7 @@ const FournisseursSMSTab = () => {
       { key: 'id', label: 'ID' },
       { key: 'nom', label: 'Nom' },
       { key: 'login', label: 'Login' },
+      { key: 'from', label: 'Expéditeur (from)' },
       { key: 'api_url', label: 'URL API' },
       { key: 'actif', label: 'Actif' },
       { key: 'date_creation', label: 'Date création' }
@@ -132,13 +136,7 @@ const FournisseursSMSTab = () => {
         queryClient.invalidateQueries('fournisseurs_sms');
         toast.success('Fournisseur SMS créé avec succès');
         setShowForm(false);
-        setFormData({ 
-          nom: '', 
-          login: '', 
-          api_key: '', 
-          api_url: 'https://api.octopush.com/v1/public',
-          actif: 1 
-        });
+        setFormData({ ...emptyForm });
         setShowApiKey({});
       },
       onError: (error) => {
@@ -163,13 +161,7 @@ const FournisseursSMSTab = () => {
         toast.success('Fournisseur SMS mis à jour avec succès');
         setShowForm(false);
         setEditingId(null);
-        setFormData({ 
-          nom: '', 
-          login: '', 
-          api_key: '', 
-          api_url: 'https://api.octopush.com/v1/public',
-          actif: 1 
-        });
+        setFormData({ ...emptyForm });
         setShowApiKey({});
       },
       onError: (error) => {
@@ -211,6 +203,7 @@ const FournisseursSMSTab = () => {
       login: fournisseur.login || '', 
       api_key: '', // Ne pas afficher la clé API existante pour des raisons de sécurité
       api_url: fournisseur.api_url || 'https://api.octopush.com/v1/public',
+      from: fournisseur.from || 'RAPPEL',
       actif: fournisseur.actif !== undefined ? fournisseur.actif : 1
     });
     setShowForm(true);
@@ -276,13 +269,7 @@ const FournisseursSMSTab = () => {
           <button className="btn-primary" onClick={() => { 
             setShowForm(true); 
             setEditingId(null); 
-            setFormData({ 
-              nom: '', 
-              login: '', 
-              api_key: '', 
-              api_url: 'https://api.octopush.com/v1/public',
-              actif: 1 
-            });
+            setFormData({ ...emptyForm });
             setShowApiKey({});
           }}>
             <FaPlus /> Ajouter un fournisseur
@@ -384,6 +371,22 @@ const FournisseursSMSTab = () => {
               </div>
               <div className="form-group">
                 <label>
+                  Expéditeur (from) *
+                  <Tooltip text="Nom d'expéditeur SMS (sender) envoyé à l'API. Doit être autorisé chez le fournisseur (ex: RAPPEL, PROVOICE).">
+                    <FaInfoCircle className="info-icon" />
+                  </Tooltip>
+                </label>
+                <input
+                  type="text"
+                  value={formData.from}
+                  onChange={(e) => setFormData({ ...formData, from: e.target.value })}
+                  required
+                  maxLength={11}
+                  placeholder="Ex: RAPPEL"
+                />
+              </div>
+              <div className="form-group">
+                <label>
                   Actif
                   <Tooltip text="Définit si le fournisseur SMS est actif (utilisable) ou inactif dans le système.">
                     <FaInfoCircle className="info-icon" />
@@ -430,6 +433,7 @@ const FournisseursSMSTab = () => {
               <th>ID</th>
               <th>Nom</th>
               <th>Login</th>
+              <th>Expéditeur</th>
               <th>URL API</th>
               <th>Actif</th>
               <th>Date création</th>
@@ -443,6 +447,7 @@ const FournisseursSMSTab = () => {
                   <td data-label="ID:">{fournisseur.id}</td>
                   <td data-label="Nom:">{fournisseur.nom}</td>
                   <td data-label="Login:">{fournisseur.login}</td>
+                  <td data-label="Expéditeur:">{fournisseur.from || '—'}</td>
                   <td data-label="URL API:">
                     <a href={fournisseur.api_url} target="_blank" rel="noopener noreferrer" className="link-external">
                       {fournisseur.api_url}
@@ -470,7 +475,7 @@ const FournisseursSMSTab = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="7" className="text-center">
+                <td colSpan="8" className="text-center">
                   {searchTerm ? 'Aucun résultat trouvé' : 'Aucun fournisseur SMS trouvé'}
                 </td>
               </tr>

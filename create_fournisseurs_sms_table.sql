@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `fournisseurs_sms` (
   `login` varchar(255) CHARACTER SET utf8 NOT NULL,
   `api_key` varchar(500) CHARACTER SET utf8 NOT NULL,
   `api_url` varchar(500) CHARACTER SET utf8 NOT NULL,
+  `from` varchar(11) CHARACTER SET utf8 DEFAULT 'RAPPEL' COMMENT 'Expéditeur SMS (sender)',
   `actif` tinyint(1) DEFAULT 1 COMMENT '1=Actif, 0=Inactif',
   `date_creation` datetime DEFAULT NULL,
   `date_modification` datetime DEFAULT NULL,

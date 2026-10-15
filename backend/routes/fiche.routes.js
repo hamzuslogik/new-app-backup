@@ -8929,7 +8929,7 @@ router.post('/:id/sms', authenticate, hashToIdMiddleware, checkPermissionCode('f
     // Envoyer le SMS via le fournisseur
     let smsResult;
     try {
-      smsResult = await sendSMSViaProvider(provider, tel.trim(), processedMessage, 'RAPPEL', fiche || null);
+      smsResult = await sendSMSViaProvider(provider, tel.trim(), processedMessage, null, fiche || null);
     } catch (error) {
       console.error('[SMS Route] Erreur lors de l\'envoi du SMS:', error);
       return res.status(500).json({
