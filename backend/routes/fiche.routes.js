@@ -25,7 +25,7 @@ const {
 } = require('../utils/statsDrill');
 const {
   confirmateurDerniereLigneHistoJoin,
-  fichesHistoAnyActionByConfirmateurJoin,
+  fichesHistoConfirmateurActionLineJoin,
 } = require('../utils/fichesHistoJoinSql');
 const { isPolicyClosedSlot, canCreateRdvOnPolicyClosedSlot } = require('../utils/planningSlotPolicy');
 const {
@@ -1492,6 +1492,20 @@ router.get('/', authenticate, async (req, res) => {
     // Alias historique utilisé plus bas (histo join, filtre id_confirmateur)
     const hasCritereOuTelSearch = hasConfirmateurIdentitySearch;
 
+    // Date modif / changements d'état + confirmateur : afficher l'état de SA ligne histo
+    // (pas l'état actuel de la fiche si un autre a touché avant/après).
+    const willUseConfirmateurActionLine =
+      (String(date_champ) === 'date_modif_time' &&
+        (((id_confirmateur && id_confirmateur !== 'all') ||
+          (req.user.fonction === 6 && !hasCritereOuTelSearch)))) ||
+      (String(date_champ) === 'fiches_histo' &&
+        id_confirmateur &&
+        id_confirmateur !== 'all' &&
+        req.user.fonction !== 6);
+
+    let histoActionLineActive = false;
+    let deferredEtatIdsForHistoAction = null;
+
     if (!isActiveSearch && !statsDrillHandled) {
       if (req.user.fonction === 5) {
         // Commerciaux : RDV du jour avec état final 7
@@ -1676,6 +1690,13 @@ router.get('/', authenticate, async (req, res) => {
       if (etatFinalRaw === 't_s') {
         if (deferToutSignerWithPending) {
           // Combiné plus bas avec date_sign_time (approuvés groupe 3 OU CR Signer pending)
+        } else if (willUseConfirmateurActionLine) {
+          // Filtrer sur l'état de la ligne histo du confirmateur (après JOIN)
+          whereConditions.push(`EXISTS (
+            SELECT 1 FROM etats e_ts
+            WHERE e_ts.id = histo_action.histo_action_id_etat
+            AND (CAST(e_ts.groupe AS CHAR) = '3' OR e_ts.groupe = 3)
+          )`);
         } else {
           // TOUT SIGNER : tous les états de la phase 3 (groupe Signer)
           whereConditions.push(`EXISTS (
@@ -1690,7 +1711,10 @@ router.get('/', authenticate, async (req, res) => {
         if (etatIds.length === 0 && etatFinalRaw !== '') {
           console.warn('[FICHES] id_etat_final ignoré (valeur non reconnue):', idEtatFinalForWhere);
         }
-        if (etatIds.length === 1) {
+        if (willUseConfirmateurActionLine && etatIds.length > 0) {
+          // Reporté après le JOIN histo_action (filtre sur id_etat de la ligne confirmateur)
+          deferredEtatIdsForHistoAction = etatIds;
+        } else if (etatIds.length === 1) {
           if (qualificationCondition) {
             whereConditions.push(`(fiche.id_etat_final = ? OR ${qualificationCondition})`);
             params.push(etatIds[0], req.query.qualification_code);
@@ -2007,7 +2031,8 @@ router.get('/', authenticate, async (req, res) => {
             histoIdsSubquerySql = j.idsSubquerySql;
             histoIdsSubqueryParams = j.idsSubqueryParams;
           } else if (id_confirmateur && id_confirmateur !== 'all') {
-            const j = fichesHistoAnyActionByConfirmateurJoin(
+            // Ligne exacte du confirmateur (état affiché = son action, pas l'état actuel fiche)
+            const j = fichesHistoConfirmateurActionLineJoin(
               startDatetime,
               endDatetime,
               histoTargetUserId,
@@ -2017,6 +2042,7 @@ router.get('/', authenticate, async (req, res) => {
             histoParamsForFichesHisto = j.params;
             histoIdsSubquerySql = j.idsSubquerySql;
             histoIdsSubqueryParams = j.idsSubqueryParams;
+            histoActionLineActive = true;
           } else {
             // Sans confirmateur : toute fiche ayant au moins un passage d'état dans la plage
             histoIdsSubquerySql = `SELECT DISTINCT id_fiche
@@ -2069,7 +2095,8 @@ router.get('/', authenticate, async (req, res) => {
             (id_confirmateur && id_confirmateur !== 'all') ||
             (req.user.fonction === 6 && !hasCritereOuTelSearch);
           if (confFilterOnModif && dateDebut && dateFin) {
-            const j = fichesHistoAnyActionByConfirmateurJoin(
+            // Ligne exacte du confirmateur dans la plage → état / résultat de CETTE action
+            const j = fichesHistoConfirmateurActionLineJoin(
               startDatetime,
               endDatetime,
               histoTargetUserId,
@@ -2079,6 +2106,7 @@ router.get('/', authenticate, async (req, res) => {
             histoParamsForFichesHisto = j.params;
             histoIdsSubquerySql = j.idsSubquerySql;
             histoIdsSubqueryParams = j.idsSubqueryParams;
+            histoActionLineActive = true;
           } else if (dateDebut && dateFin) {
             histoIdsSubquerySql =
               'SELECT id_fiche FROM fiches_histo WHERE date_creation >= ? AND date_creation <= ? GROUP BY id_fiche';
@@ -2171,7 +2199,25 @@ router.get('/', authenticate, async (req, res) => {
           }
         }
       }
-    } else if (!isActiveSearch && !date_debut && !date_fin && !date_champ) {
+    }
+
+    // Filtre état sur la ligne histo du confirmateur (pas fiche.id_etat_final)
+    if (
+      histoActionLineActive &&
+      Array.isArray(deferredEtatIdsForHistoAction) &&
+      deferredEtatIdsForHistoAction.length > 0
+    ) {
+      if (deferredEtatIdsForHistoAction.length === 1) {
+        whereConditions.push('histo_action.histo_action_id_etat = ?');
+        params.push(deferredEtatIdsForHistoAction[0]);
+      } else {
+        const ph = deferredEtatIdsForHistoAction.map(() => '?').join(',');
+        whereConditions.push(`histo_action.histo_action_id_etat IN (${ph})`);
+        params.push(...deferredEtatIdsForHistoAction);
+      }
+    }
+
+    if (!date_champ && !isActiveSearch && !date_debut && !date_fin) {
       // Par défaut, si aucune recherche active et aucun filtre de date spécifié,
       // filtrer par fiches créées aujourd'hui (date_insert_time)
       // Ceci ne s'applique que si aucun filtre de date n'a été spécifié et qu'il n'y a pas de recherche active
@@ -2307,6 +2353,22 @@ router.get('/', authenticate, async (req, res) => {
     // Si histoIdsSubquerySql (déjà 1 ligne / fiche), GROUP BY est inutile et coûteux.
     const groupByClause = histoIdsSubquerySql ? '' : 'GROUP BY fiche.id';
     const selectStartTime = Date.now();
+    const histoActionSelect = histoActionLineActive
+      ? `, histo_action.histo_action_id AS histo_action_id
+       , histo_action.histo_action_id_etat AS histo_action_id_etat
+       , histo_action.histo_action_id_sous_etat AS histo_action_id_sous_etat
+       , histo_action.histo_action_date AS histo_action_date
+       , histo_action.histo_action_commentaire AS histo_action_commentaire
+       , histo_action.histo_action_id_confirmateur AS histo_action_id_confirmateur
+       , etat_histo_action.titre AS histo_action_etat_titre
+       , etat_histo_action.color AS histo_action_etat_color
+       , sous_etat_histo_action.titre AS histo_action_sous_etat_titre`
+      : '';
+    const histoActionEtatJoins = histoActionLineActive
+      ? `LEFT JOIN etats etat_histo_action ON etat_histo_action.id = histo_action.histo_action_id_etat
+       LEFT JOIN sous_etat sous_etat_histo_action ON sous_etat_histo_action.id = histo_action.histo_action_id_sous_etat`
+      : '';
+
     const selectQuery = `SELECT fiche.*,
        etat.titre as etat_titre,
        etat.color as etat_color,
@@ -2331,6 +2393,7 @@ router.get('/', authenticate, async (req, res) => {
        ) as commercial_2_pseudo,
        ${commercialDisplaySql('com_r1_sort')} as commercial_r1_pseudo
        ${qualifSelect}
+       ${histoActionSelect}
        FROM fiches fiche
        LEFT JOIN etats etat ON fiche.id_etat_final = etat.id
        LEFT JOIN sous_etat sous_etat_se ON fiche.id_sous_etat = sous_etat_se.id
@@ -2356,6 +2419,7 @@ router.get('/', authenticate, async (req, res) => {
        LEFT JOIN utilisateurs agent_sort ON fiche.id_agent = agent_sort.id
        LEFT JOIN centres centre_sort ON fiche.id_centre = centre_sort.id
        ${histoJoinForFichesHisto}
+       ${histoActionEtatJoins}
        ${qualifJoin}
        ${whereClause}
        ${groupByClause}
@@ -2365,6 +2429,26 @@ router.get('/', authenticate, async (req, res) => {
       ? [...histoParamsForFichesHisto, ...params, parsedLimit, offset]
       : [...params, parsedLimit, offset];
     const fiches = await query(selectQuery, selectParams);
+
+    // Afficher l'état / sous-état / commentaire de la ligne histo du confirmateur sélectionné
+    if (histoActionLineActive && fiches.length > 0) {
+      fiches.forEach((fiche) => {
+        const histoEtatId = fiche.histo_action_id_etat;
+        if (histoEtatId == null || histoEtatId === '') return;
+        fiche.id_etat_final_actuel = fiche.id_etat_final;
+        fiche.id_etat_final = histoEtatId;
+        fiche.etat_titre = fiche.histo_action_etat_titre || fiche.etat_titre;
+        fiche.etat_color = fiche.histo_action_etat_color || fiche.etat_color;
+        if (fiche.histo_action_id_sous_etat != null && fiche.histo_action_id_sous_etat !== '') {
+          fiche.id_sous_etat = fiche.histo_action_id_sous_etat;
+          fiche.sous_etat_titre = fiche.histo_action_sous_etat_titre || fiche.sous_etat_titre;
+        }
+        if (fiche.histo_action_commentaire != null) {
+          fiche.histo_last_conf_commentaire = fiche.histo_action_commentaire;
+        }
+        fiche.etat_from_confirmateur_histo = true;
+      });
+    }
     const selectDuration = Date.now() - selectStartTime;
     if (selectDuration >= 800) {
       console.warn(
@@ -2440,7 +2524,17 @@ router.get('/', authenticate, async (req, res) => {
         }
         confIdsByFiche.set(fid, uniq.slice(0, 3));
       }
-      const allConfIds = [...new Set(ficheIds.flatMap((fid) => confIdsByFiche.get(Number(fid)) || []))];
+      const actionConfIds = histoActionLineActive
+        ? fiches
+            .map((f) => Number(f.histo_action_id_confirmateur))
+            .filter((n) => Number.isFinite(n) && n > 0)
+        : [];
+      const allConfIds = [
+        ...new Set([
+          ...ficheIds.flatMap((fid) => confIdsByFiche.get(Number(fid)) || []),
+          ...actionConfIds,
+        ]),
+      ];
       let idToPseudo = new Map();
       if (allConfIds.length > 0) {
         const ph = allConfIds.map(() => '?').join(',');
@@ -2448,7 +2542,19 @@ router.get('/', authenticate, async (req, res) => {
         idToPseudo = new Map(userRows.map((u) => [Number(u.id), u.pseudo]));
       }
       fiches.forEach((fiche) => {
-        fiche.histo_last_conf_commentaire = histoLastCommentByFiche.get(Number(fiche.id)) ?? null;
+        // Ne pas écraser le commentaire de la ligne du confirmateur sélectionné (date modif / histo)
+        if (!fiche.etat_from_confirmateur_histo) {
+          fiche.histo_last_conf_commentaire = histoLastCommentByFiche.get(Number(fiche.id)) ?? null;
+        }
+        // Colonne Confirmateur : privilégier l'auteur de la ligne histo affichée
+        if (fiche.etat_from_confirmateur_histo && fiche.histo_action_id_confirmateur) {
+          const cid = Number(fiche.histo_action_id_confirmateur);
+          const pseudo = idToPseudo.get(cid);
+          if (pseudo) {
+            fiche.histo_confirmateurs_pseudo = pseudo;
+            return;
+          }
+        }
         const ids = confIdsByFiche.get(Number(fiche.id)) || [];
         const parts = ids.map((id) => idToPseudo.get(id) || `ID${id}`).filter(Boolean);
         fiche.histo_confirmateurs_pseudo = parts.length > 0 ? parts.join(' | ') : null;

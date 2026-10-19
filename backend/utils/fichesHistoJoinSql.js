@@ -138,11 +138,72 @@ function fichesHistoAnyActionByConfirmateurJoin(
   };
 }
 
+/**
+ * Dernière ligne fiches_histo DU confirmateur dans la plage (MAX(id) parmi ses actions),
+ * même si un autre confirmateur a touché la fiche avant ou après.
+ * Expose id_etat / id_sous_etat / commentaire pour l'affichage Dashboard.
+ */
+function fichesHistoConfirmateurActionLineSql(
+  startDatetime,
+  endDatetime,
+  userId,
+  includeMultiSlot = false
+) {
+  const slotWhere = confirmateurSlotMatch('h', includeMultiSlot);
+  const headParams = confirmateurSlotParams(userId, includeMultiSlot);
+
+  const sql = `SELECT
+      fh.id_fiche,
+      fh.id AS histo_action_id,
+      fh.id_etat AS histo_action_id_etat,
+      fh.id_sous_etat AS histo_action_id_sous_etat,
+      fh.date_creation AS histo_action_date,
+      fh.conf_commentaire_produit AS histo_action_commentaire,
+      fh.id_confirmateur AS histo_action_id_confirmateur
+    FROM fiches_histo fh
+    INNER JOIN (
+      SELECT h.id_fiche, MAX(h.id) AS max_id
+      FROM fiches_histo h
+      WHERE ${slotWhere}
+        AND h.date_creation >= ? AND h.date_creation <= ?
+      GROUP BY h.id_fiche
+    ) pick ON fh.id = pick.max_id`;
+
+  return {
+    sql,
+    params: [...headParams, startDatetime, endDatetime],
+  };
+}
+
+function fichesHistoConfirmateurActionLineJoin(
+  startDatetime,
+  endDatetime,
+  userId,
+  includeMultiSlot = false
+) {
+  const line = fichesHistoConfirmateurActionLineSql(
+    startDatetime,
+    endDatetime,
+    userId,
+    includeMultiSlot
+  );
+  const idsSql = `SELECT id_fiche FROM (${line.sql}) histo_action_ids`;
+  return {
+    joinSql: `INNER JOIN (${line.sql}) histo_action ON fiche.id = histo_action.id_fiche`,
+    params: line.params,
+    idsSubquerySql: idsSql,
+    idsSubqueryParams: line.params,
+    exposesActionLine: true,
+  };
+}
+
 module.exports = {
   confirmateurDerniereLigneHistoJoin,
   fichesHistoLastInRangeJoin,
   fichesHistoAnyActionByConfirmateurJoin,
+  fichesHistoConfirmateurActionLineJoin,
   confirmateurDerniereLigneHistoIdsSql,
   fichesHistoLastInRangeIdsSql,
   fichesHistoAnyActionByConfirmateurIdsSql,
+  fichesHistoConfirmateurActionLineSql,
 };
