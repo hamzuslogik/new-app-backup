@@ -1780,13 +1780,15 @@ router.get('/', authenticate, async (req, res) => {
       }
     // Filtre par confirmateur : pour toutes les sessions Dashboard sauf confirmateur (fonction 6).
     // include_confirmateur_2=1 : inclure 2ème et 3ème slots ; sinon uniquement 1er confirmateur.
-    // Pas de filtre slots fiche si « Mes actions » ou « Confirmer (histo) » : le JOIN histo fait foi
+    // Pas de filtre slots fiche si « Mes actions », « Date Modification (état) » (+ confirmateur),
+    // ou « Confirmer (histo) » : le JOIN histo fait foi
     // (évite d'afficher d'autres confirmateurs via fiche.id_confirmateur alors que X a agi en histo).
     } else if (
       id_confirmateur &&
       id_confirmateur !== 'all' &&
       req.user.fonction !== 6 &&
       String(date_champ) !== 'fiches_histo' &&
+      String(date_champ) !== 'date_modif_time' &&
       String(date_champ) !== 'fiches_histo_confirmation' &&
       String(date_champ) !== 'confirmations'
     ) {
@@ -2058,11 +2060,26 @@ router.get('/', authenticate, async (req, res) => {
           histoParamsForFichesHisto = histoIdsSubqueryParams;
         } else if (date_champ === 'date_modif_time') {
           // Date Modification (état) = passage d'état dans fiches_histo.date_creation
-          // (pas fiches.date_modif_time). JOIN piloté par l'histo (comme fiches_histo_confirmation)
-          // au lieu d'un EXISTS corrélé — beaucoup plus rapide sur grosses tables.
+          // (pas fiches.date_modif_time). Avec confirmateur choisi (ou session confirmateur) :
+          // uniquement les fiches où CE confirmateur a changé l'état dans la plage —
+          // même sémantique que « Changements d'état du confirmateur (fiches_histo) ».
           const startDatetime = `${dateDebut || dateFin} ${timeStart}`;
           const endDatetime = `${dateFin || dateDebut} ${timeEnd}`;
-          if (dateDebut && dateFin) {
+          const confFilterOnModif =
+            (id_confirmateur && id_confirmateur !== 'all') ||
+            (req.user.fonction === 6 && !hasCritereOuTelSearch);
+          if (confFilterOnModif && dateDebut && dateFin) {
+            const j = fichesHistoAnyActionByConfirmateurJoin(
+              startDatetime,
+              endDatetime,
+              histoTargetUserId,
+              includeHistoMultiSlot
+            );
+            histoJoinForFichesHisto = j.joinSql;
+            histoParamsForFichesHisto = j.params;
+            histoIdsSubquerySql = j.idsSubquerySql;
+            histoIdsSubqueryParams = j.idsSubqueryParams;
+          } else if (dateDebut && dateFin) {
             histoIdsSubquerySql =
               'SELECT id_fiche FROM fiches_histo WHERE date_creation >= ? AND date_creation <= ? GROUP BY id_fiche';
             histoIdsSubqueryParams = [startDatetime, endDatetime];
@@ -2075,7 +2092,7 @@ router.get('/', authenticate, async (req, res) => {
               'SELECT id_fiche FROM fiches_histo WHERE date_creation <= ? GROUP BY id_fiche';
             histoIdsSubqueryParams = [endDatetime];
           }
-          if (histoIdsSubquerySql) {
+          if (histoIdsSubquerySql && !histoJoinForFichesHisto) {
             histoJoinForFichesHisto = `INNER JOIN (${histoIdsSubquerySql}) histo_modif ON fiche.id = histo_modif.id_fiche`;
             histoParamsForFichesHisto = histoIdsSubqueryParams;
           }
@@ -2179,9 +2196,15 @@ router.get('/', authenticate, async (req, res) => {
 
     // Session confirmateur (Dashboard / fiche_search) : périmètre fiche.id_confirmateur (1er) ;
     // + slots 2/3 si include_confirmateur_2=1. Exception : recherche téléphone
-    // → hors périmètre (hasConfirmateurIdentitySearch). La plage « Mes actions (fiches_histo) »
-    // est gérée ci-dessus via dernière ligne fiches_histo.
-    if (req.user.fonction === 6 && isActiveSearch && !hasCritereOuTelSearch && date_champ !== 'fiches_histo') {
+    // → hors périmètre (hasConfirmateurIdentitySearch). « Mes actions (fiches_histo) » et
+    // « Date Modification (état) » : JOIN histo par auteur — pas de filtre slots fiche.
+    if (
+      req.user.fonction === 6 &&
+      isActiveSearch &&
+      !hasCritereOuTelSearch &&
+      date_champ !== 'fiches_histo' &&
+      date_champ !== 'date_modif_time'
+    ) {
       if (includeConfSlots) {
         whereConditions.push(
           '(fiche.id_confirmateur = ? OR fiche.id_confirmateur_2 = ? OR fiche.id_confirmateur_3 = ?)'
