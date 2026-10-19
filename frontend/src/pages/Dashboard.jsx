@@ -1130,9 +1130,14 @@ const Dashboard = () => {
     }
     setIsSearching(true);
     const newFilters = { ...filters, fiche_search: true, page: 1 };
-    
-    if (newFilters.critere || (newFilters.cp || '').trim()) {
-      const today = new Date().toISOString().split('T')[0];
+
+    // Recherche par critère (nom/tél) sans champ de date choisi : retirer la plage
+    // « aujourd'hui » par défaut pour ne pas restreindre à tort.
+    // Ne PAS appliquer si date_champ est renseigné (ex. Date Planning + département) :
+    // sinon le périmètre de dates disparaît et le backend ignore la période.
+    const hasExplicitDateChamp = !!(newFilters.date_champ || '').trim();
+    if ((newFilters.critere || '').trim() && !hasExplicitDateChamp) {
+      const today = getTodayDateRange().dateStr;
       if (newFilters.date_debut === today && newFilters.date_fin === today) {
         delete newFilters.date_debut;
         delete newFilters.date_fin;
@@ -1141,7 +1146,7 @@ const Dashboard = () => {
         delete newFilters.time_fin;
       }
     }
-    
+
     setFilters(newFilters);
     setAppliedFilters(newFilters);
     setStatsListOverride(null);
