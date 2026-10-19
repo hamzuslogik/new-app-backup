@@ -390,7 +390,9 @@ const AdminTopNav = () => {
             <NavLink to={urls.permissions} className={classFor(urls.permissions)}>Permissions</NavLink>
             <NavLink to={urls.systemMessages} className={classFor(urls.systemMessages)}>Messages système</NavLink>
           </>
-        ) : null}
+        ) : (
+          <NavLink to="/validation" className={classFor('/validation')}>Validation</NavLink>
+        )}
         <NavLink to={urls.monProfil} className={classFor(urls.monProfil)}>Mon profil</NavLink>
         <NavLink to={urls.envoyerMessage} className={classFor(urls.envoyerMessage)}>Envoyer un message</NavLink>
         {!isRpConfirmation ? (

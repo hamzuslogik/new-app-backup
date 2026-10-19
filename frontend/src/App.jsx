@@ -150,7 +150,7 @@ function App() {
           <Route path="stats-agents-qualite" element={<ProtectedRoute permission="stats_agents_qualite_view"><StatsAgentsQualite /></ProtectedRoute>} />
           <Route path="management" element={<ProtectedRoute permission="management_view" excludeFunctions={[8]}><Management /></ProtectedRoute>} />
           <Route path="decalages" element={<ProtectedRoute permission="decalage_view"><Decalages /></ProtectedRoute>} />
-          <Route path="validation" element={<ProtectedRoute permission="validation_view"><Validation /></ProtectedRoute>} />
+          <Route path="validation" element={<ProtectedRoute permission="validation_view" allowFunctions={[13]}><Validation /></ProtectedRoute>} />
           <Route path="mes-rappels" element={<ProtectedRoute permission="dashboard_view" allowFunctions={[6, 13, 14]}><MesRappels /></ProtectedRoute>} />
           <Route path="mon-equipe" element={<ProtectedRoute permission={null} allowFunctions={[2, 12, 13, 14]}><MonEquipe /></ProtectedRoute>} />
           <Route path="rappels-bureau" element={<ProtectedRoute permission={null} allowFunctions={[13]}><RappelsBureau /></ProtectedRoute>} />

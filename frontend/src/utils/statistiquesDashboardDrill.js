@@ -53,6 +53,9 @@ export function buildDashboardDrillUrl({
 
   if (filters.produit === '1' || filters.produit === '2') {
     base.produit = filters.produit;
+  } else if (row?.produit === 1 || row?.produit === 2 || row?.produit === '1' || row?.produit === '2') {
+    // Ligne centre découpée PAC/PV (ex. CALL_JWS PAC)
+    base.produit = String(row.produit);
   }
 
   if (activeTab === 'confirmateur' && filters.id_centre) {

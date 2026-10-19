@@ -618,6 +618,23 @@ router.get('/all-stat', authenticate, async (req, res) => {
     ? prefixConfirmateurHistoSqlConditions(additionalConditions)
     : '';
 
+    // CENTRE : CALL_JWS / CALL_JWS_PEP → 2 lignes (PAC / PV) si filtre énergie = les deux
+    const CENTRE_SPLIT_PAC_PV_TITLES = ['CALL_JWS', 'CALL_JWS_PEP'];
+    const splitCentreIdSet = new Set();
+    const produitFilterActive = produit === '1' || produit === '2';
+    if (name_stat === 'CENTRE' && !produitFilterActive) {
+      const splitCentres = await query(
+        `SELECT id, titre FROM centres
+         WHERE titre IN (${CENTRE_SPLIT_PAC_PV_TITLES.map(() => '?').join(',')})`,
+        CENTRE_SPLIT_PAC_PV_TITLES
+      );
+      (splitCentres || []).forEach((c) => {
+        const cid = Number(c.id);
+        if (Number.isFinite(cid) && cid > 0) splitCentreIdSet.add(cid);
+      });
+    }
+    const splitCentreByProduit = name_stat === 'CENTRE' && splitCentreIdSet.size > 0;
+
     // Récupérer le total de fiches pour la période
     let total;
     let stats;
@@ -704,22 +721,51 @@ router.get('/all-stat', authenticate, async (req, res) => {
     );
     total = totalResult?.total || 0;
 
-    stats = await query(
-      `SELECT
-         ${useEtatFinalKey
-           ? 'CAST(id_etat_final AS CHAR) AS etat_key'
-           : 'CASE WHEN (ko = 1) THEN ? ELSE CAST(id_etat_final AS CHAR) END AS etat_key'},
-         \`${groupByField}\`,
-         COUNT(*) AS stats
-       FROM fiches
-       WHERE (archive = 0 OR archive IS NULL)
-       AND active = 1
-       AND \`${dateFieldForQuery}\` >= ?
-       AND \`${dateFieldForQuery}\` <= ?${fichesConditions}
-       GROUP BY etat_key, \`${groupByField}\`
-       ORDER BY etat_key ASC`,
-      useEtatFinalKey ? fichesQueryParams : [String(koColumnKey), ...fichesQueryParams]
-    );
+    if (splitCentreByProduit) {
+      const splitIds = [...splitCentreIdSet];
+      const inPh = splitIds.map(() => '?').join(',');
+      const etatKeySql = useEtatFinalKey
+        ? 'CAST(id_etat_final AS CHAR) AS etat_key'
+        : 'CASE WHEN (ko = 1) THEN ? ELSE CAST(id_etat_final AS CHAR) END AS etat_key';
+      const statsParams = useEtatFinalKey
+        ? [...splitIds, ...fichesQueryParams]
+        : [String(koColumnKey), ...splitIds, ...fichesQueryParams];
+      stats = await query(
+        `SELECT
+           ${etatKeySql},
+           \`${groupByField}\`,
+           CASE
+             WHEN \`${groupByField}\` IN (${inPh}) AND produit IN (1, 2) THEN produit
+             ELSE 0
+           END AS produit_key,
+           COUNT(*) AS stats
+         FROM fiches
+         WHERE (archive = 0 OR archive IS NULL)
+         AND active = 1
+         AND \`${dateFieldForQuery}\` >= ?
+         AND \`${dateFieldForQuery}\` <= ?${fichesConditions}
+         GROUP BY etat_key, \`${groupByField}\`, produit_key
+         ORDER BY etat_key ASC`,
+        statsParams
+      );
+    } else {
+      stats = await query(
+        `SELECT
+           ${useEtatFinalKey
+             ? 'CAST(id_etat_final AS CHAR) AS etat_key'
+             : 'CASE WHEN (ko = 1) THEN ? ELSE CAST(id_etat_final AS CHAR) END AS etat_key'},
+           \`${groupByField}\`,
+           COUNT(*) AS stats
+         FROM fiches
+         WHERE (archive = 0 OR archive IS NULL)
+         AND active = 1
+         AND \`${dateFieldForQuery}\` >= ?
+         AND \`${dateFieldForQuery}\` <= ?${fichesConditions}
+         GROUP BY etat_key, \`${groupByField}\`
+         ORDER BY etat_key ASC`,
+        useEtatFinalKey ? fichesQueryParams : [String(koColumnKey), ...fichesQueryParams]
+      );
+    }
     }
 
     // Organiser les données par utilisateur/centre
@@ -727,8 +773,16 @@ router.get('/all-stat', authenticate, async (req, res) => {
     const tauxByEntity = {};
 
     stats.forEach(stat => {
-      const entityId = stat[groupByField];
-      if (!entityId) return;
+      const centreOrEntityId = stat[groupByField];
+      if (!centreOrEntityId) return;
+
+      const produitKey = Number(stat.produit_key) || 0;
+      const entityId =
+        splitCentreByProduit &&
+        splitCentreIdSet.has(Number(centreOrEntityId)) &&
+        (produitKey === 1 || produitKey === 2)
+          ? `${centreOrEntityId}:${produitKey}`
+          : String(centreOrEntityId);
 
       if (!dataByEntity[entityId]) {
         dataByEntity[entityId] = {};
@@ -747,7 +801,7 @@ router.get('/all-stat', authenticate, async (req, res) => {
       const taux = etatsTaux[etatId] ?? (String(etatId) === String(koColumnKey) ? -1 : 0);
 
       // Stocker le nombre par état
-      dataByEntity[entityId][etatId] = count;
+      dataByEntity[entityId][etatId] = (dataByEntity[entityId][etatId] || 0) + count;
 
       // Calculer les totaux par type de taux
       if (taux === 0) {
@@ -758,6 +812,35 @@ router.get('/all-stat', authenticate, async (req, res) => {
         tauxByEntity[entityId].negative += count;
       }
     });
+
+    // Centres CALL_JWS / CALL_JWS_PEP : garantir les 2 lignes PAC + PV si le centre a de l'activité
+    if (splitCentreByProduit) {
+      for (const cid of splitCentreIdSet) {
+        const hasActivity = Object.keys(dataByEntity).some(
+          (k) => k === String(cid) || k.startsWith(`${cid}:`)
+        );
+        if (!hasActivity) continue;
+        for (const pid of [1, 2]) {
+          const key = `${cid}:${pid}`;
+          if (!dataByEntity[key]) {
+            dataByEntity[key] = {};
+            tauxByEntity[key] = { neutre: 0, positive: 0, negative: 0 };
+          }
+        }
+        // Ligne sans produit (ni 1 ni 2) : la retirer si vide uniquement
+        const orphanKey = String(cid);
+        if (dataByEntity[orphanKey]) {
+          const orphanCount = Object.values(dataByEntity[orphanKey]).reduce(
+            (sum, v) => sum + (Number(v) || 0),
+            0
+          );
+          if (orphanCount === 0) {
+            delete dataByEntity[orphanKey];
+            delete tauxByEntity[orphanKey];
+          }
+        }
+      }
+    }
 
     // Récupérer les noms des entités (centres, utilisateurs)
     let entitiesMap = {};
@@ -808,23 +891,37 @@ router.get('/all-stat', authenticate, async (req, res) => {
     };
 
     // Construire les données pour chaque entité
-    Object.keys(dataByEntity).forEach(entityId => {
-      if (name_stat === 'COMMERCIAL' && !entitiesMap[entityId]) return;
-      const entityName = entitiesMap[entityId] || `ID ${entityId}`;
+    Object.keys(dataByEntity).forEach(entityKey => {
+      let centreId = entityKey;
+      let rowProduit = null;
+      if (String(entityKey).includes(':')) {
+        const [cid, pid] = String(entityKey).split(':');
+        centreId = cid;
+        rowProduit = Number(pid);
+      }
+      if (name_stat === 'COMMERCIAL' && !entitiesMap[centreId] && !entitiesMap[entityKey]) return;
+      const baseName = entitiesMap[centreId] || entitiesMap[entityKey] || `ID ${centreId}`;
+      let entityName = baseName;
+      if (rowProduit === 1) entityName = `${baseName} PAC`;
+      else if (rowProduit === 2) entityName = `${baseName} PV`;
+
       const entityData = {
-        id: entityId,
+        id: centreId,
         name: entityName,
         stats: {},
         totals: {
-          neutre: tauxByEntity[entityId].neutre,
-          positive: tauxByEntity[entityId].positive,
-          negative: tauxByEntity[entityId].negative
+          neutre: tauxByEntity[entityKey].neutre,
+          positive: tauxByEntity[entityKey].positive,
+          negative: tauxByEntity[entityKey].negative
         }
       };
+      if (rowProduit === 1 || rowProduit === 2) {
+        entityData.produit = rowProduit;
+      }
 
       // Ajouter les stats par état
       etatsForDisplay.forEach(etat => {
-        entityData.stats[etat.id] = dataByEntity[entityId][etat.id] || 0;
+        entityData.stats[etat.id] = dataByEntity[entityKey][etat.id] || 0;
       });
 
       // Calculer le total et le taux de réussite
@@ -841,8 +938,8 @@ router.get('/all-stat', authenticate, async (req, res) => {
       result.data.push(entityData);
     });
 
-    // Trier par nom
-    result.data.sort((a, b) => a.name.localeCompare(b.name));
+    // Trier par nom (CALL_JWS PAC puis CALL_JWS PV grâce au suffixe)
+    result.data.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
 
     res.json({
       success: true,
