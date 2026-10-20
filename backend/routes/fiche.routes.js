@@ -2290,13 +2290,16 @@ router.get('/', authenticate, async (req, res) => {
     const qualifJoinForCount = needsQualifJoin && qualifTableExists 
       ? 'LEFT JOIN qualif ON fiche.id_qualif = qualif.id' 
       : '';
-    const countParams = histoIdsSubquerySql
+    // Avec ligne histo confirmateur (histo_action.*) : le COUNT doit utiliser le même JOIN
+    // que le SELECT — la sous-requête ids seule n'expose pas histo_action_id_etat.
+    const useHistoIdsCount = !!histoIdsSubquerySql && !histoActionLineActive;
+    const countParams = useHistoIdsCount
       ? [...histoIdsSubqueryParams, ...params]
       : histoJoinForFichesHisto
         ? [...histoParamsForFichesHisto, ...params]
         : params;
 
-    const countSql = histoIdsSubquerySql
+    const countSql = useHistoIdsCount
       ? `SELECT COUNT(*) AS total
          FROM (${histoIdsSubquerySql}) histo_cnt
          INNER JOIN fiches fiche ON fiche.id = histo_cnt.id_fiche
