@@ -19,6 +19,8 @@ const {
   getProductionHours,
   normalizeProductionHours,
   computePresenceCoefficient,
+  getPartenaireFixerRdvIds,
+  userHasPartenaireFixerRdv,
 } = require('../utils/globalSettingsHelper');
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -3182,6 +3184,83 @@ router.put('/global-settings/production-hours', authenticate, checkPermission(1,
     });
   } catch (error) {
     console.error('Erreur PUT /global-settings/production-hours:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+router.get('/global-settings/partenaire-fixer-rdv/me', authenticate, async (req, res) => {
+  try {
+    const enabled =
+      Number(req.user?.fonction) === 9 && (await userHasPartenaireFixerRdv(req.user.id));
+    res.json({ success: true, data: { enabled } });
+  } catch (error) {
+    console.error('Erreur GET /global-settings/partenaire-fixer-rdv/me:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+router.get('/global-settings/partenaire-fixer-rdv', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    await ensureGlobalSettingsTable();
+    const ids = await getPartenaireFixerRdvIds();
+    const partenaires = await query(
+      `SELECT id, pseudo, nom, prenom, login
+       FROM utilisateurs
+       WHERE fonction = 9 AND (etat > 0 OR etat IS NULL)
+       ORDER BY pseudo ASC, nom ASC`
+    );
+    res.json({
+      success: true,
+      data: {
+        ids,
+        partenaires: (partenaires || []).map((p) => ({
+          id: p.id,
+          pseudo: p.pseudo || p.login || `ID ${p.id}`,
+          nom: p.nom || '',
+          prenom: p.prenom || '',
+          fixer_rdv: ids.includes(Number(p.id)),
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('Erreur GET /global-settings/partenaire-fixer-rdv:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+router.put('/global-settings/partenaire-fixer-rdv', authenticate, checkPermission(1, 2, 7, 11), async (req, res) => {
+  try {
+    await ensureGlobalSettingsTable();
+    const raw = Array.isArray(req.body?.ids) ? req.body.ids : [];
+    const ids = [...new Set(raw.map((n) => parseInt(n, 10)).filter((n) => Number.isFinite(n) && n > 0))];
+    if (ids.length > 0) {
+      const ph = ids.map(() => '?').join(',');
+      const rows = await query(
+        `SELECT id FROM utilisateurs WHERE fonction = 9 AND id IN (${ph})`,
+        ids
+      );
+      const allowed = new Set((rows || []).map((r) => Number(r.id)));
+      const invalid = ids.filter((id) => !allowed.has(id));
+      if (invalid.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'Certains identifiants ne sont pas des partenaires',
+        });
+      }
+    }
+    await query(
+      `INSERT INTO global_settings (setting_key, setting_value, updated_by)
+       VALUES ('partenaire_fixer_rdv_ids', ?, ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by)`,
+      [JSON.stringify(ids), req.user?.id || null]
+    );
+    res.json({
+      success: true,
+      message: 'Paramètre fixer RDV partenaires enregistré',
+      data: { ids },
+    });
+  } catch (error) {
+    console.error('Erreur PUT /global-settings/partenaire-fixer-rdv:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

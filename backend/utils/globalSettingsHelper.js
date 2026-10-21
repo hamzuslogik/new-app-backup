@@ -19,6 +19,7 @@ async function ensureDefaultGlobalSettingsRows() {
     ['failed_login_max_before_ip_block', '5'],
     ['failed_login_window_minutes', '60'],
     ['session_lifetime', sessionDefault],
+    ['partenaire_fixer_rdv_ids', '[]'],
     [
       'production_hours',
       JSON.stringify({
@@ -151,6 +152,33 @@ function normalizeProductionHours(raw) {
     data[day] = slots;
   }
   return { ok: true, data };
+}
+
+function parseIdList(raw) {
+  if (raw == null || raw === '') return [];
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!Array.isArray(parsed)) return [];
+    return [...new Set(parsed.map((n) => parseInt(n, 10)).filter((n) => Number.isFinite(n) && n > 0))];
+  } catch {
+    return [];
+  }
+}
+
+async function getPartenaireFixerRdvIds() {
+  await ensureGlobalSettingsTable();
+  const rows = await query(
+    `SELECT setting_value FROM global_settings WHERE setting_key = ?`,
+    ['partenaire_fixer_rdv_ids']
+  );
+  return parseIdList(rows?.[0]?.setting_value);
+}
+
+async function userHasPartenaireFixerRdv(userId) {
+  const id = parseInt(userId, 10);
+  if (!Number.isFinite(id) || id <= 0) return false;
+  const ids = await getPartenaireFixerRdvIds();
+  return ids.includes(id);
 }
 
 async function getProductionHours() {
@@ -386,6 +414,8 @@ module.exports = {
   defaultProductionHours,
   normalizeProductionHours,
   getProductionHours,
+  getPartenaireFixerRdvIds,
+  userHasPartenaireFixerRdv,
   computePresenceCoefficient,
   getDayKeyFromYmd,
   getSlotsMinutes,

@@ -1252,16 +1252,26 @@ const FicheDetail = ({
     Number(user?.fonction) === 9 ||
     (typeof user?.fonction_titre === 'string' && /partenaire/i.test(user.fonction_titre)) ||
     (typeof user?.centre_titre === 'string' && /partenaire/i.test(user.centre_titre));
-  /** Modal détail fiche partenaire : uniquement l'onglet Fiches (pas Modifica / historique états). */
+  /** Modal détail fiche partenaire : onglets limités, sauf si « fixer RDV » est autorisé. */
   const isPartenaireModalLimitedTabs = Boolean(isModal && isPartenaireProfil);
+
+  const { data: partenaireFixerRdvEnabled = false } = useQuery(
+    ['partenaire-fixer-rdv-me', user?.id],
+    async () => {
+      const res = await api.get('/management/global-settings/partenaire-fixer-rdv/me');
+      return !!res.data?.data?.enabled;
+    },
+    { enabled: isPartenaireProfil, staleTime: 60 * 1000 }
+  );
+  const partenaireCanFixerRdv = isPartenaireProfil && partenaireFixerRdvEnabled;
 
   useEffect(() => {
     if (!isModal || !initialTab) return;
     const allowed = isPartenaireModalLimitedTabs
-      ? ['fiches']
+      ? (partenaireCanFixerRdv ? ['fiches', 'planning'] : ['fiches'])
       : ['fiches', 'modifica', 'affectation', 'planning', 'sms', 'pdf'];
     if (allowed.includes(initialTab)) setActiveTab(initialTab);
-  }, [isModal, initialTab, isPartenaireModalLimitedTabs]);
+  }, [isModal, initialTab, isPartenaireModalLimitedTabs, partenaireCanFixerRdv]);
   const isConfirmateurSession = userFonction === 6;
   const getConfirmateurLabel = (id) => {
     if (!id) return '';
@@ -1276,13 +1286,14 @@ const FicheDetail = ({
     }
   }, [isQualiteQualif, activeTab]);
 
-  // Modal partenaire : onglet Fiches uniquement
+  // Modal partenaire : Fiches seul, ou Fiches + Planning si fixer RDV autorisé
   useEffect(() => {
     if (!isPartenaireModalLimitedTabs) return;
-    if (activeTab !== 'fiches') {
+    const allowed = partenaireCanFixerRdv ? ['fiches', 'planning'] : ['fiches'];
+    if (!allowed.includes(activeTab)) {
       setActiveTab('fiches');
     }
-  }, [isPartenaireModalLimitedTabs, activeTab]);
+  }, [isPartenaireModalLimitedTabs, partenaireCanFixerRdv, activeTab]);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [bulkEditingEtude, setBulkEditingEtude] = useState(false);
@@ -4649,22 +4660,22 @@ const FicheDetail = ({
             <FaUserPlus /> {commercialAffecteNom ? `${commercialAffecteNom} | ` : ''}Affectation
           </button>
         )}
-        {/* Masquer les onglets Planning et SMS pour les utilisateurs qualité qualification (fonction 2, 8, 12), commerciaux et modal partenaire */}
+        {/* Planning : aussi pour un partenaire autorisé à fixer un RDV. SMS reste masqué pour le partenaire. */}
+        {!isQualiteQualif && !isCommercial && (!isPartenaireModalLimitedTabs || partenaireCanFixerRdv) && (
+          <button
+            className={`fiche-tab ${activeTab === 'planning' ? 'active' : ''}`}
+            onClick={() => setActiveTab('planning')}
+          >
+            <FaCalendar /> Planning
+          </button>
+        )}
         {!isQualiteQualif && !isCommercial && !isPartenaireModalLimitedTabs && (
-          <>
-            <button
-              className={`fiche-tab ${activeTab === 'planning' ? 'active' : ''}`}
-              onClick={() => setActiveTab('planning')}
-            >
-              <FaCalendar /> Planning
-            </button>
-            <button
-              className={`fiche-tab ${activeTab === 'sms' ? 'active' : ''}`}
-              onClick={() => setActiveTab('sms')}
-            >
-              <FaSms /> SMS
-            </button>
-          </>
+          <button
+            className={`fiche-tab ${activeTab === 'sms' ? 'active' : ''}`}
+            onClick={() => setActiveTab('sms')}
+          >
+            <FaSms /> SMS
+          </button>
         )}
         {!isPartenaireModalLimitedTabs && (
           <button
@@ -6240,8 +6251,8 @@ const FicheDetail = ({
                     </div>
                   )}
 
-                  {/* Section Historique - Pliable (masquée en session commercial et modal partenaire) */}
-                  {!isPartenaireModalLimitedTabs && user?.fonction !== 5 && fiche.historique && fiche.historique.length > 0 && (
+                  {/* Section Historique - Pliable (masquée en session commercial ; visible partenaire si fixer RDV) */}
+                  {(!isPartenaireModalLimitedTabs || partenaireCanFixerRdv) && user?.fonction !== 5 && fiche.historique && fiche.historique.length > 0 && (
                     <>
                       {historiqueListeSansEtatActuel.length > 0 && (
                       <>
@@ -8443,7 +8454,8 @@ const FicheDetail = ({
             - Confirmateurs (6), RE Confirmation (14), RP Confirmation (13) : peuvent changer l'état (y compris si fiche déjà confirmée) */}
         {((Number(user?.fonction) === 1 || Number(user?.fonction) === 2 || Number(user?.fonction) === 7 || Number(user?.fonction) === 8 || Number(user?.fonction) === 11 || Number(user?.fonction) === 12) ||
           (Number(user?.fonction) === 3 && user?.centre === ficheData?.id_centre) ||
-          (Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13)) && (
+          (Number(user?.fonction) === 6 || Number(user?.fonction) === 14 || Number(user?.fonction) === 13) ||
+          partenaireCanFixerRdv) && (
           <div ref={etatChangeSectionRef} className="fiche-section etat-change-section">
             <h2 className="section-title">Changer l'état de la fiche</h2>
             <div className="etat-change-form">
@@ -10546,7 +10558,7 @@ const FicheDetail = ({
       )}
 
       {/* Onglet Planning - Masqué pour qualité qualification */}
-      {activeTab === 'planning' && !isQualiteQualif && !isPartenaireModalLimitedTabs && (
+      {activeTab === 'planning' && !isQualiteQualif && (!isPartenaireModalLimitedTabs || partenaireCanFixerRdv) && (
         <PlanningTab
           ficheHash={hash}
           ficheData={ficheData}

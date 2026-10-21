@@ -5,6 +5,7 @@ const { authenticate, checkPermission, isAdminOrBackofficeOrRPConfirmation } = r
 const { checkPermissionCode, hasPermission } = require('../middleware/permissions.middleware');
 const { triggerWorkflowOnFicheCreated, triggerWorkflowOnFicheUpdated, triggerWorkflowOnEtatChanged, triggerWorkflowOnRdvValidated } = require('../middleware/workflow.middleware');
 const { query, queryOne } = require('../config/database');
+const { userHasPartenaireFixerRdv } = require('../utils/globalSettingsHelper');
 const { logUserActivityEvent } = require('../utils/userActivitySession');
 const { executeWorkflow } = require('../services/workflow/workflow-executor');
 const { syncAffectationRecord } = require('../utils/affectationSync');
@@ -7558,7 +7559,18 @@ router.post('/:hash/alerte-ko', authenticate, hashToIdMiddleware, async (req, re
 });
 
 // Mettre à jour une fiche
-router.put('/:id', authenticate, hashToIdMiddleware, checkPermissionCode('fiches_edit'), triggerWorkflowOnFicheUpdated, async (req, res) => {
+const allowFicheEditOrPartenaireFixerRdv = async (req, res, next) => {
+  try {
+    if (Number(req.user?.fonction) === 9 && (await userHasPartenaireFixerRdv(req.user.id))) {
+      return next();
+    }
+  } catch (err) {
+    console.warn('[fiches] partenaire fixer_rdv:', err.message);
+  }
+  return checkPermissionCode('fiches_edit')(req, res, next);
+};
+
+router.put('/:id', authenticate, hashToIdMiddleware, allowFicheEditOrPartenaireFixerRdv, triggerWorkflowOnFicheUpdated, async (req, res) => {
   try {
     const { id } = req.params;
     const ficheData = req.body;

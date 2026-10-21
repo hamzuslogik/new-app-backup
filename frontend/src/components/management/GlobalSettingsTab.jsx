@@ -40,6 +40,103 @@ function copyText(text, label = 'Lien') {
   );
 }
 
+function PartenaireFixerRdvSection() {
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useQuery('global-settings-partenaire-fixer-rdv', async () => {
+    const res = await api.get('/management/global-settings/partenaire-fixer-rdv');
+    return res.data?.data;
+  });
+  const [flags, setFlags] = useState({});
+
+  useEffect(() => {
+    const next = {};
+    (data?.partenaires || []).forEach((p) => {
+      next[p.id] = !!p.fixer_rdv;
+    });
+    setFlags(next);
+  }, [data]);
+
+  const saveMutation = useMutation(
+    async () => {
+      const ids = Object.entries(flags)
+        .filter(([, on]) => on)
+        .map(([id]) => Number(id))
+        .filter((id) => Number.isFinite(id) && id > 0);
+      const res = await api.put('/management/global-settings/partenaire-fixer-rdv', { ids });
+      return res.data;
+    },
+    {
+      onSuccess: (res) => {
+        queryClient.invalidateQueries('global-settings-partenaire-fixer-rdv');
+        toast.success(res?.message || 'Paramètre enregistré');
+      },
+      onError: (err) => {
+        toast.error(err.response?.data?.message || err.message || 'Erreur enregistrement');
+      },
+    }
+  );
+
+  const partenaires = data?.partenaires || [];
+
+  return (
+    <section style={{ marginTop: 32 }}>
+      <h3 style={{ fontSize: '1.05rem', marginBottom: 12 }}>Partenaires — fixer un RDV</h3>
+      <p style={{ marginBottom: 16, maxWidth: 820, color: '#444' }}>
+        Pour chaque partenaire : <strong>Oui</strong> autorise, dans le détail fiche, l&apos;onglet Planning,
+        l&apos;historique des états et le changement d&apos;état. <strong>Non</strong> laisse le modal limité à l&apos;onglet Fiches.
+      </p>
+      {isLoading ? (
+        <p>Chargement…</p>
+      ) : partenaires.length === 0 ? (
+        <p>Aucun partenaire actif.</p>
+      ) : (
+        <div style={{ maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {partenaires.map((p) => (
+            <div
+              key={p.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: 8,
+              }}
+            >
+              <span style={{ flex: 1 }}>
+                {p.pseudo}
+                {(p.nom || p.prenom) ? ` — ${p.prenom || ''} ${p.nom || ''}`.trim() : ''}
+              </span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+                Fixer RDV
+                <select
+                  value={flags[p.id] ? '1' : '0'}
+                  onChange={(e) =>
+                    setFlags((prev) => ({ ...prev, [p.id]: e.target.value === '1' }))
+                  }
+                >
+                  <option value="0">Non</option>
+                  <option value="1">Oui</option>
+                </select>
+              </label>
+            </div>
+          ))}
+          <div>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={saveMutation.isLoading}
+              onClick={() => saveMutation.mutate()}
+            >
+              {saveMutation.isLoading ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 const GlobalSettingsTab = () => {
   const queryClient = useQueryClient();
 
@@ -526,6 +623,8 @@ const GlobalSettingsTab = () => {
           </div>
         )}
       </section>
+
+      <PartenaireFixerRdvSection />
 
       <section>
         <h3 style={{ fontSize: '1.05rem', marginBottom: 12 }}>Fiches / URL</h3>
