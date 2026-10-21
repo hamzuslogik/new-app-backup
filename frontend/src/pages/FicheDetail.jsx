@@ -1972,11 +1972,16 @@ const FicheDetail = ({
     confirmateurs,
   ]);
 
-  // États : pour confirmateur (6), matrice de transitions selon l'état actuel de la fiche
+  // États : confirmateur (6) et partenaire « fixer RDV » : même matrice selon l'état actuel
+  const useConfirmateurEtatList = Number(user?.fonction) === 6 || partenaireCanFixerRdv;
   const { data: etats } = useQuery(
-    Number(user?.fonction) === 6 && ficheData?.id_etat_final ? ['etats', 'confirmateur', ficheData.id_etat_final] : ['etats'],
+    useConfirmateurEtatList && ficheData?.id_etat_final
+      ? ['etats', 'confirmateur', ficheData.id_etat_final, user?.id]
+      : ['etats', user?.fonction],
     async () => {
-      const params = Number(user?.fonction) === 6 && ficheData?.id_etat_final ? { id_etat_fiche: ficheData.id_etat_final } : {};
+      const params = useConfirmateurEtatList && ficheData?.id_etat_final
+        ? { id_etat_fiche: ficheData.id_etat_final }
+        : {};
       const res = await api.get('/management/etats', { params });
       return res.data.data || [];
     }
@@ -1991,7 +1996,7 @@ const FicheDetail = ({
   // - Confirmateur (fonction 6) : on applique strictement la matrice
   //   (sinon impossible de passer de "Confirmer" à "Confirmer", de "Annuler 2 fois" à "Confirmer", etc.).
   // - Autres rôles autorisés à voir le bouton + : aucune restriction d'état actuel.
-  const isConfirmateurSessionForPlanning = Number(user?.fonction) === 6;
+  const isConfirmateurSessionForPlanning = Number(user?.fonction) === 6 || partenaireCanFixerRdv;
   const canOpenConfirmEtatFromPlanning = isConfirmateurSessionForPlanning
     ? (
         currentEtatFinalId != null &&

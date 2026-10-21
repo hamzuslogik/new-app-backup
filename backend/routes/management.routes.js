@@ -1327,8 +1327,11 @@ router.get('/etats', authenticate, async (req, res) => {
     if (!canSeeGroupe0) {
       etats = etats.filter(e => String(e.groupe) !== '0' && e.groupe !== 0);
     }
-    // Session confirmateur (6) : selon id_etat_fiche (page détail fiche), appliquer la matrice de transitions
-    if (fonction === 6) {
+    // Session confirmateur (6), ou partenaire autorisé à fixer un RDV : même matrice de transitions
+    const applyConfirmateurEtatMatrix =
+      fonction === 6 ||
+      (fonction === 9 && (await userHasPartenaireFixerRdv(req.user.id)));
+    if (applyConfirmateurEtatMatrix) {
       if (idEtatFiche != null && idEtatFiche > 0 && CONFIRMATEUR_TRANSITIONS[idEtatFiche] !== undefined) {
         const allowedIds = CONFIRMATEUR_TRANSITIONS[idEtatFiche];
         etats = etats.filter(e => allowedIds.includes(Number(e.id)));
