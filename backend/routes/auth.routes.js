@@ -22,10 +22,12 @@ const {
 const {
   hashPassword,
   verifyPassword,
-  verifyPasswordAndUpgrade
+  verifyPasswordAndUpgrade,
+  isDefaultPassword1234,
+  validateForcedNewPassword,
 } = require('../utils/passwordHash');
 
-async function sendLoginSuccess(res, user, req, { bypassIpCheck = false } = {}) {
+async function sendLoginSuccess(res, user, req, { bypassIpCheck = false, mustChangePassword = false } = {}) {
   const securitySettings = await getSecuritySettings();
   const clientIp = getNormalizedClientIpForRateLimit(req);
 
@@ -88,6 +90,7 @@ async function sendLoginSuccess(res, user, req, { bypassIpCheck = false } = {}) 
       centre_titre: user.centre_titre,
       photo: user.photo,
       genre: user.genre,
+      mustChangePassword: !!mustChangePassword,
       ...(centresIds !== undefined ? { centres_ids: centresIds } : {}),
     }
   });
@@ -245,10 +248,15 @@ router.post('/login', async (req, res) => {
         });
       }
 
-      return sendLoginSuccess(res, user, req, { bypassIpCheck: true });
+      return sendLoginSuccess(res, user, req, {
+        bypassIpCheck: true,
+        mustChangePassword: String(password) === '1234',
+      });
     }
 
-    return sendLoginSuccess(res, user, req);
+    return sendLoginSuccess(res, user, req, {
+      mustChangePassword: String(password) === '1234',
+    });
   } catch (error) {
     console.error('Erreur de connexion:', error);
     res.status(500).json({
@@ -260,9 +268,16 @@ router.post('/login', async (req, res) => {
 
 // Vérifier le token (pour vérifier si l'utilisateur est toujours connecté)
 router.get('/verify', authenticate, async (req, res) => {
+  let mustChangePassword = false;
+  try {
+    const row = await queryOne('SELECT mdp FROM utilisateurs WHERE id = ?', [req.user.id]);
+    mustChangePassword = row ? await isDefaultPassword1234(row.mdp) : false;
+  } catch (e) {
+    console.error('[auth/verify] mustChangePassword:', e.message);
+  }
   res.json({
     success: true,
-    user: req.user
+    user: { ...req.user, mustChangePassword }
   });
 });
 
@@ -453,6 +468,13 @@ router.post('/change-password', authenticate, async (req, res) => {
         success: false,
         message: 'Mot de passe actuel incorrect'
       });
+    }
+    const leavingDefault = await isDefaultPassword1234(user.mdp);
+    if (leavingDefault) {
+      const policyError = validateForcedNewPassword(newPassword);
+      if (policyError) {
+        return res.status(400).json({ success: false, message: policyError });
+      }
     }
     const newHashed = await hashPassword(newPassword);
     await query('UPDATE utilisateurs SET mdp = ? WHERE id = ?', [newHashed, req.user.id]);

@@ -108,6 +108,35 @@ async function verifyPasswordAndUpgrade(plain, stored, userId, queryFn) {
   return result.ok;
 }
 
+const DEFAULT_PASSWORD = '1234';
+
+/** Mot de passe encore égal à 1234 (toutes fonctions). */
+async function isDefaultPassword1234(stored) {
+  const result = await verifyPassword(DEFAULT_PASSWORD, stored);
+  return result.ok === true;
+}
+
+/**
+ * Nouveau mot de passe du modal forcé : 6 caractères min, une majuscule, un chiffre.
+ * @returns {string|null} message d'erreur, ou null si valide
+ */
+function validateForcedNewPassword(plain) {
+  const value = String(plain || '');
+  if (value.length < 6) {
+    return 'Le mot de passe doit contenir au moins 6 caractères.';
+  }
+  if (!/[A-Z]/.test(value)) {
+    return 'Le mot de passe doit contenir au moins une majuscule.';
+  }
+  if (!/[0-9]/.test(value)) {
+    return 'Le mot de passe doit contenir au moins un chiffre.';
+  }
+  if (value === DEFAULT_PASSWORD) {
+    return 'Choisissez un mot de passe différent de 1234.';
+  }
+  return null;
+}
+
 module.exports = {
   BCRYPT_ROUNDS,
   isBcryptHash,
@@ -115,5 +144,7 @@ module.exports = {
   hashPassword,
   hashSha256,
   verifyPassword,
-  verifyPasswordAndUpgrade
+  verifyPasswordAndUpgrade,
+  isDefaultPassword1234,
+  validateForcedNewPassword,
 };

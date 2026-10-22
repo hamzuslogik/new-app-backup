@@ -15,6 +15,7 @@ import {
   isPathAllowedForRestrictedBackofficeNav,
 } from '../utils/backofficeNavRestriction';
 import api from '../config/api';
+import ForcePasswordChangeModal from './ForcePasswordChangeModal';
 import './Layout.css';
 
 const LayoutContent = () => {
@@ -140,6 +141,7 @@ const LayoutContent = () => {
           </div>
         </div>
       </div>
+      <ForcePasswordChangeModal />
     </FicheDetailModalProvider>
   );
 };
