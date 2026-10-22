@@ -354,6 +354,19 @@
   font-weight: 700;
 }
 
+/* EN TAUX : tableau à la largeur du contenu, pas toute la page */
+.statistiques-page .stats-table.stats-table--taux {
+  width: max-content;
+  max-width: 100%;
+  table-layout: auto;
+}
+
+.statistiques-page .stats-table.stats-table--taux th,
+.statistiques-page .stats-table.stats-table--taux td {
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
 .stat-neutre {
   background-color: #9e9e9e !important;
   color: #ffffff !important;
