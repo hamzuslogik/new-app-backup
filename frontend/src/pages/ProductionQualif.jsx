@@ -361,8 +361,7 @@ const ProductionQualif = () => {
       const exportData = fiches.map(fiche => {
         const agent = agentsData?.find(a => a.id === fiche.id_agent);
         const superviseur = superviseurs.find(s => s.id === agent?.chef_equipe);
-        const superviseurName = superviseur?.pseudo || '-'
-          : '-';
+        const superviseurName = superviseur?.pseudo || '-';
         
         const { label: displayEtat } = getFicheEtatDisplay(fiche);
         
@@ -428,8 +427,7 @@ const ProductionQualif = () => {
       const exportData = fiches.map(fiche => {
         const agent = agentsData?.find(a => a.id === fiche.id_agent);
         const superviseur = superviseurs.find(s => s.id === agent?.chef_equipe);
-        const superviseurName = superviseur?.pseudo || '-'
-          : '-';
+        const superviseurName = superviseur?.pseudo || '-';
         
         const { label: displayEtat } = getFicheEtatDisplay(fiche);
         
@@ -495,8 +493,7 @@ const ProductionQualif = () => {
       const exportData = fiches.map(fiche => {
         const agent = agentsData?.find(a => a.id === fiche.id_agent);
         const superviseur = superviseurs.find(s => s.id === agent?.chef_equipe);
-        const superviseurName = superviseur?.pseudo || '-'
-          : '-';
+        const superviseurName = superviseur?.pseudo || '-';
         
         const { label: displayEtat } = getFicheEtatDisplay(fiche);
         
