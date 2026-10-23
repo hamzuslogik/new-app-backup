@@ -69,11 +69,12 @@ const ProductionQualif = () => {
     date_fin: getTodayLocal(),
     time_debut: '00:00',
     time_fin: '23:59',
+    id_rp: '',
     id_superviseur: '',
     id_etat_final: [] // Tableau pour multi-select
   });
 
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'superviseur', direction: 'asc' });
 
   // État pour gérer l'édition du commentaire qualité
   const [editingComment, setEditingComment] = useState({ hash: null, value: '' });
@@ -92,6 +93,26 @@ const ProductionQualif = () => {
   // Vérifier si l'utilisateur peut modifier/créer des commentaires qualité
   // Seul Admin (fonction 1) peut modifier
   const canEditCommentaireQualite = isAdmin;
+  const canFilterByRp = isBackofficeOrAdmin;
+
+  useEffect(() => {
+    setSortConfig({
+      key: viewMode === 'fiches' ? 'agent_pseudo' : 'superviseur',
+      direction: 'asc',
+    });
+  }, [viewMode]);
+
+  const { data: rpsData } = useQuery(
+    'rps-qualif-production',
+    async () => {
+      const res = await api.get('/management/utilisateurs');
+      const rps = res.data.data?.filter((u) => Number(u.fonction) === 12 && Number(u.etat) > 0) || [];
+      return [...rps].sort((a, b) =>
+        String(a.pseudo || '').localeCompare(String(b.pseudo || ''), 'fr', { sensitivity: 'base' })
+      );
+    },
+    { enabled: canFilterByRp && !!user }
+  );
 
   // Récupérer les superviseurs (périmètre selon le rôle)
   const { data: superviseursData } = useQuery(
@@ -137,6 +158,7 @@ const ProductionQualif = () => {
       if (filters.date_fin) params.date_fin = filters.date_fin;
       if (filters.time_debut) params.time_debut = filters.time_debut;
       if (filters.time_fin) params.time_fin = filters.time_fin;
+      if (filters.id_rp) params.id_rp = filters.id_rp;
       if (filters.id_superviseur) params.id_superviseur = filters.id_superviseur;
       // Pour les statistiques, on peut envoyer le premier état ou filtrer côté backend
       if (filters.id_etat_final && filters.id_etat_final.length > 0) {
@@ -176,6 +198,7 @@ const ProductionQualif = () => {
       if (filters.date_fin) params.date_fin = filters.date_fin;
       if (filters.time_debut) params.time_debut = filters.time_debut;
       if (filters.time_fin) params.time_fin = filters.time_fin;
+      if (filters.id_rp) params.id_rp = filters.id_rp;
       // Filtrer par superviseur côté backend
       if (filters.id_superviseur) {
         params.id_superviseur = filters.id_superviseur;
@@ -338,10 +361,7 @@ const ProductionQualif = () => {
       const exportData = fiches.map(fiche => {
         const agent = agentsData?.find(a => a.id === fiche.id_agent);
         const superviseur = superviseurs.find(s => s.id === agent?.chef_equipe);
-        const superviseurName = superviseur 
-          ? (superviseur.nom && superviseur.prenom 
-              ? `${superviseur.nom} ${superviseur.prenom}`
-              : superviseur.pseudo || '-')
+        const superviseurName = superviseur?.pseudo || '-'
           : '-';
         
         const { label: displayEtat } = getFicheEtatDisplay(fiche);
@@ -379,9 +399,7 @@ const ProductionQualif = () => {
       
       // Créer les lignes (une par superviseur)
       const statsData = stats.superviseurs.map(superviseurStat => {
-        const superviseurName = superviseurStat.superviseur.nom && superviseurStat.superviseur.prenom
-          ? `${superviseurStat.superviseur.nom} ${superviseurStat.superviseur.prenom}`
-          : superviseurStat.superviseur.pseudo || 'N/A';
+        const superviseurName = superviseurStat.superviseur?.pseudo || 'N/A';
         
         const row = { superviseur: superviseurName };
         
@@ -410,10 +428,7 @@ const ProductionQualif = () => {
       const exportData = fiches.map(fiche => {
         const agent = agentsData?.find(a => a.id === fiche.id_agent);
         const superviseur = superviseurs.find(s => s.id === agent?.chef_equipe);
-        const superviseurName = superviseur 
-          ? (superviseur.nom && superviseur.prenom 
-              ? `${superviseur.nom} ${superviseur.prenom}`
-              : superviseur.pseudo || '-')
+        const superviseurName = superviseur?.pseudo || '-'
           : '-';
         
         const { label: displayEtat } = getFicheEtatDisplay(fiche);
@@ -451,9 +466,7 @@ const ProductionQualif = () => {
       
       // Créer les lignes (une par superviseur)
       const statsData = stats.superviseurs.map(superviseurStat => {
-        const superviseurName = superviseurStat.superviseur.nom && superviseurStat.superviseur.prenom
-          ? `${superviseurStat.superviseur.nom} ${superviseurStat.superviseur.prenom}`
-          : superviseurStat.superviseur.pseudo || 'N/A';
+        const superviseurName = superviseurStat.superviseur?.pseudo || 'N/A';
         
         const row = { superviseur: superviseurName };
         
@@ -482,10 +495,7 @@ const ProductionQualif = () => {
       const exportData = fiches.map(fiche => {
         const agent = agentsData?.find(a => a.id === fiche.id_agent);
         const superviseur = superviseurs.find(s => s.id === agent?.chef_equipe);
-        const superviseurName = superviseur 
-          ? (superviseur.nom && superviseur.prenom 
-              ? `${superviseur.nom} ${superviseur.prenom}`
-              : superviseur.pseudo || '-')
+        const superviseurName = superviseur?.pseudo || '-'
           : '-';
         
         const { label: displayEtat } = getFicheEtatDisplay(fiche);
@@ -524,9 +534,7 @@ const ProductionQualif = () => {
       
       // Créer les lignes (une par superviseur)
       const statsData = stats.superviseurs.map(superviseurStat => {
-        const superviseurName = superviseurStat.superviseur.nom && superviseurStat.superviseur.prenom
-          ? `${superviseurStat.superviseur.nom} ${superviseurStat.superviseur.prenom}`
-          : superviseurStat.superviseur.pseudo || 'N/A';
+        const superviseurName = superviseurStat.superviseur?.pseudo || 'N/A';
         
         const row = { superviseur: superviseurName };
         
@@ -549,7 +557,15 @@ const ProductionQualif = () => {
     }
   };
 
-  const superviseurs = superviseursData || [];
+  const superviseurs = useMemo(() => {
+    let list = superviseursData || [];
+    if (filters.id_rp) {
+      list = list.filter((s) => String(s.id_rp_qualif || '') === String(filters.id_rp));
+    }
+    return [...list].sort((a, b) =>
+      String(a.pseudo || '').localeCompare(String(b.pseudo || ''), 'fr', { sensitivity: 'base' })
+    );
+  }, [superviseursData, filters.id_rp]);
   const etats = etatsData || [];
   const stats = statsData || { superviseurs: [], etats: [], period: {} };
   const fiches = filteredFiches || [];
@@ -571,7 +587,7 @@ const ProductionQualif = () => {
       sortRowsByConfig(stats.superviseurs || [], sortConfig, (row, key) => {
         if (key === 'superviseur') {
           const s = row.superviseur || {};
-          return s.nom && s.prenom ? `${s.nom} ${s.prenom}` : (s.pseudo || '');
+          return s.pseudo || '';
         }
         if (key === 'total') return Number(row.total || 0);
         if (key === 'validated') return Number(row.stats?.validated?.count || 0);
@@ -669,6 +685,25 @@ const ProductionQualif = () => {
               onChange={(e) => handleDateTimeFilterChange('fin', e.target.value)}
             />
           </div>
+          {canFilterByRp && (
+            <div className="filter-group">
+              <label>RP Qualification</label>
+              <select
+                value={filters.id_rp}
+                onChange={(e) => {
+                  const nextRp = e.target.value;
+                  setFilters((prev) => ({ ...prev, id_rp: nextRp, id_superviseur: '' }));
+                }}
+              >
+                <option value="">Tous les RP</option>
+                {(rpsData || []).map((rp) => (
+                  <option key={rp.id} value={rp.id}>
+                    {rp.pseudo || `RP #${rp.id}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="filter-group">
             <label>Superviseur</label>
             <select
@@ -678,9 +713,7 @@ const ProductionQualif = () => {
               <option value="">Tous les superviseurs</option>
               {superviseurs.map(superviseur => (
                 <option key={superviseur.id} value={superviseur.id}>
-                  {superviseur.nom && superviseur.prenom 
-                    ? `${superviseur.nom} ${superviseur.prenom}`
-                    : superviseur.pseudo || `ID: ${superviseur.id}`}
+                  {superviseur.pseudo || `ID: ${superviseur.id}`}
                 </option>
               ))}
             </select>
@@ -1106,9 +1139,7 @@ const ProductionQualif = () => {
                     <tr key={superviseurStat.superviseur.id || index}>
                       <td className="superviseur-cell">
                         <strong>
-                          {superviseurStat.superviseur.nom && superviseurStat.superviseur.prenom 
-                            ? `${superviseurStat.superviseur.nom} ${superviseurStat.superviseur.prenom}`
-                            : superviseurStat.superviseur.pseudo || 'N/A'}
+                          {superviseurStat.superviseur.pseudo || 'N/A'}
                         </strong>
                       </td>
                       {stats.etats && stats.etats.map(etat => {

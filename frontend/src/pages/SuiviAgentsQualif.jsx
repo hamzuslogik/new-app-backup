@@ -143,6 +143,8 @@ const SuiviAgentsQualif = () => {
   
   // Vérifier si l'utilisateur est un Administrateur (fonction 1)
   const isAdmin = user?.fonction === 1;
+  const isBackoffice = Number(user?.fonction) === 11;
+  const canFilterByRp = isAdmin || isBackoffice;
   
   // Vérifier si l'utilisateur est un Superviseur Qualification (fonction 2) ou RP Qualification (fonction 12)
   const isSuperviseurQualif = user?.fonction === 2;
@@ -169,11 +171,19 @@ const SuiviAgentsQualif = () => {
     time_debut: '00:00',
     time_fin: '23:59',
     id_agent: '',
-    id_rp: '', // Nouveau filtre par RP
+    id_rp: '',
+    id_superviseur: '',
     id_etat_final: [] // Tableau pour multi-select
   });
 
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'pseudo', direction: 'asc' });
+
+  useEffect(() => {
+    setSortConfig({
+      key: viewMode === 'fiches' ? 'agent_pseudo' : 'pseudo',
+      direction: 'asc',
+    });
+  }, [viewMode]);
 
   // Récupérer les superviseurs assignés au RP Qualification (pour filtrer leurs agents)
   const { data: superviseursAssignesRP } = useQuery(
@@ -194,7 +204,7 @@ const SuiviAgentsQualif = () => {
       const res = await api.get('/management/utilisateurs');
       return res.data.data?.filter(u => u.fonction === 12 && u.etat > 0) || [];
     },
-    { enabled: isAdmin }
+    { enabled: canFilterByRp }
   );
 
   // Récupérer les superviseurs assignés à un RP spécifique (pour le filtre RP)
@@ -206,20 +216,34 @@ const SuiviAgentsQualif = () => {
       // Récupérer les superviseurs qui ont id_rp_qualif = filters.id_rp
       return res.data.data?.filter(u => u.id_rp_qualif === parseInt(filters.id_rp) && u.etat > 0) || [];
     },
-    { enabled: isAdmin && !!filters.id_rp }
+    { enabled: canFilterByRp && !!filters.id_rp }
+  );
+
+  const { data: allSuperviseursQualif } = useQuery(
+    'superviseurs-qualif-suivi',
+    async () => {
+      const res = await api.get('/management/utilisateurs');
+      const users = res.data.data || [];
+      return users.filter(
+        (u) =>
+          Number(u.etat) > 0 &&
+          users.some((a) => a.chef_equipe === u.id && Number(a.fonction) === 3 && Number(a.etat) > 0)
+      );
+    },
+    { enabled: !isREQualif && !!user }
   );
 
   // Récupérer les agents qualification (filtrés par responsabilité si RE Qualification ou RP Qualification)
   const { data: agentsData } = useQuery(
-    ['agents-qualif-list', isREQualif, isRPQualif, isAdmin, user?.id, superviseursAssignesRP, filters.id_rp, superviseursDuRP],
+    ['agents-qualif-list', isREQualif, isRPQualif, isAdmin, user?.id, superviseursAssignesRP, filters.id_rp, filters.id_superviseur, superviseursDuRP],
     async () => {
       const res = await api.get('/management/utilisateurs');
       let agents = res.data.data?.filter(u => u.fonction === 3 && u.etat > 0) || [];
       
       // Si Administrateur avec filtre RP sélectionné, filtrer par les superviseurs de ce RP
-      if (isAdmin && filters.id_rp && superviseursDuRP && superviseursDuRP.length > 0) {
-        const superviseurIds = superviseursDuRP.map(s => s.id);
-        agents = agents.filter(a => superviseurIds.includes(a.chef_equipe));
+      if (canFilterByRp && filters.id_rp) {
+        const superviseurIds = (superviseursDuRP || []).map((s) => String(s.id));
+        agents = agents.filter((a) => superviseurIds.includes(String(a.chef_equipe)));
       }
       // Si RE Qualification, filtrer uniquement ses agents (ceux qui ont chef_equipe = user.id)
       else if (isREQualif && user?.id) {
@@ -239,16 +263,17 @@ const SuiviAgentsQualif = () => {
         const superviseurIds = superviseursAssignesRP.map(s => s.id);
         agents = agents.filter(a => superviseurIds.includes(a.chef_equipe));
       }
-      // Pour les administrateurs sans filtre RP, afficher tous les agents
-      // Pour les autres utilisateurs (non RE, non RP, non Admin), afficher tous les agents
-      
+      if (filters.id_superviseur) {
+        agents = agents.filter((a) => String(a.chef_equipe) === String(filters.id_superviseur));
+      }
+
       return agents;
     },
     { 
       // Pour RP Qualification, attendre que les superviseurs soient chargés
       // Pour Admin avec filtre RP, attendre que les superviseurs du RP soient chargés
       enabled: (!isRPQualif || (isRPQualif && superviseursAssignesRP !== undefined)) && 
-               (!(isAdmin && filters.id_rp) || (isAdmin && filters.id_rp && superviseursDuRP !== undefined)),
+               (!(canFilterByRp && filters.id_rp) || (canFilterByRp && filters.id_rp && superviseursDuRP !== undefined)),
       // Invalider quand les données de responsabilité changent
       refetchOnMount: true
     }
@@ -279,7 +304,8 @@ const SuiviAgentsQualif = () => {
       if (filters.time_debut) params.time_debut = filters.time_debut;
       if (filters.time_fin) params.time_fin = filters.time_fin;
       if (filters.id_agent) params.id_agent = filters.id_agent;
-      if (isAdmin && filters.id_rp) params.id_rp = filters.id_rp;
+      if (canFilterByRp && filters.id_rp) params.id_rp = filters.id_rp;
+      if (filters.id_superviseur) params.id_superviseur = filters.id_superviseur;
       
       const res = await api.get('/statistiques/agents-qualif', { params });
       return res.data.data;
@@ -300,6 +326,8 @@ const SuiviAgentsQualif = () => {
       if (filters.time_debut) params.time_debut = filters.time_debut;
       if (filters.time_fin) params.time_fin = filters.time_fin;
       if (filters.id_agent) params.id_agent = filters.id_agent;
+      if (canFilterByRp && filters.id_rp) params.id_rp = filters.id_rp;
+      if (filters.id_superviseur) params.id_superviseur = filters.id_superviseur;
       // Envoyer tous les états au backend pour un filtrage optimisé
       if (filters.id_etat_final && Array.isArray(filters.id_etat_final) && filters.id_etat_final.length > 0) {
         params.id_etat_final = filters.id_etat_final;
@@ -610,7 +638,19 @@ const SuiviAgentsQualif = () => {
     }
   };
 
-  const agents = agentsData || [];
+  const byPseudo = (a, b) =>
+    String(a?.pseudo || '').localeCompare(String(b?.pseudo || ''), 'fr', { sensitivity: 'base' });
+  const agents = [...(agentsData || [])].sort(byPseudo);
+  const superviseursOptions = (
+    isRPQualif
+      ? superviseursAssignesRP || []
+      : filters.id_rp
+        ? superviseursDuRP || []
+        : allSuperviseursQualif || []
+  )
+    .slice()
+    .sort(byPseudo);
+  const rpsOptions = [...(rpsData || [])].sort(byPseudo);
   const stats = statsData || { agents: [], etats: [], period: {} };
   const fiches = filteredFiches || [];
 
@@ -724,20 +764,43 @@ const SuiviAgentsQualif = () => {
               onChange={(e) => handleDateTimeFilterChange('fin', e.target.value)}
             />
           </div>
-          {isAdmin && (
+          {canFilterByRp && (
             <div className="filter-group">
               <label>RP Qualification</label>
               <select
                 value={filters.id_rp}
                 onChange={(e) => {
-                  handleFilterChange('id_rp', e.target.value);
-                  // Réinitialiser le filtre agent quand on change le RP
-                  handleFilterChange('id_agent', '');
+                  const nextRp = e.target.value;
+                  setFilters((prev) => ({
+                    ...prev,
+                    id_rp: nextRp,
+                    id_superviseur: '',
+                    id_agent: '',
+                  }));
                 }}
               >
                 <option value="">Tous les RP</option>
-                {rpsData && rpsData.map(rp => (
-                  <option key={rp.id} value={rp.id}>{rp.pseudo}</option>
+                {rpsOptions.map((rp) => (
+                  <option key={rp.id} value={rp.id}>{rp.pseudo || `RP #${rp.id}`}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {!isREQualif && (
+            <div className="filter-group">
+              <label>Superviseur</label>
+              <select
+                value={filters.id_superviseur}
+                onChange={(e) => {
+                  const nextSup = e.target.value;
+                  setFilters((prev) => ({ ...prev, id_superviseur: nextSup, id_agent: '' }));
+                }}
+              >
+                <option value="">Tous les superviseurs</option>
+                {superviseursOptions.map((superviseur) => (
+                  <option key={superviseur.id} value={superviseur.id}>
+                    {superviseur.pseudo || `ID: ${superviseur.id}`}
+                  </option>
                 ))}
               </select>
             </div>

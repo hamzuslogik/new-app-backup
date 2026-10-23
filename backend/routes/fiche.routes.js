@@ -3696,6 +3696,7 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
       id_agent,
       id_etat_final,
       id_superviseur,
+      id_rp,
       date_debut,
       date_fin,
       time_debut,
@@ -3777,16 +3778,21 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
         agentIds = (agentsSousResponsabilite || []).map(a => a.id);
       }
     } else if (isBackofficeOrAdmin) {
-      if (id_superviseur) {
-        const superviseurId = parseInt(id_superviseur, 10);
-        const agentsSousResponsabilite = await query(
+      let superviseurIds = [];
+      if (id_rp) {
+        const superviseursDuRp = await query(
           `SELECT id FROM utilisateurs
-           WHERE chef_equipe = ? AND fonction = 3 AND etat > 0`,
-          [superviseurId]
+           WHERE id_rp_qualif = ? AND etat > 0
+           AND EXISTS (
+             SELECT 1 FROM utilisateurs agents
+             WHERE agents.chef_equipe = utilisateurs.id
+             AND agents.fonction = 3
+             AND agents.etat > 0
+           )`,
+          [parseInt(id_rp, 10)]
         );
-        agentIds = (agentsSousResponsabilite || []).map((a) => a.id);
+        superviseurIds = (superviseursDuRp || []).map((s) => s.id);
       } else {
-        // Aligné stats production-qualif : agents rattachés à un superviseur ayant des agents qualif
         const superviseursWithAgents = await query(
           `SELECT DISTINCT u.id
            FROM utilisateurs u
@@ -3798,18 +3804,20 @@ router.get('/agents-sous-responsabilite', authenticate, async (req, res) => {
              AND agents.etat > 0
            )`
         );
-        const superviseurIds = (superviseursWithAgents || []).map((s) => s.id);
-        if (superviseurIds.length === 0) {
-          agentIds = [];
-        } else {
-          const agentsSousResponsabilite = await query(
-            `SELECT id FROM utilisateurs
-             WHERE chef_equipe IN (${superviseurIds.map(() => '?').join(',')})
-             AND fonction = 3 AND etat > 0`,
-            superviseurIds
-          );
-          agentIds = (agentsSousResponsabilite || []).map((a) => a.id);
-        }
+        superviseurIds = (superviseursWithAgents || []).map((s) => s.id);
+      }
+      if (id_superviseur) {
+        const superviseurId = parseInt(id_superviseur, 10);
+        superviseurIds = superviseurIds.includes(superviseurId) ? [superviseurId] : [];
+      }
+      if (superviseurIds.length > 0) {
+        const agentsSousResponsabilite = await query(
+          `SELECT id FROM utilisateurs
+           WHERE chef_equipe IN (${superviseurIds.map(() => '?').join(',')})
+           AND fonction = 3 AND etat > 0`,
+          superviseurIds
+        );
+        agentIds = (agentsSousResponsabilite || []).map((a) => a.id);
       }
     } else if (fonction === 2) {
       // RE Qualification : agents sous la responsabilité du superviseur connecté

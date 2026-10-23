@@ -714,11 +714,8 @@ const KPIs = () => {
                     <div className="kpi-card-body">
                       <div className="team-info">
                         <div className="superviseur-name">
-                          {team.superviseur.nom && team.superviseur.prenom
-                            ? `${team.superviseur.nom} ${team.superviseur.prenom}`
-                            : team.superviseur.pseudo || 'N/A'}
+                          {team.superviseur.pseudo || 'N/A'}
                         </div>
-                        <div className="superviseur-pseudo">{team.superviseur.pseudo}</div>
                         <div className="team-stats">
                           <span className="stat-item">
                             <strong>{team.nb_agents}</strong> agent{team.nb_agents > 1 ? 's' : ''}

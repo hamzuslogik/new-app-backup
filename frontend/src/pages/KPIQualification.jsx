@@ -37,9 +37,6 @@ function formatEffectif(effectif) {
 
 function teamLabel(superviseur) {
   if (!superviseur) return 'Équipe';
-  if (superviseur.nom || superviseur.prenom) {
-    return `${superviseur.nom || ''} ${superviseur.prenom || ''}`.trim();
-  }
   return superviseur.pseudo || `RE #${superviseur.id}`;
 }
 
@@ -373,11 +370,8 @@ const KPIQualification = () => {
                   <>
                     <div className="team-info">
                       <div className="superviseur-name">
-                        {currentData.best_team.superviseur.nom && currentData.best_team.superviseur.prenom
-                          ? `${currentData.best_team.superviseur.nom} ${currentData.best_team.superviseur.prenom}`
-                          : currentData.best_team.superviseur.pseudo || 'N/A'}
+                        {currentData.best_team.superviseur.pseudo || 'N/A'}
                       </div>
-                      <div className="superviseur-pseudo">{currentData.best_team.superviseur.pseudo}</div>
                       <div className="team-stats">
                         <span className="stat-item">
                           <strong>{currentData.best_team.nb_agents}</strong> agent{currentData.best_team.nb_agents > 1 ? 's' : ''}
@@ -498,9 +492,6 @@ const KPIQualification = () => {
                             <tr key={eq.superviseur?.id || eq.superviseur?.pseudo}>
                               <td>
                                 <div className="ratio-team-name">{teamLabel(eq.superviseur)}</div>
-                                {eq.superviseur?.pseudo && (
-                                  <div className="ratio-team-pseudo">{eq.superviseur.pseudo}</div>
-                                )}
                               </td>
                               <td>{(eq.production ?? 0).toLocaleString('fr-FR')}</td>
                               <td>{formatEffectif(eq.effectif)}</td>

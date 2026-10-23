@@ -1441,7 +1441,8 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
     const { 
       id_agent,
       id_centre,
-      id_rp // Nouveau paramètre pour filtrer par RP (pour les administrateurs)
+      id_rp, // Filtre RP (admin / backoffice)
+      id_superviseur
     } = req.query;
 
     // Période avec heure (time_debut / time_fin), défaut = aujourd'hui 00:00 → 23:59
@@ -1487,9 +1488,11 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
     const agentsParams = [];
 
     let agentIds = [];
+    let scoped = false;
 
-    // Si un filtre RP est fourni (pour les administrateurs), filtrer par ce RP
+    // Si un filtre RP est fourni (admin / backoffice), filtrer par ce RP
     if (id_rp) {
+      scoped = true;
       // Récupérer les superviseurs assignés au RP spécifié
       const superviseursAssignes = await query(
         `SELECT id FROM utilisateurs 
@@ -1518,6 +1521,7 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
     }
     // Vérifier si l'utilisateur est un RP Qualification (fonction 12)
     else if (req.user.fonction === 12) {
+      scoped = true;
       // Récupérer les superviseurs assignés au RP connecté
       const superviseursAssignes = await query(
         `SELECT id FROM utilisateurs 
@@ -1552,8 +1556,44 @@ router.get('/agents-qualif', authenticate, async (req, res) => {
         [req.user.id]
       );
       if (agentsSousResponsabilite && agentsSousResponsabilite.length > 0) {
+        scoped = true;
         agentIds = agentsSousResponsabilite.map(a => a.id);
       }
+    }
+
+    if (id_superviseur) {
+      scoped = true;
+      const sid = parseInt(id_superviseur, 10);
+      const agentsDuSuperviseur = await query(
+        `SELECT id FROM utilisateurs
+         WHERE chef_equipe = ? AND fonction = 3 AND etat > 0`,
+        [sid]
+      );
+      const idsSup = (agentsDuSuperviseur || []).map((a) => Number(a.id));
+      if (id_rp || Number(req.user.fonction) === 12 || agentIds.length > 0) {
+        const allowed = new Set(idsSup);
+        agentIds = agentIds.filter((id) => allowed.has(Number(id)));
+      } else {
+        agentIds = idsSup;
+      }
+    }
+
+    if (scoped && agentIds.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          agents: [],
+          etats: [],
+          period: {
+            date_debut: startDateStr,
+            date_fin: endDateStr,
+            time_debut: timeDebut,
+            time_fin: timeFin,
+            start_datetime: startDate,
+            end_datetime: endDate,
+          }
+        }
+      });
     }
 
     if (agentIds.length > 0) {
@@ -1733,7 +1773,8 @@ router.get('/production-qualif', authenticate, async (req, res) => {
   try {
     const { 
       id_superviseur,
-      id_etat_final
+      id_etat_final,
+      id_rp
     } = req.query;
 
     const {
@@ -1822,6 +1863,11 @@ router.get('/production-qualif', authenticate, async (req, res) => {
           comparison_other_plateau: null,
         }
       });
+    }
+
+    if (isBackofficeOrAdmin && id_rp) {
+      superviseursQuery += ' AND u.id_rp_qualif = ?';
+      superviseursParams.push(parseInt(id_rp, 10));
     }
 
     if (id_superviseur) {
