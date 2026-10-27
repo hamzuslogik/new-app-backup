@@ -5226,6 +5226,8 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
           // Repli fiche uniquement pour les anciennes lignes CONFIRMER sans colonnes historisées.
           ...(() => {
             const filled = (v) => v != null && String(v).trim() !== '';
+            // Profession / contrat : ignorer 0 / '0' (anciens snapshots int vides)
+            const filledProf = (v) => filled(v) && String(v).trim() !== '0';
             const pick = (key, ...fallbacks) => {
               if (filled(histo[key])) return histo[key];
               if (!isConfirmerEtat) return histo[key] ?? null;
@@ -5233,6 +5235,14 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
                 if (filled(fb)) return fb;
               }
               return histo[key] ?? null;
+            };
+            const pickProf = (key, ...fallbacks) => {
+              if (filledProf(histo[key])) return histo[key];
+              if (!isConfirmerEtat) return filledProf(histo[key]) ? histo[key] : null;
+              for (const fb of fallbacks) {
+                if (filledProf(fb)) return fb;
+              }
+              return null;
             };
             return {
               conf_rdv_avec: pick('conf_rdv_avec', fiche.conf_rdv_avec),
@@ -5246,10 +5256,10 @@ router.get('/:id', authenticate, hashToIdMiddleware, async (req, res) => {
                 fiche.etude
               ),
               conf_details_etude: pick('conf_details_etude', fiche.conf_details_etude, fiche.details_etude),
-              conf_profession_monsieur: pick('conf_profession_monsieur', fiche.conf_profession_monsieur, fiche.profession_mr),
-              conf_type_contrat_mr: pick('conf_type_contrat_mr', fiche.conf_type_contrat_mr, fiche.type_contrat_mr),
-              conf_profession_madame: pick('conf_profession_madame', fiche.conf_profession_madame, fiche.profession_madame),
-              conf_type_contrat_madame: pick('conf_type_contrat_madame', fiche.conf_type_contrat_madame, fiche.type_contrat_madame),
+              conf_profession_monsieur: pickProf('conf_profession_monsieur', fiche.conf_profession_monsieur, fiche.profession_mr),
+              conf_type_contrat_mr: pickProf('conf_type_contrat_mr', fiche.conf_type_contrat_mr, fiche.type_contrat_mr),
+              conf_profession_madame: pickProf('conf_profession_madame', fiche.conf_profession_madame, fiche.profession_madame),
+              conf_type_contrat_madame: pickProf('conf_type_contrat_madame', fiche.conf_type_contrat_madame, fiche.type_contrat_madame),
               conf_revenu: pick('conf_revenu', fiche.conf_revenu, fiche.revenu_foyer),
               conf_credit: pick('conf_credit', fiche.conf_credit, fiche.credit_foyer),
               conf_mode_chauffage: pick('conf_mode_chauffage', fiche.conf_mode_chauffage, fiche.mode_chauffage),
@@ -5822,6 +5832,30 @@ router.patch('/:id/field', authenticate, hashToIdMiddleware, async (req, res) =>
       `UPDATE fiches SET \`${dbField}\` = ?, date_modif_time = ? WHERE id = ?`,
       [dbValue, now, id]
     );
+
+    // Profession / type contrat : garder colonnes conf_* et base synchronisées
+    // (l'édition UI envoie profession_mr → conf_* ; sans sync le repli base peut rester vide)
+    const professionTwin = {
+      conf_profession_monsieur: 'profession_mr',
+      profession_mr: 'conf_profession_monsieur',
+      conf_profession_madame: 'profession_madame',
+      profession_madame: 'conf_profession_madame',
+      conf_type_contrat_mr: 'type_contrat_mr',
+      type_contrat_mr: 'conf_type_contrat_mr',
+      conf_type_contrat_madame: 'type_contrat_madame',
+      type_contrat_madame: 'conf_type_contrat_madame'
+    };
+    if (professionTwin[dbField]) {
+      const twinField = professionTwin[dbField];
+      try {
+        await query(
+          `UPDATE fiches SET \`${twinField}\` = ?, date_modif_time = ? WHERE id = ?`,
+          [dbValue, now, id]
+        );
+      } catch (syncProfErr) {
+        console.error('Erreur sync profession/contrat:', syncProfErr?.message || syncProfErr);
+      }
+    }
 
     // is_r2 = 0 (NON) : vider les infos R1 pour ne plus afficher le cadre « R2 — Infos R1 »
     if (dbField === 'is_r2' && dbValue === 0) {
@@ -9457,23 +9491,46 @@ router.post('/:id/valider', authenticate, hashToIdMiddleware, triggerWorkflowOnR
         [parseInt(id)]
       );
     } else {
-      // Valider : mettre à jour tous les champs conf_ envoyés
+      // Valider : ne mettre à jour que les champs conf_ présents dans le body.
+      // Le front n'envoie en général que type_valid + conf_rdv_avec + conf_presence_couple ;
+      // l'ancien UPDATE forçait profession/contrat (etc.) à NULL à chaque validation.
+      const setParts = ['valider = ?', 'conf_rdv_avec = ?', 'conf_presence_couple = ?'];
+      const setValues = [valider, confRdvAvec, confPresenceCouple];
+      const body = req.body || {};
+      const optionalUpdates = [
+        ['conf_appel_tunisie_avec', confAppelTunisie],
+        ['conf_deja_etude', confDejaEtude],
+        ['conf_deja_fait_etude', confDejaFaitEtude],
+        ['conf_details_etude', confDejaFaitEtude === 'OUI' ? confDetailsEtude : null],
+        ['conf_profession_monsieur', conf_profession_monsieur],
+        ['conf_type_contrat_mr', conf_type_contrat_mr],
+        ['conf_profession_madame', conf_profession_madame],
+        ['conf_type_contrat_madame', conf_type_contrat_madame],
+        ['conf_revenu', conf_revenu],
+        ['conf_credit', conf_credit],
+        ['conf_mode_chauffage', conf_mode_chauffage],
+        ['conf_consommation_electricite', conf_consommation_electricite],
+        ['conf_consommation_chauffage', conf_consommation_chauffage],
+        ['conf_rdv_annule_precedent', confRdvAnnule]
+      ];
+      for (const [col, raw] of optionalUpdates) {
+        if (!Object.prototype.hasOwnProperty.call(body, col)) continue;
+        setParts.push(`\`${col}\` = ?`);
+        setValues.push(raw === '' || raw === undefined ? null : raw);
+      }
+      // Alias : si seul conf_deja_etude / conf_deja_fait_etude est envoyé, synchroniser le jumeau
+      if (Object.prototype.hasOwnProperty.call(body, 'conf_deja_etude') && !Object.prototype.hasOwnProperty.call(body, 'conf_deja_fait_etude')) {
+        setParts.push('`conf_deja_fait_etude` = ?');
+        setValues.push(confDejaFaitEtude);
+      }
+      if (Object.prototype.hasOwnProperty.call(body, 'conf_deja_fait_etude') && !Object.prototype.hasOwnProperty.call(body, 'conf_deja_etude')) {
+        setParts.push('`conf_deja_etude` = ?');
+        setValues.push(confDejaEtude);
+      }
+      setValues.push(parseInt(id));
       await query(
-        `UPDATE fiches SET valider = ?, conf_rdv_avec = ?, conf_presence_couple = ?,
-         conf_appel_tunisie_avec = ?, conf_deja_etude = ?, conf_deja_fait_etude = ?, conf_details_etude = ?,
-         conf_profession_monsieur = ?, conf_type_contrat_mr = ?,
-         conf_profession_madame = ?, conf_type_contrat_madame = ?, conf_revenu = ?, conf_credit = ?,
-         conf_mode_chauffage = ?, conf_consommation_electricite = ?, conf_consommation_chauffage = ?, conf_rdv_annule_precedent = ?
-         WHERE id = ?`,
-        [
-          valider, confRdvAvec, confPresenceCouple,
-          confAppelTunisie, confDejaEtude, confDejaFaitEtude,
-          confDejaFaitEtude === 'OUI' ? confDetailsEtude : null,
-          conf_profession_monsieur || null, conf_type_contrat_mr || null,
-          conf_profession_madame || null, conf_type_contrat_madame || null, conf_revenu || null, conf_credit || null,
-          conf_mode_chauffage || null, conf_consommation_electricite || null, conf_consommation_chauffage || null, confRdvAnnule,
-          parseInt(id)
-        ]
+        `UPDATE fiches SET ${setParts.join(', ')} WHERE id = ?`,
+        setValues
       );
     }
 

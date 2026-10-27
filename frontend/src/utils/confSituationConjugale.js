@@ -38,20 +38,27 @@ export function showConfProfessionMmeFields(situationConjugale, confRdvAvec) {
 }
 
 /**
- * Applique les règles d'affichage : vide les champs masqués.
- * @returns {object} patch partiel pour confFormData / rdvFormData
+ * Ancien comportement : vidait les champs masqués dans le state formulaire,
+ * ce qui les envoyait ensuite en null et écrasait la BDD.
+ * On conserve les valeurs en mémoire ; l'affichage reste conditionnel et
+ * le submit n'inclut plus les champs masqués.
+ * @returns {object} patch partiel (toujours vide — compat appels existants)
  */
-export function clearHiddenConfProfessionFields(formData) {
-  const sit = formData?.situation_conjugale;
-  const avec = formData?.conf_rdv_avec;
-  const patch = {};
-  if (!showConfProfessionMrFields(sit, avec)) {
-    patch.conf_profession_monsieur = '';
-    patch.conf_type_contrat_mr = '';
+export function clearHiddenConfProfessionFields(_formData) {
+  return {};
+}
+
+/** Valeur métier utilisable (ignore null / '' / '0' issus d'anciens snapshots int). */
+export function hasProfessionOrContratValue(value) {
+  if (value == null) return false;
+  const s = String(value).trim();
+  return s !== '' && s !== '0';
+}
+
+/** Première valeur non vide parmi les candidats (conf_* puis base). */
+export function pickProfessionOrContratValue(...candidates) {
+  for (const v of candidates) {
+    if (hasProfessionOrContratValue(v)) return v;
   }
-  if (!showConfProfessionMmeFields(sit, avec)) {
-    patch.conf_profession_madame = '';
-    patch.conf_type_contrat_madame = '';
-  }
-  return patch;
+  return null;
 }

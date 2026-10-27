@@ -53,6 +53,7 @@ import {
   showConfProfessionMrFields,
   showConfProfessionMmeFields,
   clearHiddenConfProfessionFields,
+  pickProfessionOrContratValue,
 } from '../utils/confSituationConjugale';
 /** Style option / select « Nouvel état » : fond = couleur état, texte contrasté. */
 function getEtatSelectOptionStyle(color) {
@@ -3291,10 +3292,6 @@ const FicheDetail = ({
           (data.conf_deja_etude === 'OUI' || data.conf_deja_fait_etude === 'OUI')
             ? (data.conf_details_etude || data.details_etude || null)
             : null,
-        conf_profession_monsieur: data.conf_profession_monsieur || null,
-        conf_type_contrat_mr: data.conf_type_contrat_mr ? parseInt(data.conf_type_contrat_mr) : null,
-        conf_profession_madame: data.conf_profession_madame || null,
-        conf_type_contrat_madame: data.conf_type_contrat_madame ? parseInt(data.conf_type_contrat_madame) : null,
         conf_revenu: data.conf_revenu || null,
         conf_credit: data.conf_credit || null,
         conf_mode_chauffage: data.conf_mode_chauffage?.trim() ? data.conf_mode_chauffage.trim() : null,
@@ -3316,6 +3313,20 @@ const FicheDetail = ({
         annee_systeme_chauffage: data.annee_systeme_chauffage ? parseInt(data.annee_systeme_chauffage) : null,
         conf_commentaire_produit: data.conf_commentaire_produit || null
       };
+
+      // RDV modal : professions toujours affichées — n'écraser la BDD que si une valeur est saisie
+      if (String(data.conf_profession_monsieur || '').trim() !== '') {
+        updateData.conf_profession_monsieur = data.conf_profession_monsieur;
+      }
+      if (data.conf_type_contrat_mr) {
+        updateData.conf_type_contrat_mr = parseInt(data.conf_type_contrat_mr, 10);
+      }
+      if (String(data.conf_profession_madame || '').trim() !== '') {
+        updateData.conf_profession_madame = data.conf_profession_madame;
+      }
+      if (data.conf_type_contrat_madame) {
+        updateData.conf_type_contrat_madame = parseInt(data.conf_type_contrat_madame, 10);
+      }
 
       // Commercial 2 retiré de la création RDV (toutes sessions) — R2 / champs R1 conservés
       updateData.id_commercial_2 = null;
@@ -3711,30 +3722,6 @@ const FicheDetail = ({
           (confFormData.conf_deja_fait_etude || confFormData.conf_deja_etude) === 'OUI'
             ? (confFormData.conf_details_etude || null)
             : null,
-        conf_profession_monsieur: showConfProfessionMrFields(
-          confFormData.situation_conjugale,
-          confFormData.conf_rdv_avec
-        )
-          ? (confFormData.conf_profession_monsieur || null)
-          : null,
-        conf_type_contrat_mr: showConfProfessionMrFields(
-          confFormData.situation_conjugale,
-          confFormData.conf_rdv_avec
-        ) && confFormData.conf_type_contrat_mr
-          ? parseInt(confFormData.conf_type_contrat_mr, 10)
-          : null,
-        conf_profession_madame: showConfProfessionMmeFields(
-          confFormData.situation_conjugale,
-          confFormData.conf_rdv_avec
-        )
-          ? (confFormData.conf_profession_madame || null)
-          : null,
-        conf_type_contrat_madame: showConfProfessionMmeFields(
-          confFormData.situation_conjugale,
-          confFormData.conf_rdv_avec
-        ) && confFormData.conf_type_contrat_madame
-          ? parseInt(confFormData.conf_type_contrat_madame, 10)
-          : null,
         conf_revenu: confFormData.conf_revenu || null,
         conf_credit: confFormData.conf_credit || null,
         conf_mode_chauffage: confFormData.conf_mode_chauffage?.trim() ? confFormData.conf_mode_chauffage.trim() : null,
@@ -3753,6 +3740,20 @@ const FicheDetail = ({
         consommation_chauffage: confFormData.consommation_chauffage || null,
         conf_commentaire_produit: confFormData.conf_commentaire_produit || null
       };
+
+      // Profession / type contrat : n'envoyer que les champs visibles (sinon null écrasait la BDD)
+      if (showConfProfessionMrFields(confFormData.situation_conjugale, confFormData.conf_rdv_avec)) {
+        updateData.conf_profession_monsieur = confFormData.conf_profession_monsieur || null;
+        updateData.conf_type_contrat_mr = confFormData.conf_type_contrat_mr
+          ? parseInt(confFormData.conf_type_contrat_mr, 10)
+          : null;
+      }
+      if (showConfProfessionMmeFields(confFormData.situation_conjugale, confFormData.conf_rdv_avec)) {
+        updateData.conf_profession_madame = confFormData.conf_profession_madame || null;
+        updateData.conf_type_contrat_madame = confFormData.conf_type_contrat_madame
+          ? parseInt(confFormData.conf_type_contrat_madame, 10)
+          : null;
+      }
 
       // Commercial 2 retiré de la confirmation RDV (toutes sessions) — R2 / champs R1 conservés
       updateData.id_commercial_2 = null;
@@ -4897,41 +4898,49 @@ const FicheDetail = ({
               ], false, undefined, true)}
               {renderField('Nombre d\'enfants en Charges', 'nb_enfants', fiche.nb_enfants || '-', 'number', null, false, undefined, true)}
               {(() => {
-                const rawMr = (fiche.conf_profession_monsieur != null && String(fiche.conf_profession_monsieur).trim() !== '')
-                  ? fiche.conf_profession_monsieur
-                  : fiche.profession_mr;
-                const labelMr = rawMr != null && String(rawMr).trim() !== ''
+                const rawMr = pickProfessionOrContratValue(fiche.conf_profession_monsieur, fiche.profession_mr);
+                const labelMr = rawMr != null
                   ? (professions?.find(p => p.id == rawMr || (p.nom && String(p.nom).toLowerCase() === String(rawMr).toLowerCase()))?.nom || String(rawMr))
                   : '';
                 return renderField('Profession Du MR', 'profession_mr', labelMr || '-', 'text', null, false, labelMr, true);
               })()}
-              {renderField('Type de Contrat MR', 'type_contrat_mr',
-                (fiche.conf_type_contrat_mr != null && fiche.conf_type_contrat_mr !== '')
-                  ? (typeContrat?.find(t => String(t.id) === String(fiche.conf_type_contrat_mr))?.nom || fiche.conf_type_contrat_mr || '-')
-                  : (typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_mr))?.nom || fiche.type_contrat_mr || '-'),
-                'select', typeContrat, false,
-                (fiche.conf_type_contrat_mr != null && fiche.conf_type_contrat_mr !== '')
-                  ? fiche.conf_type_contrat_mr
-                  : (fiche.type_contrat_mr ?? ''),
-                true)}
               {(() => {
-                const rawMme = (fiche.conf_profession_madame != null && String(fiche.conf_profession_madame).trim() !== '')
-                  ? fiche.conf_profession_madame
-                  : fiche.profession_madame;
-                const labelMme = rawMme != null && String(rawMme).trim() !== ''
+                const rawTypeMr = pickProfessionOrContratValue(fiche.conf_type_contrat_mr, fiche.type_contrat_mr);
+                return renderField(
+                  'Type de Contrat MR',
+                  'type_contrat_mr',
+                  rawTypeMr != null
+                    ? (typeContrat?.find(t => String(t.id) === String(rawTypeMr))?.nom || rawTypeMr || '-')
+                    : '-',
+                  'select',
+                  typeContrat,
+                  false,
+                  rawTypeMr ?? '',
+                  true
+                );
+              })()}
+              {(() => {
+                const rawMme = pickProfessionOrContratValue(fiche.conf_profession_madame, fiche.profession_madame);
+                const labelMme = rawMme != null
                   ? (professions?.find(p => p.id == rawMme || (p.nom && String(p.nom).toLowerCase() === String(rawMme).toLowerCase()))?.nom || String(rawMme))
                   : '';
                 return renderField('Profession Du Madame', 'profession_madame', labelMme || '-', 'text', null, false, labelMme, true);
               })()}
-              {renderField('Type de Contrat MME', 'type_contrat_madame',
-                (fiche.conf_type_contrat_madame != null && fiche.conf_type_contrat_madame !== '')
-                  ? (typeContrat?.find(t => String(t.id) === String(fiche.conf_type_contrat_madame))?.nom || fiche.conf_type_contrat_madame || '-')
-                  : (typeContrat?.find(t => String(t.id) === String(fiche.type_contrat_madame))?.nom || fiche.type_contrat_madame || '-'),
-                'select', typeContrat, false,
-                (fiche.conf_type_contrat_madame != null && fiche.conf_type_contrat_madame !== '')
-                  ? fiche.conf_type_contrat_madame
-                  : (fiche.type_contrat_madame ?? ''),
-                true)}
+              {(() => {
+                const rawTypeMme = pickProfessionOrContratValue(fiche.conf_type_contrat_madame, fiche.type_contrat_madame);
+                return renderField(
+                  'Type de Contrat MME',
+                  'type_contrat_madame',
+                  rawTypeMme != null
+                    ? (typeContrat?.find(t => String(t.id) === String(rawTypeMme))?.nom || rawTypeMme || '-')
+                    : '-',
+                  'select',
+                  typeContrat,
+                  false,
+                  rawTypeMme ?? '',
+                  true
+                );
+              })()}
               {/* Exclus du mode édition groupée : date/heure d'appel, agent, centre */}
               {!isCommercial && renderField('Date & Heure d\'appel', 'date_appel_time', 
                 (() => {
@@ -5825,23 +5834,23 @@ const FicheDetail = ({
                   }
                   if (etatData.conf_rdv_annule_precedent) items.push({ label: 'RDV déjà annulé précédemment', value: etatData.conf_rdv_annule_precedent });
                   if (etatData.conf_presence_couple) items.push({ label: 'Présence du couple ou célibataire', value: etatData.conf_presence_couple });
-                  const profMrId = etatData.conf_profession_monsieur ?? etatData.profession_mr;
-                  if (profMrId != null && profMrId !== '') {
+                  const profMrId = pickProfessionOrContratValue(etatData.conf_profession_monsieur, etatData.profession_mr);
+                  if (profMrId != null) {
                     const professionMr = professions?.find(p => p.id == profMrId);
                     items.push({ label: 'Profession MR', value: professionMr ? professionMr.nom : String(profMrId) });
                   }
-                  const typeContratMrId = etatData.conf_type_contrat_mr ?? etatData.type_contrat_mr;
-                  if (typeContratMrId != null && typeContratMrId !== '') {
+                  const typeContratMrId = pickProfessionOrContratValue(etatData.conf_type_contrat_mr, etatData.type_contrat_mr);
+                  if (typeContratMrId != null) {
                     const typeContratMr = typeContrat?.find(t => String(t.id) === String(typeContratMrId));
                     items.push({ label: 'Type de contrat MR', value: typeContratMr ? typeContratMr.nom : String(typeContratMrId) });
                   }
-                  const profMmeId = etatData.conf_profession_madame ?? etatData.profession_madame;
-                  if (profMmeId != null && profMmeId !== '') {
+                  const profMmeId = pickProfessionOrContratValue(etatData.conf_profession_madame, etatData.profession_madame);
+                  if (profMmeId != null) {
                     const professionMme = professions?.find(p => p.id == profMmeId);
                     items.push({ label: 'Profession MME', value: professionMme ? professionMme.nom : String(profMmeId) });
                   }
-                  const typeContratMmeId = etatData.conf_type_contrat_madame ?? etatData.type_contrat_madame;
-                  if (typeContratMmeId != null && typeContratMmeId !== '') {
+                  const typeContratMmeId = pickProfessionOrContratValue(etatData.conf_type_contrat_madame, etatData.type_contrat_madame);
+                  if (typeContratMmeId != null) {
                     const typeContratMme = typeContrat?.find(t => String(t.id) === String(typeContratMmeId));
                     items.push({ label: 'Type de contrat MME', value: typeContratMme ? typeContratMme.nom : String(typeContratMmeId) });
                   }
@@ -5950,10 +5959,10 @@ const FicheDetail = ({
                     : (fiche.conf_details_etude != null && String(fiche.conf_details_etude).trim() !== ''
                       ? fiche.conf_details_etude
                       : null),
-                conf_profession_monsieur: fiche.conf_profession_monsieur ?? fiche.profession_mr ?? null,
-                conf_type_contrat_mr: fiche.conf_type_contrat_mr ?? fiche.type_contrat_mr ?? null,
-                conf_profession_madame: fiche.conf_profession_madame ?? fiche.profession_madame ?? null,
-                conf_type_contrat_madame: fiche.conf_type_contrat_madame ?? fiche.type_contrat_madame ?? null,
+                conf_profession_monsieur: pickProfessionOrContratValue(fiche.conf_profession_monsieur, fiche.profession_mr),
+                conf_type_contrat_mr: pickProfessionOrContratValue(fiche.conf_type_contrat_mr, fiche.type_contrat_mr),
+                conf_profession_madame: pickProfessionOrContratValue(fiche.conf_profession_madame, fiche.profession_madame),
+                conf_type_contrat_madame: pickProfessionOrContratValue(fiche.conf_type_contrat_madame, fiche.type_contrat_madame),
                 conf_revenu: fiche.conf_revenu || null,
                 conf_credit: fiche.conf_credit || null,
                 conf_mode_chauffage: fiche.conf_mode_chauffage ?? fiche.mode_chauffage ?? null,
