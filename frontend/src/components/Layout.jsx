@@ -46,20 +46,20 @@ const LayoutContent = () => {
   const [overlayReady, setOverlayReady] = React.useState(false);
   const prevPathnameRef = React.useRef(location.pathname);
   const isInitialMountRef = React.useRef(true);
-  const isFirstNavLogRef = React.useRef(true);
+  const lastLoggedPathRef = React.useRef('');
 
-  // Journal d’activité : navigation (après le premier rendu, pour ne pas logger l’URL d’entrée deux fois)
+  // Journal d’activité : chaque changement de page → user_activity.detail + activity_events
   React.useEffect(() => {
-    if (isFirstNavLogRef.current) {
-      isFirstNavLogRef.current = false;
-      return;
-    }
     const path = `${location.pathname}${location.search || ''}`;
+    if (!path || path === lastLoggedPathRef.current) return;
     const t = setTimeout(() => {
+      // Dédupe si l’effet se rejoue avant la fin du délai (Strict Mode / search inchangé)
+      if (path === lastLoggedPathRef.current) return;
+      lastLoggedPathRef.current = path;
       api
         .post('/user-activity/log', {
           nature: 'navigation',
-          detail: JSON.stringify({ path })
+          detail: { path }
         })
         .catch(() => {});
     }, 400);
