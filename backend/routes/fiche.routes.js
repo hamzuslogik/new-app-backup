@@ -7870,8 +7870,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, allowFicheEditOrPartenaireF
           
           if (totalMinutes >= 540 && totalMinutes < 660) return '09:00:00'; // 9h-10h59
           if (totalMinutes >= 660 && totalMinutes < 780) return '11:00:00'; // 11h-12h59
-          if (totalMinutes >= 780 && totalMinutes < 960) return '13:00:00'; // 13h-15h59
-          if (totalMinutes >= 960 && totalMinutes < 1080) return '16:00:00'; // 16h-17h59
+          if (totalMinutes >= 780 && totalMinutes < 900) return '13:00:00'; // 13h-14h59
+          if (totalMinutes >= 900 && totalMinutes < 1080) return '16:00:00'; // 15h-17h59
           if (totalMinutes >= 1080 && totalMinutes < 1170) return '18:00:00'; // 18h-19h29
           if (totalMinutes >= 1170 && totalMinutes <= 1200) return '19:30:00'; // 19h30-20h
           return null;
@@ -7974,8 +7974,8 @@ router.put('/:id', authenticate, hashToIdMiddleware, allowFicheEditOrPartenaireF
               const slotRanges = {
                 '09:00:00': ['09:00:00', '10:59:59'],
                 '11:00:00': ['11:00:00', '12:59:59'],
-                '13:00:00': ['13:00:00', '15:59:59'],
-                '16:00:00': ['16:00:00', '17:59:59'],
+                '13:00:00': ['13:00:00', '14:59:59'],
+                '16:00:00': ['15:00:00', '17:59:59'],
                 '18:00:00': ['18:00:00', '19:29:59'],
                 '19:30:00': ['19:30:00', '20:00:00'],
               };

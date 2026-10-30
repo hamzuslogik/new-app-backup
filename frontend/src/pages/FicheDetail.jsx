@@ -984,7 +984,7 @@ const TIME_SLOTS = [
   { hour: '09:00:00', name: '9H ( 9h uniquement )' },
   { hour: '11:00:00', name: '11H ( 11h à 12h )' },
   { hour: '13:00:00', name: '13H ( 13h à 14h30 )' },
-  { hour: '16:00:00', name: '16H ( 16h à 17h )' },
+  { hour: '16:00:00', name: '16H ( 15h à 17h )' },
   { hour: '18:00:00', name: '18H ( 18h à 19h )' },
   { hour: '19:30:00', name: '20H ( 19h30 à 20h )' }
 ];
@@ -1107,8 +1107,8 @@ function timeToSlotHour(timeStr) {
   const minutes = h * 60 + m;
   if (minutes >= 540 && minutes <= 659) return '09:00:00';
   if (minutes >= 660 && minutes <= 779) return '11:00:00';
-  if (minutes >= 780 && minutes <= 959) return '13:00:00';
-  if (minutes >= 960 && minutes <= 1079) return '16:00:00';
+  if (minutes >= 780 && minutes <= 899) return '13:00:00'; // 13h-14h59
+  if (minutes >= 900 && minutes <= 1079) return '16:00:00'; // 15h-17h59
   if (minutes >= 1080 && minutes <= 1169) return '18:00:00';
   if (minutes >= 1170 && minutes <= 1200) return '19:30:00';
   return null;
@@ -1185,8 +1185,8 @@ function getDashboardTimeRangeForPlanningSlot(slotHour) {
   const map = {
     '09:00:00': { time_debut: '09:00:00', time_fin: '10:59:59' },
     '11:00:00': { time_debut: '11:00:00', time_fin: '12:59:59' },
-    '13:00:00': { time_debut: '13:00:00', time_fin: '15:59:59' },
-    '16:00:00': { time_debut: '16:00:00', time_fin: '17:59:59' },
+    '13:00:00': { time_debut: '13:00:00', time_fin: '14:59:59' },
+    '16:00:00': { time_debut: '15:00:00', time_fin: '17:59:59' },
     '18:00:00': { time_debut: '18:00:00', time_fin: '19:29:59' },
     '19:30:00': { time_debut: '19:30:00', time_fin: '20:00:00' }
   };

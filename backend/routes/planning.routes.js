@@ -152,8 +152,8 @@ function triggerPlanningWorkflow(triggerType, req, payload = {}) {
 const TIME_SLOTS = [
   { hour: '09:00:00', start: '09:00:00', end: '10:59:59', name: '9H ( 9h uniquement )' },
   { hour: '11:00:00', start: '11:00:00', end: '12:59:59', name: '11H ( 11h à 12h )' },
-  { hour: '13:00:00', start: '13:00:00', end: '15:59:59', name: '13H ( 13h à 14h30 )' },
-  { hour: '16:00:00', start: '16:00:00', end: '17:59:59', name: '16H ( 16h à 17h )' },
+  { hour: '13:00:00', start: '13:00:00', end: '14:59:59', name: '13H ( 13h à 14h30 )' },
+  { hour: '16:00:00', start: '15:00:00', end: '17:59:59', name: '16H ( 15h à 17h )' },
   { hour: '18:00:00', start: '18:00:00', end: '19:29:59', name: '18H ( 18h à 19h )' },
   { hour: '19:30:00', start: '19:30:00', end: '20:00:00', name: '20H ( 19h30 à 20h )' }
 ];
